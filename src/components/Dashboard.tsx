@@ -211,16 +211,16 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
         </div>
 
         <Tabs defaultValue="downloads" className="w-full">
-          <TabsList className="grid w-full grid-cols-9 mb-8">
-            <TabsTrigger value="downloads">Downloads</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="agents">Agents</TabsTrigger>
-            <TabsTrigger value="dat">Updates</TabsTrigger>
-            <TabsTrigger value="epo">Trellix ePO</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="audit">Audit Log</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto mb-8 h-auto p-1">
+            <TabsTrigger value="downloads" className="flex-shrink-0 px-4 py-2">Downloads</TabsTrigger>
+            <TabsTrigger value="users" className="flex-shrink-0 px-4 py-2">Users</TabsTrigger>
+            <TabsTrigger value="agents" className="flex-shrink-0 px-4 py-2">Agents</TabsTrigger>
+            <TabsTrigger value="dat" className="flex-shrink-0 px-4 py-2">Updates</TabsTrigger>
+            <TabsTrigger value="epo" className="flex-shrink-0 px-4 py-2">Trellix ePO</TabsTrigger>
+            <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2">Messages</TabsTrigger>
+            <TabsTrigger value="security" className="flex-shrink-0 px-4 py-2">Security</TabsTrigger>
+            <TabsTrigger value="audit" className="flex-shrink-0 px-4 py-2">Audit Log</TabsTrigger>
+            <TabsTrigger value="analytics" className="flex-shrink-0 px-4 py-2">Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="downloads" className="space-y-6">

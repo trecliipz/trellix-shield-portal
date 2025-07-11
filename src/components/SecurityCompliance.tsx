@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Shield, 
   Lock, 
@@ -18,6 +19,10 @@ import {
   Server,
   Activity
 } from "lucide-react";
+import { PrivacyPolicy } from "@/components/policies/PrivacyPolicy";
+import { ResponsePlan } from "@/components/policies/ResponsePlan";
+import { AccessPolicy } from "@/components/policies/AccessPolicy";
+import { DisclosurePolicy } from "@/components/policies/DisclosurePolicy";
 
 interface ComplianceStatus {
   name: string;
@@ -39,6 +44,7 @@ interface SecurityMetric {
 export const SecurityCompliance = () => {
   const [complianceData, setComplianceData] = useState<ComplianceStatus[]>([]);
   const [securityMetrics, setSecurityMetrics] = useState<SecurityMetric[]>([]);
+  const [selectedPolicy, setSelectedPolicy] = useState<string | null>(null);
 
   useEffect(() => {
     // Load compliance data
@@ -325,10 +331,20 @@ export const SecurityCompliance = () => {
                 <p className="text-muted-foreground mb-4">
                   Comprehensive data protection and privacy guidelines in compliance with GDPR and other regulations.
                 </p>
-                <Button variant="outline" className="w-full">
-                  <Globe className="h-4 w-4 mr-2" />
-                  View Privacy Policy
-                </Button>
+                <Dialog open={selectedPolicy === 'privacy'} onOpenChange={(open) => setSelectedPolicy(open ? 'privacy' : null)}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <Globe className="h-4 w-4 mr-2" />
+                      View Privacy Policy
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Data Privacy Policy</DialogTitle>
+                    </DialogHeader>
+                    <PrivacyPolicy />
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
 
@@ -340,10 +356,20 @@ export const SecurityCompliance = () => {
                 <p className="text-muted-foreground mb-4">
                   Procedures for identifying, responding to, and recovering from security incidents.
                 </p>
-                <Button variant="outline" className="w-full">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  View Response Plan
-                </Button>
+                <Dialog open={selectedPolicy === 'response'} onOpenChange={(open) => setSelectedPolicy(open ? 'response' : null)}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      View Response Plan
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Security Incident Response Plan</DialogTitle>
+                    </DialogHeader>
+                    <ResponsePlan />
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
 
@@ -355,10 +381,20 @@ export const SecurityCompliance = () => {
                 <p className="text-muted-foreground mb-4">
                   Guidelines for user access management, authentication, and authorization protocols.
                 </p>
-                <Button variant="outline" className="w-full">
-                  <Lock className="h-4 w-4 mr-2" />
-                  View Access Policy
-                </Button>
+                <Dialog open={selectedPolicy === 'access'} onOpenChange={(open) => setSelectedPolicy(open ? 'access' : null)}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <Lock className="h-4 w-4 mr-2" />
+                      View Access Policy
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Access Control Policy</DialogTitle>
+                    </DialogHeader>
+                    <AccessPolicy />
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
 
@@ -370,10 +406,20 @@ export const SecurityCompliance = () => {
                 <p className="text-muted-foreground mb-4">
                   Process for reporting security vulnerabilities and our response procedures.
                 </p>
-                <Button variant="outline" className="w-full">
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Disclosure Policy
-                </Button>
+                <Dialog open={selectedPolicy === 'disclosure'} onOpenChange={(open) => setSelectedPolicy(open ? 'disclosure' : null)}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Disclosure Policy
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Vulnerability Disclosure Policy</DialogTitle>
+                    </DialogHeader>
+                    <DisclosurePolicy />
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           </div>
