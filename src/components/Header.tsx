@@ -4,7 +4,7 @@ import { AuthModal } from "./AuthModal";
 
 interface HeaderProps {
   isLoggedIn: boolean;
-  currentUser: { email: string; name: string } | null;
+  currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
   onLogin: (email: string, password: string) => boolean;
   onLogout: () => void;
 }

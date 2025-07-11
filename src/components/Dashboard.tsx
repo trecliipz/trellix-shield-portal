@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Download, Shield, Lock, BarChart } from "lucide-react";
 
 interface DashboardProps {
-  currentUser: { email: string; name: string } | null;
+  currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
 }
 
 interface AgentDownload {
@@ -86,17 +86,27 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
     }
   };
 
+  // Filter agents based on user role
+  const availableAgents = currentUser?.role === 'admin' 
+    ? Object.entries(agentDownloads)
+    : Object.entries(agentDownloads).filter(([key]) => key === 'trellix-agent');
+
   return (
     <section className="py-12 min-h-screen">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-primary">
             Welcome to Trellix Agent Portal
+            {currentUser?.role === 'admin' && (
+              <span className="ml-3 px-3 py-1 text-sm bg-primary text-primary-foreground rounded-full">
+                ADMIN
+              </span>
+            )}
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {Object.entries(agentDownloads).map(([key, agent]) => (
+          {availableAgents.map(([key, agent]) => (
             <Card key={key} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
               <CardHeader>
                 <div className="flex items-center space-x-3 mb-2">

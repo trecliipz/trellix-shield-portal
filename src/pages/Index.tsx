@@ -7,15 +7,27 @@ import { Features } from "@/components/Features";
 
 const Index = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ email: string; name: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string; role: 'admin' | 'user' } | null>(null);
 
   const handleLogin = (email: string, password: string): boolean => {
-    // Simulate authentication - in a real app, you'd validate against a backend
+    // Check for admin credentials
+    if (email === 'admin@trellix.com' && password === '12345678') {
+      setIsLoggedIn(true);
+      setCurrentUser({ 
+        email: email, 
+        name: 'Admin',
+        role: 'admin'
+      });
+      return true;
+    }
+    
+    // Regular user authentication
     if (email && password) {
       setIsLoggedIn(true);
       setCurrentUser({ 
         email: email, 
-        name: email.split('@')[0] 
+        name: email.split('@')[0],
+        role: 'user'
       });
       return true;
     }
