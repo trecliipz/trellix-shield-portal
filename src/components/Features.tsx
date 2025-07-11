@@ -26,13 +26,22 @@ const features = [
 
 const securityUpdates = [
   {
-    type: "DAT Files",
+    type: "DAT V3 Definition Files",
     platforms: [
-      { name: "Windows", version: "1234.0000", date: "Jan 11, 2025", size: "45.2 MB" },
-      { name: "macOS", version: "1234.0000", date: "Jan 11, 2025", size: "42.8 MB" },
-      { name: "Linux", version: "1234.0000", date: "Jan 11, 2025", size: "48.1 MB" }
+      { name: "Windows", version: "v3.1234.5678", date: "Jan 11, 2025", size: "45.2 MB" },
+      { name: "macOS", version: "v3.1234.5678", date: "Jan 11, 2025", size: "42.8 MB" },
+      { name: "Linux", version: "v3.1234.5678", date: "Jan 11, 2025", size: "48.1 MB" }
     ],
-    description: "Latest virus definition files with threat signatures and behavioral patterns."
+    description: "Latest DAT V3 definition files with enhanced machine learning detection patterns and behavioral analysis."
+  },
+  {
+    type: "MEDDAT Mobile Endpoint",
+    platforms: [
+      { name: "Windows", version: "MEDDAT.2024.11.15", date: "Jan 10, 2025", size: "28.5 MB" },
+      { name: "macOS", version: "MEDDAT.2024.11.15", date: "Jan 10, 2025", size: "24.8 MB" },
+      { name: "Linux", version: "MEDDAT.2024.11.15", date: "Jan 10, 2025", size: "31.2 MB" }
+    ],
+    description: "Mobile and endpoint detection files for advanced threat hunting and mobile device security."
   },
   {
     type: "Security Engines",
@@ -44,13 +53,22 @@ const securityUpdates = [
     description: "Core scanning engines with enhanced detection capabilities and performance improvements."
   },
   {
-    type: "Content Updates",
+    type: "TIE Threat Intelligence",
     platforms: [
-      { name: "Windows", version: "2.8.5", date: "Jan 10, 2025", size: "128 MB" },
-      { name: "macOS", version: "2.8.5", date: "Jan 10, 2025", size: "95.4 MB" },
-      { name: "Linux", version: "2.8.5", date: "Jan 10, 2025", size: "112 MB" }
+      { name: "Windows", version: "TIE.2025.01.11", date: "Jan 11, 2025", size: "85.3 MB" },
+      { name: "macOS", version: "TIE.2025.01.11", date: "Jan 11, 2025", size: "76.8 MB" },
+      { name: "Linux", version: "TIE.2025.01.11", date: "Jan 11, 2025", size: "82.1 MB" }
     ],
-    description: "Security content packages including web protection filters and application control rules."
+    description: "Threat Intelligence Exchange content with global reputation data and file intelligence services."
+  },
+  {
+    type: "Exploit Prevention Content",
+    platforms: [
+      { name: "Windows", version: "EP.2025.01.10", date: "Jan 10, 2025", size: "156.7 MB" },
+      { name: "macOS", version: "EP.2025.01.10", date: "Jan 10, 2025", size: "124.3 MB" },
+      { name: "Linux", version: "EP.2025.01.10", date: "Jan 10, 2025", size: "143.9 MB" }
+    ],
+    description: "Advanced exploit prevention signatures and behavioral rules for comprehensive endpoint protection."
   }
 ];
 
@@ -87,7 +105,7 @@ export const Features = () => {
           Latest Security Updates by Platform
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
           {securityUpdates.map((update, index) => (
             <Card key={index} className="bg-card border-border">
               <CardContent className="p-6">

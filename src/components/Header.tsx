@@ -47,7 +47,10 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
               >
                 Support
               </button>
-              <button className="text-foreground hover:text-primary transition-colors">
+              <button 
+                onClick={() => scrollToSection('documentation')}
+                className="text-foreground hover:text-primary transition-colors"
+              >
                 Documentation
               </button>
             </div>

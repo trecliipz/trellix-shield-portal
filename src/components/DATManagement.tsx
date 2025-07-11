@@ -22,47 +22,61 @@ interface SecurityUpdate {
 }
 
 const securityUpdates: SecurityUpdate[] = [
-  // DAT Files
+  // DAT V3 Files
   {
     id: '1',
-    name: 'Virus Definition Update',
+    name: 'DAT V3 Definition Update',
     type: 'DAT',
     platform: 'Windows',
-    version: '1234.0000',
+    version: 'v3.1234.5678',
     releaseDate: '2025-01-11',
     fileSize: '45.2 MB',
-    fileName: 'avvdat-1234.zip',
+    fileName: 'avvdat-v3123456.zip',
     sha256: '4C09DB4914F16918E3A518B8D44E7E65527A90694BBBB460D5A5C4C965B385B7',
-    description: 'Latest virus definition file for Windows with enhanced threat detection.',
+    description: 'Latest DAT V3 definition files with enhanced machine learning detection patterns.',
     isRecommended: true
   },
   {
     id: '2',
-    name: 'Virus Definition Update',
+    name: 'DAT V3 Definition Update',
     type: 'DAT',
     platform: 'macOS',
-    version: '1234.0000',
+    version: 'v3.1234.5678',
     releaseDate: '2025-01-11',
     fileSize: '42.8 MB',
-    fileName: 'avvdat-1234-mac.zip',
+    fileName: 'avvdat-v3123456-mac.zip',
     sha256: '84570DE12504814C1D722085E49E9D2516192598AA36C3DA99B046DE9CD75C47',
-    description: 'Latest virus definition file for macOS with enhanced threat detection.'
+    description: 'Latest DAT V3 definition files for macOS with behavioral analysis signatures.'
   },
   {
     id: '3',
-    name: 'Virus Definition Update',
+    name: 'DAT V3 Definition Update',
     type: 'DAT',
     platform: 'Linux',
-    version: '1234.0000',
+    version: 'v3.1234.5678',
     releaseDate: '2025-01-11',
     fileSize: '48.1 MB',
-    fileName: 'avvdat-1234-lnx.zip',
+    fileName: 'avvdat-v3123456-lnx.zip',
     sha256: 'D85D8B96891AB23788CADD2BAB7B052D813205CDE452125BC347800F2023969A',
-    description: 'Latest virus definition file for Linux with enhanced threat detection.'
+    description: 'Latest DAT V3 definition files for Linux with advanced threat intelligence.'
+  },
+  // MEDDAT Files
+  {
+    id: '4',
+    name: 'MEDDAT Mobile Endpoint Detection',
+    type: 'DAT',
+    platform: 'Windows',
+    version: 'MEDDAT.2024.11.15',
+    releaseDate: '2025-01-10',
+    fileSize: '28.5 MB',
+    fileName: 'meddat-20241115.zip',
+    sha256: 'A7B8C9D0E1F2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S1T2U3V4W5X6Y7Z8',
+    description: 'Mobile and endpoint detection files for advanced threat hunting.',
+    isRecommended: true
   },
   // Engine Updates
   {
-    id: '4',
+    id: '5',
     name: 'Security Engine Package',
     type: 'Engine',
     platform: 'Windows',
@@ -75,7 +89,7 @@ const securityUpdates: SecurityUpdate[] = [
     isRecommended: true
   },
   {
-    id: '5',
+    id: '6',
     name: 'Security Engine Package',
     type: 'Engine',
     platform: 'macOS',
@@ -87,7 +101,7 @@ const securityUpdates: SecurityUpdate[] = [
     description: 'Mac OS Universal Engine Package for use with ePO.'
   },
   {
-    id: '6',
+    id: '7',
     name: 'Security Engine Package',
     type: 'Engine',
     platform: 'Linux',
@@ -98,43 +112,81 @@ const securityUpdates: SecurityUpdate[] = [
     sha256: 'D85D8B96891AB23788CADD2BAB7B052D813205CDE452125BC347800F2023969A',
     description: 'Linux Engine Package for use with ePO - Optimized for server environments.'
   },
-  // Content Updates
+  // TIE Content Updates
   {
-    id: '7',
-    name: 'Security Content Package',
+    id: '8',
+    name: 'TIE Threat Intelligence Package',
     type: 'Content',
     platform: 'Windows',
-    version: '2.8.5',
-    releaseDate: '2025-01-10',
-    fileSize: '128 MB',
-    fileName: 'content-285-win.zip',
+    version: 'TIE.2025.01.11',
+    releaseDate: '2025-01-11',
+    fileSize: '85.3 MB',
+    fileName: 'tie-content-20250111-win.zip',
     sha256: '5D18EB5915F26928F4A529C9E55F8F76638B91705CCCC571E6A6D5D976C486C8',
-    description: 'Web protection filters and application control rules for Windows.',
+    description: 'Threat Intelligence Exchange content with global reputation data.',
     isRecommended: true
   },
   {
-    id: '8',
-    name: 'Security Content Package',
+    id: '9',
+    name: 'TIE Threat Intelligence Package',
     type: 'Content',
     platform: 'macOS',
-    version: '2.8.5',
-    releaseDate: '2025-01-10',
-    fileSize: '95.4 MB',
-    fileName: 'content-285-mac.zip',
+    version: 'TIE.2025.01.11',
+    releaseDate: '2025-01-11',
+    fileSize: '76.8 MB',
+    fileName: 'tie-content-20250111-mac.zip',
     sha256: '95681EF23615925E2E833186F5AB9E63527A91806DDDD571F7B7E6E087D397D9',
-    description: 'Web protection filters and application control rules for macOS.'
+    description: 'Threat Intelligence Exchange content for macOS with file reputation services.'
   },
   {
-    id: '9',
-    name: 'Security Content Package',
+    id: '10',
+    name: 'TIE Threat Intelligence Package',
     type: 'Content',
     platform: 'Linux',
-    version: '2.8.5',
-    releaseDate: '2025-01-10',
-    fileSize: '112 MB',
-    fileName: 'content-285-lnx.zip',
+    version: 'TIE.2025.01.11',
+    releaseDate: '2025-01-11',
+    fileSize: '82.1 MB',
+    fileName: 'tie-content-20250111-lnx.zip',
     sha256: 'A96E9C07902BC34899DBEE3CAC8C163E724B92917EEEE682F8C8F7F198E408FA',
-    description: 'Web protection filters and application control rules for Linux.'
+    description: 'Threat Intelligence Exchange content for Linux servers and workstations.'
+  },
+  // Exploit Prevention Content
+  {
+    id: '11',
+    name: 'Exploit Prevention Content',
+    type: 'Content',
+    platform: 'Windows',
+    version: 'EP.2025.01.10',
+    releaseDate: '2025-01-10',
+    fileSize: '156.7 MB',
+    fileName: 'exploit-prevention-20250110-win.zip',
+    sha256: 'F1E2D3C4B5A6978867F5E4D3C2B1A09876543210FEDCBA987654321098765432',
+    description: 'Advanced exploit prevention signatures and behavioral rules for Windows.',
+    isRecommended: true
+  },
+  {
+    id: '12',
+    name: 'Exploit Prevention Content',
+    type: 'Content', 
+    platform: 'macOS',
+    version: 'EP.2025.01.10',
+    releaseDate: '2025-01-10',
+    fileSize: '124.3 MB',
+    fileName: 'exploit-prevention-20250110-mac.zip',
+    sha256: 'E9F8G7H6I5J4K3L2M1N0O9P8Q7R6S5T4U3V2W1X0Y9Z8A7B6C5D4E3F2G1H0I9J8',
+    description: 'Exploit prevention rules optimized for macOS application security.'
+  },
+  {
+    id: '13',
+    name: 'Exploit Prevention Content',
+    type: 'Content',
+    platform: 'Linux',
+    version: 'EP.2025.01.10',
+    releaseDate: '2025-01-10',
+    fileSize: '143.9 MB',
+    fileName: 'exploit-prevention-20250110-lnx.zip',
+    sha256: 'B8A9C0D1E2F3G4H5I6J7K8L9M0N1O2P3Q4R5S6T7U8V9W0X1Y2Z3A4B5C6D7E8F9',
+    description: 'Comprehensive exploit prevention for Linux environments and containers.'
   }
 ];
 

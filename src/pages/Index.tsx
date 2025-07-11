@@ -4,6 +4,8 @@ import { Hero } from "@/components/Hero";
 import { Dashboard } from "@/components/Dashboard";
 import { AnimatedArchitecture } from "@/components/AnimatedArchitecture";
 import { Features } from "@/components/Features";
+import { Support } from "@/components/Support";
+import { Documentation } from "@/components/Documentation";
 
 const Index = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -75,6 +77,8 @@ const Index = () => {
             <Hero onGetStarted={handleGetStarted} />
             <AnimatedArchitecture />
             <Features />
+            <Support />
+            <Documentation />
           </>
         ) : (
           <Dashboard currentUser={currentUser} />
