@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Search, UserCheck, UserX, Shield } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Users, Search, UserCheck, UserX, Shield, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -26,6 +27,8 @@ export const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUser, setNewUser] = useState({ email: "", name: "", role: "user" as 'admin' | 'user' });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -120,6 +123,56 @@ export const UserManagement = () => {
     });
   };
 
+  const handleAddUser = () => {
+    if (!newUser.email || !newUser.name) {
+      toast({
+        title: "Validation Error",
+        description: "Email and name are required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if email already exists
+    if (users.some(user => user.email.toLowerCase() === newUser.email.toLowerCase())) {
+      toast({
+        title: "Email Already Exists",
+        description: "A user with this email address already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const newUserData: User = {
+      id: Date.now().toString(),
+      email: newUser.email,
+      name: newUser.name,
+      role: newUser.role,
+      status: 'active',
+      registrationDate: new Date().toISOString().split('T')[0],
+      lastLogin: 'Never',
+      tempPassword,
+      passwordResetDate: new Date().toISOString().split('T')[0]
+    };
+
+    const updatedUsers = [...users, newUserData];
+    saveUsers(updatedUsers);
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(tempPassword);
+
+    toast({
+      title: "User Created Successfully",
+      description: `Welcome email sent to ${newUser.email}. Temporary password: ${tempPassword} (copied to clipboard)`,
+      duration: 10000,
+    });
+
+    // Reset form
+    setNewUser({ email: "", name: "", role: "user" });
+    setShowAddUser(false);
+  };
+
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -175,7 +228,73 @@ export const UserManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>User Management</CardTitle>
+            <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add User
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New User</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="user@company.com"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="John Doe"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="role">Role</Label>
+                    <Select
+                      value={newUser.role}
+                      onValueChange={(value: 'admin' | 'user') => setNewUser({ ...newUser, role: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex space-x-2 pt-4">
+                    <Button onClick={handleAddUser} className="flex-1">
+                      Create User
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowAddUser(false);
+                        setNewUser({ email: "", name: "", role: "user" });
+                      }}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
           <div className="flex items-center space-x-2">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
