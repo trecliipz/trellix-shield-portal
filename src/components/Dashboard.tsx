@@ -68,6 +68,26 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
   useEffect(() => {
     loadDynamicAgents();
+
+    // Listen for localStorage changes from other windows
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'admin_agents') {
+        loadDynamicAgents();
+      }
+    };
+
+    // Listen for custom events from same window (AgentManagement updates)
+    const handleAgentUpdate = () => {
+      loadDynamicAgents();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('agentsUpdated', handleAgentUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('agentsUpdated', handleAgentUpdate);
+    };
   }, []);
 
   const loadDynamicAgents = () => {

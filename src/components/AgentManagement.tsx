@@ -94,6 +94,9 @@ export const AgentManagement = () => {
   const saveAgents = (updatedAgents: Agent[]) => {
     setAgents(updatedAgents);
     localStorage.setItem('admin_agents', JSON.stringify(updatedAgents));
+    
+    // Dispatch custom event to notify other components of the update
+    window.dispatchEvent(new CustomEvent('agentsUpdated'));
   };
 
   const handleAddAgent = () => {
