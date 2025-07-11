@@ -6,7 +6,7 @@ interface HeroProps {
 
 export const Hero = ({ onGetStarted }: HeroProps) => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-gradient-hero">
+    <section className="relative min-h-[80vh] flex items-center justify-center bg-gradient-hero">
       <div className="absolute inset-0 bg-gradient-primary" />
       <div className="relative z-10 container mx-auto px-4 lg:px-8 text-center">
         <h1 className="text-4xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
