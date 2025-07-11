@@ -1,7 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Download, Shield, Lock, BarChart } from "lucide-react";
+import { UserManagement } from "@/components/UserManagement";
+import { AgentManagement } from "@/components/AgentManagement";
+import { AdminAnalytics } from "@/components/AdminAnalytics";
 
 interface DashboardProps {
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
@@ -91,53 +95,124 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
     ? Object.entries(agentDownloads)
     : Object.entries(agentDownloads).filter(([key]) => key === 'trellix-agent');
 
+  // Regular user view - only agent downloads
+  if (currentUser?.role !== 'admin') {
+    return (
+      <section className="py-12 min-h-screen">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold text-primary">
+              Welcome to Trellix Agent Portal
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {availableAgents.map(([key, agent]) => (
+              <Card key={key} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+                <CardHeader>
+                  <div className="flex items-center space-x-3 mb-2">
+                    {agent.icon}
+                    <CardTitle className="text-xl text-card-foreground">
+                      {agent.name}
+                    </CardTitle>
+                  </div>
+                  <p className="text-muted-foreground">{agent.description}</p>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 mb-6 text-sm">
+                    {agent.features.map((feature, index) => (
+                      <li key={index} className="flex items-center space-x-2">
+                        <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
+                        <span className="text-muted-foreground">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    onClick={() => handleDownload(key)}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download {agent.name.split(' ')[0]}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Admin user view - tabbed interface with all features
   return (
     <section className="py-12 min-h-screen">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-primary">
-            Welcome to Trellix Agent Portal
-            {currentUser?.role === 'admin' && (
-              <span className="ml-3 px-3 py-1 text-sm bg-primary text-primary-foreground rounded-full">
-                ADMIN
-              </span>
-            )}
+            Admin Portal
+            <span className="ml-3 px-3 py-1 text-sm bg-primary text-primary-foreground rounded-full">
+              ADMIN
+            </span>
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {availableAgents.map(([key, agent]) => (
-            <Card key={key} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
-              <CardHeader>
-                <div className="flex items-center space-x-3 mb-2">
-                  {agent.icon}
-                  <CardTitle className="text-xl text-card-foreground">
-                    {agent.name}
-                  </CardTitle>
-                </div>
-                <p className="text-muted-foreground">{agent.description}</p>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 mb-6 text-sm">
-                  {agent.features.map((feature, index) => (
-                    <li key={index} className="flex items-center space-x-2">
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
-                      <span className="text-muted-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button 
-                  onClick={() => handleDownload(key)}
-                  className="w-full"
-                  size="lg"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download {agent.name.split(' ')[0]}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Tabs defaultValue="downloads" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="downloads">Agent Downloads</TabsTrigger>
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="agents">Agent Management</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="downloads" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Object.entries(agentDownloads).map(([key, agent]) => (
+                <Card key={key} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+                  <CardHeader>
+                    <div className="flex items-center space-x-3 mb-2">
+                      {agent.icon}
+                      <CardTitle className="text-xl text-card-foreground">
+                        {agent.name}
+                      </CardTitle>
+                    </div>
+                    <p className="text-muted-foreground">{agent.description}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 mb-6 text-sm">
+                      {agent.features.map((feature, index) => (
+                        <li key={index} className="flex items-center space-x-2">
+                          <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
+                          <span className="text-muted-foreground">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
+                      onClick={() => handleDownload(key)}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download {agent.name.split(' ')[0]}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="agents">
+            <AgentManagement />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <AdminAnalytics />
+          </TabsContent>
+        </Tabs>
       </div>
     </section>
   );
