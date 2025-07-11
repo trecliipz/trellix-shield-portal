@@ -420,7 +420,7 @@ export const AnimatedArchitecture = () => {
   };
 
   return (
-    <section id="architecture" className="py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
+    <section id="architecture" className="py-20 gradient-bg relative overflow-hidden">
       {/* Technical Grid Background */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0" style={{

@@ -61,7 +61,7 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
 
   return (
     <>
-      <header className="fixed top-0 w-full bg-background/80 backdrop-blur-lg border-b border-border z-50">
+      <header className="fixed top-0 w-full glass-header z-50">
         <nav className="container mx-auto px-4 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <a href="#" className="text-2xl font-bold text-primary">
@@ -71,21 +71,24 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
             <div className="hidden md:flex space-x-8">
               <button 
                 onClick={() => scrollToSection('features')}
-                className="text-foreground hover:text-primary transition-colors"
+                className="text-foreground hover:text-primary transition-all duration-300 hover:scale-105 relative group"
               >
                 Features
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
               </button>
               <button 
                 onClick={() => scrollToSection('architecture')}
-                className="text-foreground hover:text-primary transition-colors"
+                className="text-foreground hover:text-primary transition-all duration-300 hover:scale-105 relative group"
               >
                 Architecture
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
               </button>
               
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center text-foreground hover:text-primary transition-colors">
+                <DropdownMenuTrigger className="flex items-center text-foreground hover:text-primary transition-all duration-300 hover:scale-105 relative group">
                   Documentation
-                  <ChevronDown className="ml-1 h-4 w-4" />
+                  <ChevronDown className="ml-1 h-4 w-4 transition-transform duration-300 group-hover:rotate-180" />
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
                   <DropdownMenuItem onClick={() => scrollToDocumentationSection('installation')}>
@@ -111,9 +114,10 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
               </DropdownMenu>
 
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center text-foreground hover:text-primary transition-colors">
+                <DropdownMenuTrigger className="flex items-center text-foreground hover:text-primary transition-all duration-300 hover:scale-105 relative group">
                   Support & Resources
-                  <ChevronDown className="ml-1 h-4 w-4" />
+                  <ChevronDown className="ml-1 h-4 w-4 transition-transform duration-300 group-hover:rotate-180" />
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
                   <DropdownMenuItem onClick={() => scrollToSupportSection('contact')}>
@@ -160,7 +164,7 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
                   <Button variant="outline" onClick={() => setAuthModalType('login')}>
                     Login
                   </Button>
-                  <Button onClick={() => setAuthModalType('register')}>
+                  <Button onClick={() => setAuthModalType('register')} className="glow-button">
                     Get Started
                   </Button>
                 </>

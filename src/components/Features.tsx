@@ -106,10 +106,10 @@ export const Features = () => {
           {features.map((feature, index) => (
             <Card 
               key={index} 
-              className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 text-center"
+              className="modern-card text-center group"
             >
               <CardContent className="p-6">
-                <div className="text-primary mb-4 flex justify-center">
+                <div className="text-primary mb-4 flex justify-center transition-all duration-300 group-hover:scale-110 group-hover:text-primary">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold text-card-foreground mb-3">
@@ -129,7 +129,7 @@ export const Features = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
           {securityUpdates.map((update, index) => (
-            <Card key={index} className="bg-card border-border hover:border-primary/30 transition-all duration-300">
+            <Card key={index} className="modern-card group">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl font-semibold text-card-foreground">
@@ -161,7 +161,7 @@ export const Features = () => {
                 
                 <div className="space-y-4">
                   {update.platforms.map((platform, platformIndex) => (
-                    <div key={platformIndex} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
+                    <div key={platformIndex} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] border border-transparent hover:border-primary/20">
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
                           {platform.icon}

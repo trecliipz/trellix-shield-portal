@@ -161,7 +161,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {availableAgents.map((agent, index) => (
-              <Card key={index} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+              <Card key={index} className="modern-card group">
                 <CardHeader>
                   <div className="flex items-center space-x-3 mb-2">
                     {agent.icon}
@@ -180,11 +180,11 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
                       </li>
                     ))}
                   </ul>
-                  <Button 
-                    onClick={() => handleDownload(index)}
-                    className="w-full"
-                    size="lg"
-                  >
+                    <Button 
+                      onClick={() => handleDownload(index)}
+                      className="glow-button w-full group-hover:scale-105 transition-all duration-300"
+                      size="lg"
+                    >
                     <Download className="h-4 w-4 mr-2" />
                     Download {agent.name.split(' ')[0]}
                   </Button>
@@ -211,22 +211,22 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
         </div>
 
         <Tabs defaultValue="downloads" className="w-full">
-          <TabsList className="flex w-full overflow-x-auto mb-8 h-auto p-1">
-            <TabsTrigger value="downloads" className="flex-shrink-0 px-4 py-2">Downloads</TabsTrigger>
-            <TabsTrigger value="users" className="flex-shrink-0 px-4 py-2">Users</TabsTrigger>
-            <TabsTrigger value="agents" className="flex-shrink-0 px-4 py-2">Agents</TabsTrigger>
-            <TabsTrigger value="dat" className="flex-shrink-0 px-4 py-2">Updates</TabsTrigger>
-            <TabsTrigger value="epo" className="flex-shrink-0 px-4 py-2">Trellix ePO</TabsTrigger>
-            <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2">Messages</TabsTrigger>
-            <TabsTrigger value="security" className="flex-shrink-0 px-4 py-2">Security</TabsTrigger>
-            <TabsTrigger value="audit" className="flex-shrink-0 px-4 py-2">Audit Log</TabsTrigger>
-            <TabsTrigger value="analytics" className="flex-shrink-0 px-4 py-2">Analytics</TabsTrigger>
+          <TabsList className="modern-tabs flex w-full overflow-x-auto mb-8 h-auto p-1 bg-card/50 backdrop-blur-sm rounded-xl border border-border/50">
+            <TabsTrigger value="downloads" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Downloads</TabsTrigger>
+            <TabsTrigger value="users" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Users</TabsTrigger>
+            <TabsTrigger value="agents" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Agents</TabsTrigger>
+            <TabsTrigger value="dat" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Updates</TabsTrigger>
+            <TabsTrigger value="epo" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Trellix ePO</TabsTrigger>
+            <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Messages</TabsTrigger>
+            <TabsTrigger value="security" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Security</TabsTrigger>
+            <TabsTrigger value="audit" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Audit Log</TabsTrigger>
+            <TabsTrigger value="analytics" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="downloads" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {dynamicAgents.map((agent, index) => (
-                <Card key={index} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+                <Card key={index} className="modern-card group">
                   <CardHeader>
                     <div className="flex items-center space-x-3 mb-2">
                       {agent.icon}
@@ -247,7 +247,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
                     </ul>
                     <Button 
                       onClick={() => handleDownload(index)}
-                      className="w-full"
+                      className="glow-button w-full group-hover:scale-105 transition-all duration-300"
                       size="lg"
                     >
                       <Download className="h-4 w-4 mr-2" />
