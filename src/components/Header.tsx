@@ -2,7 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "./AuthModal";
 import { ContactForm } from "./ContactForm";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   isLoggedIn: boolean;
@@ -19,6 +26,36 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const scrollToDocumentationSection = (subsection: string) => {
+    // First scroll to documentation section, then find the tab
+    const documentationElement = document.getElementById('documentation');
+    if (documentationElement) {
+      documentationElement.scrollIntoView({ behavior: 'smooth' });
+      // Small delay to ensure scroll happens first
+      setTimeout(() => {
+        const tabTrigger = document.querySelector(`[data-state="inactive"][value="${subsection}"]`) as HTMLElement;
+        if (tabTrigger) {
+          tabTrigger.click();
+        }
+      }, 300);
+    }
+  };
+
+  const scrollToSupportSection = (subsection: string) => {
+    // First scroll to support section, then find the tab
+    const supportElement = document.getElementById('support');
+    if (supportElement) {
+      supportElement.scrollIntoView({ behavior: 'smooth' });
+      // Small delay to ensure scroll happens first
+      setTimeout(() => {
+        const tabTrigger = document.querySelector(`[data-state="inactive"][value="${subsection}"]`) as HTMLElement;
+        if (tabTrigger) {
+          tabTrigger.click();
+        }
+      }, 300);
     }
   };
 
@@ -44,18 +81,59 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
               >
                 Architecture
               </button>
-              <button 
-                onClick={() => scrollToSection('support')}
-                className="text-foreground hover:text-primary transition-colors"
-              >
-                Support
-              </button>
-              <button 
-                onClick={() => scrollToSection('documentation')}
-                className="text-foreground hover:text-primary transition-colors"
-              >
-                Documentation
-              </button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center text-foreground hover:text-primary transition-colors">
+                  Documentation
+                  <ChevronDown className="ml-1 h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onClick={() => scrollToDocumentationSection('installation')}>
+                    Installation
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => scrollToDocumentationSection('api')}>
+                    API Docs
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => scrollToDocumentationSection('integration')}>
+                    Integration
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => scrollToDocumentationSection('best-practices')}>
+                    Best Practices
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => scrollToDocumentationSection('troubleshooting')}>
+                    Troubleshooting
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => scrollToDocumentationSection('downloads')}>
+                    Downloads
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center text-foreground hover:text-primary transition-colors">
+                  Support & Resources
+                  <ChevronDown className="ml-1 h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onClick={() => scrollToSupportSection('contact')}>
+                    Contact Support
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => scrollToSupportSection('knowledge')}>
+                    Knowledge Base
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => scrollToSupportSection('requirements')}>
+                    System Requirements
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => scrollToSupportSection('training')}>
+                    Training
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => scrollToSupportSection('community')}>
+                    Community
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="flex items-center space-x-4">
