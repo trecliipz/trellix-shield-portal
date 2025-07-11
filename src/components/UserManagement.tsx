@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Users, Search, UserCheck, UserX, Shield, UserPlus } from "lucide-react";
+import { Users, Search, UserCheck, UserX, Shield, UserPlus, Settings, Activity, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { BulkUserImport } from "@/components/BulkUserImport";
 
 interface User {
   id: string;
@@ -173,6 +174,17 @@ export const UserManagement = () => {
     setShowAddUser(false);
   };
 
+  const handleBulkImport = (importedUsers: User[]) => {
+    const existingUsers = [...users];
+    const newUsers = [...existingUsers, ...importedUsers];
+    saveUsers(newUsers);
+    
+    toast({
+      title: "Bulk Import Completed",
+      description: `${importedUsers.length} users have been imported successfully`,
+    });
+  };
+
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -230,70 +242,73 @@ export const UserManagement = () => {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>User Management</CardTitle>
-            <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-              <DialogTrigger asChild>
-                <Button>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add User
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New User</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="user@company.com"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    />
+            <div className="flex items-center space-x-2">
+              <BulkUserImport onUsersImported={handleBulkImport} />
+              <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="user@company.com"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input
+                        id="name"
+                        placeholder="John Doe"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="role">Role</Label>
+                      <Select
+                        value={newUser.role}
+                        onValueChange={(value: 'admin' | 'user') => setNewUser({ ...newUser, role: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex space-x-2 pt-4">
+                      <Button onClick={handleAddUser} className="flex-1">
+                        Create User
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setShowAddUser(false);
+                          setNewUser({ email: "", name: "", role: "user" });
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder="John Doe"
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="role">Role</Label>
-                    <Select
-                      value={newUser.role}
-                      onValueChange={(value: 'admin' | 'user') => setNewUser({ ...newUser, role: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex space-x-2 pt-4">
-                    <Button onClick={handleAddUser} className="flex-1">
-                      Create User
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setShowAddUser(false);
-                        setNewUser({ email: "", name: "", role: "user" });
-                      }}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <Search className="h-4 w-4 text-muted-foreground" />
@@ -324,14 +339,20 @@ export const UserManagement = () => {
                   <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                      {user.role}
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      {user.role === 'admin' ? <Shield className="h-3 w-3" /> : <Settings className="h-3 w-3" />}
+                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                        {user.role}
+                      </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
-                      {user.status}
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      {user.status === 'active' ? <Activity className="h-3 w-3 text-green-500" /> : <UserX className="h-3 w-3 text-red-500" />}
+                      <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
+                        {user.status}
+                      </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>{user.registrationDate}</TableCell>
                   <TableCell>{user.lastLogin}</TableCell>
@@ -393,6 +414,7 @@ export const UserManagement = () => {
                               onClick={() => selectedUser && handlePasswordReset(selectedUser.id)}
                               className="flex-1"
                             >
+                              <Key className="h-4 w-4 mr-2" />
                               Reset Password
                             </Button>
                           </div>

@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Shield, Database, FileCheck, RefreshCw } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Download, Shield, Database, FileCheck, RefreshCw, Monitor, Apple, Smartphone, Bell, DownloadCloud, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface SecurityUpdate {
@@ -192,6 +193,8 @@ const securityUpdates: SecurityUpdate[] = [
 
 export const DATManagement = () => {
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedUpdates, setSelectedUpdates] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState(3); // New updates count
 
   const handleDownload = (update: SecurityUpdate) => {
     const confirmDownload = window.confirm(
@@ -222,7 +225,63 @@ export const DATManagement = () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
     setRefreshing(false);
-    toast.success("Security updates refreshed successfully!");
+    // Simulate new updates found
+    setNotifications(Math.floor(Math.random() * 5) + 1);
+    toast.success("Security updates refreshed successfully!", {
+      description: "Found new updates available for download."
+    });
+  };
+
+  const handleBulkDownload = () => {
+    if (selectedUpdates.length === 0) {
+      toast.error("No updates selected", {
+        description: "Please select at least one update to download."
+      });
+      return;
+    }
+
+    const confirmDownload = window.confirm(
+      `Download ${selectedUpdates.length} selected updates?\n\nThis will download all selected security updates for all platforms.`
+    );
+
+    if (confirmDownload) {
+      selectedUpdates.forEach(updateId => {
+        const update = securityUpdates.find(u => u.id === updateId);
+        if (update) {
+          const link = document.createElement('a');
+          link.href = `data:application/octet-stream;base64,${btoa(`Trellix ${update.type} Package - ${update.platform} v${update.version}`)}`;
+          link.download = update.fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      });
+
+      toast.success(`Bulk download initiated!`, {
+        description: `${selectedUpdates.length} security updates are being downloaded.`,
+        duration: 7000,
+      });
+
+      setSelectedUpdates([]);
+    }
+  };
+
+  const handleSelectUpdate = (updateId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedUpdates([...selectedUpdates, updateId]);
+    } else {
+      setSelectedUpdates(selectedUpdates.filter(id => id !== updateId));
+    }
+  };
+
+  const handleSelectAll = (updates: SecurityUpdate[], checked: boolean) => {
+    if (checked) {
+      const newSelections = updates.map(u => u.id).filter(id => !selectedUpdates.includes(id));
+      setSelectedUpdates([...selectedUpdates, ...newSelections]);
+    } else {
+      const updateIds = updates.map(u => u.id);
+      setSelectedUpdates(selectedUpdates.filter(id => !updateIds.includes(id)));
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -243,73 +302,154 @@ export const DATManagement = () => {
     }
   };
 
+  const getPlatformIcon = (platform: string) => {
+    switch (platform) {
+      case 'Windows': return <Monitor className="h-4 w-4" />;
+      case 'macOS': return <Apple className="h-4 w-4" />;
+      case 'Linux': return <Smartphone className="h-4 w-4" />;
+      default: return <Monitor className="h-4 w-4" />;
+    }
+  };
+
   const datUpdates = securityUpdates.filter(u => u.type === 'DAT');
   const engineUpdates = securityUpdates.filter(u => u.type === 'Engine');
   const contentUpdates = securityUpdates.filter(u => u.type === 'Content');
 
-  const renderUpdatesTable = (updates: SecurityUpdate[]) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Platform</TableHead>
-          <TableHead>Version</TableHead>
-          <TableHead>Release Date</TableHead>
-          <TableHead>File Size</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {updates.map((update) => (
-          <TableRow key={update.id}>
-            <TableCell>
-              <div className="flex items-center space-x-2">
-                {getTypeIcon(update.type)}
-                <div>
-                  <div className="font-medium">{update.name}</div>
-                  <div className="text-xs text-muted-foreground">{update.description}</div>
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <Badge variant="outline">{update.platform}</Badge>
-            </TableCell>
-            <TableCell className="font-mono">{update.version}</TableCell>
-            <TableCell>{new Date(update.releaseDate).toLocaleDateString()}</TableCell>
-            <TableCell>{update.fileSize}</TableCell>
-            <TableCell>
-              {update.isRecommended && (
-                <Badge variant="default">Recommended</Badge>
-              )}
-            </TableCell>
-            <TableCell>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload(update)}
-              >
-                <Download className="h-4 w-4 mr-1" />
-                Download
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
+  const renderUpdatesTable = (updates: SecurityUpdate[]) => {
+    const isAllSelected = updates.every(u => selectedUpdates.includes(u.id));
+    const isSomeSelected = updates.some(u => selectedUpdates.includes(u.id));
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Checkbox
+              checked={isAllSelected}
+              onCheckedChange={(checked) => handleSelectAll(updates, checked as boolean)}
+              className="mr-2"
+            />
+            <span className="text-sm font-medium">
+              Select All ({selectedUpdates.filter(id => updates.find(u => u.id === id)).length} of {updates.length} selected)
+            </span>
+          </div>
+          {selectedUpdates.length > 0 && (
+            <Button
+              onClick={handleBulkDownload}
+              className="flex items-center space-x-2"
+            >
+              <DownloadCloud className="h-4 w-4" />
+              <span>Bulk Download ({selectedUpdates.length})</span>
+            </Button>
+          )}
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">Select</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Platform</TableHead>
+              <TableHead>Version</TableHead>
+              <TableHead>Release Date</TableHead>
+              <TableHead>File Size</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {updates.map((update) => (
+              <TableRow key={update.id} className={selectedUpdates.includes(update.id) ? "bg-muted/50" : ""}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedUpdates.includes(update.id)}
+                    onCheckedChange={(checked) => handleSelectUpdate(update.id, checked as boolean)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    {getTypeIcon(update.type)}
+                    <div>
+                      <div className="font-medium flex items-center space-x-2">
+                        <span>{update.name}</span>
+                        {new Date(update.releaseDate) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) && (
+                          <Badge variant="destructive" className="text-xs px-1 py-0">NEW</Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{update.description}</div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    {getPlatformIcon(update.platform)}
+                    <Badge variant="outline">{update.platform}</Badge>
+                  </div>
+                </TableCell>
+                <TableCell className="font-mono">{update.version}</TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-3 w-3 text-muted-foreground" />
+                    <span>{new Date(update.releaseDate).toLocaleDateString()}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="font-medium">{update.fileSize}</TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    {update.isRecommended && (
+                      <Badge variant="default" className="flex items-center space-x-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>Critical</span>
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDownload(update)}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-primary">Security Updates Management</h2>
-          <p className="text-muted-foreground">Download and manage latest security updates from Trellix</p>
+        <div className="flex items-center space-x-4">
+          <div>
+            <h2 className="text-2xl font-bold text-primary flex items-center space-x-3">
+              <span>Security Updates Management</span>
+              {notifications > 0 && (
+                <Badge variant="destructive" className="flex items-center space-x-1">
+                  <Bell className="h-3 w-3" />
+                  <span>{notifications} New</span>
+                </Badge>
+              )}
+            </h2>
+            <p className="text-muted-foreground">Download and manage latest security updates from Trellix</p>
+          </div>
         </div>
-        <Button onClick={handleRefresh} disabled={refreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh Updates'}
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Checking...' : 'Check Updates'}
+          </Button>
+          {selectedUpdates.length > 0 && (
+            <Button onClick={handleBulkDownload}>
+              <DownloadCloud className="h-4 w-4 mr-2" />
+              Download Selected ({selectedUpdates.length})
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
