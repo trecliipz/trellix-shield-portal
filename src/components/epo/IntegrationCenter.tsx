@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useAsync } from "@/hooks/useAsync";
@@ -18,13 +24,30 @@ import {
   Activity,
   Webhook,
   Cloud,
-  Server
+  Server,
+  Copy,
+  Key,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export const IntegrationCenter = () => {
   const { toast } = useToast();
   const { confirm, ConfirmDialog } = useConfirm();
   const { loading: operationLoading, execute } = useAsync();
+
+  // State management
+  const [apiSettingsOpen, setApiSettingsOpen] = useState(false);
+  const [integrationConfigOpen, setIntegrationConfigOpen] = useState(false);
+  const [webhookCreateOpen, setWebhookCreateOpen] = useState(false);
+  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState([
+    { id: 'key1', name: 'Production API Key', key: 'epo_prod_abc123...', created: '2024-01-15', lastUsed: '2 hours ago', status: 'active' },
+    { id: 'key2', name: 'Development API Key', key: 'epo_dev_xyz789...', created: '2024-01-10', lastUsed: '1 day ago', status: 'active' }
+  ]);
+  const [showApiKey, setShowApiKey] = useState<string | null>(null);
   // Mock integration data
   const activeIntegrations = [
     {
@@ -195,24 +218,66 @@ export const IntegrationCenter = () => {
   };
 
   const handleAPISettings = () => {
-    toast({
-      title: "API Settings",
-      description: "API management interface would open here.",
-    });
+    setApiSettingsOpen(true);
   };
 
   const handleNewIntegration = () => {
-    toast({
-      title: "New Integration",
-      description: "Integration setup wizard would open here.",
-    });
+    setIntegrationConfigOpen(true);
+    setSelectedIntegration(null);
   };
 
   const handleConfigureIntegration = (integrationId: string) => {
+    setSelectedIntegration(integrationId);
+    setIntegrationConfigOpen(true);
+  };
+
+  const handleGenerateApiKey = async () => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const newKey = {
+        id: `key${Date.now()}`,
+        name: `API Key ${apiKeys.length + 1}`,
+        key: `epo_${Math.random().toString(36).substr(2, 12)}...`,
+        created: new Date().toISOString().split('T')[0],
+        lastUsed: 'Never',
+        status: 'active'
+      };
+      setApiKeys([...apiKeys, newKey]);
+      toast({
+        title: "API Key Generated",
+        description: "New API key has been created successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate API key. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopyApiKey = (key: string) => {
+    navigator.clipboard.writeText(key);
     toast({
-      title: "Configure Integration",
-      description: `Configuring integration ${integrationId}.`,
+      title: "Copied",
+      description: "API key copied to clipboard.",
     });
+  };
+
+  const handleRevokeApiKey = async (keyId: string) => {
+    const confirmed = await confirm({
+      title: "Revoke API Key",
+      description: "Are you sure you want to revoke this API key? This action cannot be undone.",
+      confirmText: "Revoke"
+    });
+
+    if (confirmed) {
+      setApiKeys(apiKeys.filter(key => key.id !== keyId));
+      toast({
+        title: "API Key Revoked",
+        description: "The API key has been revoked successfully.",
+      });
+    }
   };
 
   const handleTestIntegration = async (integrationId: string) => {
@@ -269,11 +334,381 @@ export const IntegrationCenter = () => {
   };
 
   const handleCreateWebhook = () => {
-    toast({
-      title: "Create Webhook",
-      description: "Webhook creation wizard would open here.",
-    });
+    setWebhookCreateOpen(true);
   };
+
+  // API Settings Dialog Component
+  const APISettingsDialog = () => (
+    <Dialog open={apiSettingsOpen} onOpenChange={setApiSettingsOpen}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>API Settings</DialogTitle>
+          <DialogDescription>
+            Manage API keys, configure rate limits, and monitor API usage
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Tabs defaultValue="keys" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="keys">API Keys</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="usage">Usage</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="keys" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">API Keys</h3>
+              <Button onClick={handleGenerateApiKey} disabled={operationLoading}>
+                <Key className="h-4 w-4 mr-2" />
+                Generate New Key
+              </Button>
+            </div>
+
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Key</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Last Used</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {apiKeys.map((key) => (
+                    <TableRow key={key.id}>
+                      <TableCell className="font-medium">{key.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <code className="text-sm">
+                            {showApiKey === key.id ? key.key : key.key.replace(/./g, '•')}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowApiKey(showApiKey === key.id ? null : key.id)}
+                          >
+                            {showApiKey === key.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyApiKey(key.key)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>{key.created}</TableCell>
+                      <TableCell>{key.lastUsed}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-green-100 text-green-800">{key.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRevokeApiKey(key.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="rate-limit">Rate Limit (requests/minute)</Label>
+                <Input id="rate-limit" defaultValue="1000" type="number" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="timeout">Request Timeout (seconds)</Label>
+                <Input id="timeout" defaultValue="30" type="number" />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="api-logging" defaultChecked />
+              <Label htmlFor="api-logging">Enable API request logging</Label>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="usage" className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Today's Requests</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">12,847</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Success Rate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">99.2%</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Avg Response</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">143ms</div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Integration Configuration Dialog Component
+  const IntegrationConfigDialog = () => (
+    <Dialog open={integrationConfigOpen} onOpenChange={setIntegrationConfigOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {selectedIntegration ? 'Configure Integration' : 'New Integration'}
+          </DialogTitle>
+          <DialogDescription>
+            {selectedIntegration 
+              ? 'Update integration settings and connection parameters'
+              : 'Set up a new integration with external systems'
+            }
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="integration-name">Integration Name</Label>
+              <Input 
+                id="integration-name" 
+                placeholder="Enter integration name"
+                defaultValue={selectedIntegration ? "Splunk SIEM" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="integration-type">Type</Label>
+              <Select defaultValue={selectedIntegration ? "SIEM" : ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select integration type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SIEM">SIEM</SelectItem>
+                  <SelectItem value="ITSM">ITSM</SelectItem>
+                  <SelectItem value="SOAR">SOAR</SelectItem>
+                  <SelectItem value="Alerting">Alerting</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="endpoint-url">Endpoint URL</Label>
+            <Input 
+              id="endpoint-url" 
+              placeholder="https://api.example.com/webhook"
+              defaultValue={selectedIntegration ? "https://splunk.company.com/api" : ""}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="auth-method">Authentication Method</Label>
+              <Select defaultValue="api-key">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="api-key">API Key</SelectItem>
+                  <SelectItem value="oauth">OAuth 2.0</SelectItem>
+                  <SelectItem value="basic">Basic Auth</SelectItem>
+                  <SelectItem value="bearer">Bearer Token</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sync-frequency">Sync Frequency</Label>
+              <Select defaultValue="real-time">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="real-time">Real-time</SelectItem>
+                  <SelectItem value="5min">Every 5 minutes</SelectItem>
+                  <SelectItem value="15min">Every 15 minutes</SelectItem>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="api-credentials">API Key/Token</Label>
+            <Input 
+              id="api-credentials" 
+              type="password"
+              placeholder="Enter API key or token"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Event Filters</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {['Critical Threats', 'Policy Violations', 'System Alerts', 'Compliance Events', 'User Activities', 'Network Events'].map((event) => (
+                <div key={event} className="flex items-center space-x-2">
+                  <Checkbox id={event} defaultChecked />
+                  <Label htmlFor={event} className="text-sm">{event}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIntegrationConfigOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={async () => {
+            await execute(() => new Promise(resolve => setTimeout(resolve, 1500)));
+            setIntegrationConfigOpen(false);
+            toast({
+              title: "Integration Saved",
+              description: selectedIntegration ? "Integration updated successfully." : "New integration created successfully.",
+            });
+          }}>
+            {selectedIntegration ? 'Update' : 'Create'} Integration
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Webhook Creation Dialog Component
+  const WebhookCreateDialog = () => (
+    <Dialog open={webhookCreateOpen} onOpenChange={setWebhookCreateOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Create Webhook</DialogTitle>
+          <DialogDescription>
+            Configure a webhook to receive real-time notifications from ePO
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="webhook-name">Webhook Name</Label>
+            <Input 
+              id="webhook-name" 
+              placeholder="Enter webhook name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="webhook-url">Webhook URL</Label>
+            <Input 
+              id="webhook-url" 
+              placeholder="https://your-api.com/webhook"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Event Types</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                'Critical Threats Detected',
+                'Policy Violations',
+                'System Health Alerts',
+                'Agent Status Changes',
+                'Compliance Violations',
+                'Scheduled Task Results',
+                'User Authentication Events',
+                'Network Anomalies'
+              ].map((event) => (
+                <div key={event} className="flex items-center space-x-2">
+                  <Checkbox id={event} />
+                  <Label htmlFor={event} className="text-sm">{event}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="webhook-secret">Webhook Secret (Optional)</Label>
+            <Input 
+              id="webhook-secret" 
+              type="password"
+              placeholder="Enter secret for payload signing"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="retry-attempts">Retry Attempts</Label>
+              <Select defaultValue="3">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timeout">Timeout (seconds)</Label>
+              <Input 
+                id="timeout" 
+                type="number"
+                defaultValue="30"
+                min="5"
+                max="300"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="custom-headers">Custom Headers (JSON)</Label>
+            <Textarea 
+              id="custom-headers"
+              placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setWebhookCreateOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={async () => {
+            await execute(() => new Promise(resolve => setTimeout(resolve, 1500)));
+            setWebhookCreateOpen(false);
+            toast({
+              title: "Webhook Created",
+              description: "New webhook has been configured successfully.",
+            });
+          }}>
+            Create Webhook
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="space-y-6">
@@ -558,7 +993,8 @@ export const IntegrationCenter = () => {
                       <label className="text-sm font-medium">Rate Limiting</label>
                       <div className="text-sm">1000 requests/hour per key</div>
                     </div>
-                    <Button className="w-full">
+                    <Button className="w-full" onClick={handleGenerateApiKey} disabled={operationLoading}>
+                      <Key className="h-4 w-4 mr-2" />
                       Generate API Key
                     </Button>
                   </CardContent>
@@ -635,6 +1071,9 @@ export const IntegrationCenter = () => {
         </CardContent>
       </Card>
       <ConfirmDialog />
+      <APISettingsDialog />
+      <IntegrationConfigDialog />
+      <WebhookCreateDialog />
     </div>
   );
 };
