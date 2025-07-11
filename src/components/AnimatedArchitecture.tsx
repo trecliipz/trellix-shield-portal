@@ -84,6 +84,166 @@ const packetLabels = {
   update: 'Signature Update'
 };
 
+// Mechanism-specific technical details
+const mechanismDetails = {
+  monitoring: {
+    agent: {
+      name: "REAL-TIME MONITOR",
+      features: [
+        { icon: Activity, label: "HEARTBEAT_INTERVAL", value: "5s", status: "active" },
+        { icon: Wifi, label: "STATUS_CHECK", value: "HTTP/HTTPS", status: "ready" },
+        { icon: Monitor, label: "HEALTH_METRICS", value: "CPU/MEM/DISK", status: "monitoring" }
+      ]
+    },
+    epo: {
+      name: "MONITORING CENTER",
+      features: [
+        { icon: Database, label: "AGENT_STATUS", value: "2,847 ONLINE", status: "active" },
+        { icon: Network, label: "LATENCY_AVG", value: "12ms", status: "optimal" },
+        { icon: Shield, label: "CONNECTION_COUNT", value: "Active: 156", status: "normal" }
+      ]
+    },
+    cloud: {
+      name: "TELEMETRY HUB",
+      features: [
+        { icon: Zap, label: "DATA_INGESTION", value: "1.2GB/hr", status: "streaming" },
+        { icon: Activity, label: "ANALYTICS_ENGINE", value: "ML PROCESSING", status: "learning" },
+        { icon: Database, label: "STORAGE_TIER", value: "HOT: 45TB", status: "available" }
+      ]
+    }
+  },
+  threat: {
+    agent: {
+      name: "THREAT SCANNER",
+      features: [
+        { icon: Shield, label: "ON_ACCESS_SCAN", value: "ENABLED", status: "active" },
+        { icon: Activity, label: "BEHAVIORAL_AI", value: "HEURISTIC", status: "detecting" },
+        { icon: Zap, label: "QUARANTINE_RATE", value: "0.03%", status: "normal" }
+      ]
+    },
+    epo: {
+      name: "THREAT COORDINATION",
+      features: [
+        { icon: Database, label: "SIGNATURE_VER", value: "v4.2.1105", status: "current" },
+        { icon: Network, label: "FALSE_POSITIVE", value: "0.001%", status: "optimal" },
+        { icon: Shield, label: "RESPONSE_TIME", value: "< 50ms", status: "fast" }
+      ]
+    },
+    cloud: {
+      name: "THREAT INTELLIGENCE",
+      features: [
+        { icon: Zap, label: "GLOBAL_THREATS", value: "2.1M/day", status: "analyzing" },
+        { icon: Activity, label: "ML_MODELS", value: "47 ACTIVE", status: "training" },
+        { icon: Database, label: "IOC_DATABASE", value: "450M entries", status: "updated" }
+      ]
+    }
+  },
+  policy: {
+    agent: {
+      name: "POLICY ENFORCER",
+      features: [
+        { icon: Shield, label: "POLICY_VERSION", value: "v12.4.0", status: "enforced" },
+        { icon: Activity, label: "COMPLIANCE_CHK", value: "PASSING", status: "compliant" },
+        { icon: Monitor, label: "OVERRIDE_COUNT", value: "0 incidents", status: "clean" }
+      ]
+    },
+    epo: {
+      name: "POLICY ENGINE",
+      features: [
+        { icon: Database, label: "DEPLOY_METHOD", value: "PUSH/PULL", status: "hybrid" },
+        { icon: Network, label: "CONFIG_TEMPLATES", value: "84 active", status: "managed" },
+        { icon: Zap, label: "RULE_EXECUTION", value: "PRIORITY", status: "ordered" }
+      ]
+    },
+    cloud: {
+      name: "GOVERNANCE CLOUD",
+      features: [
+        { icon: Activity, label: "POLICY_SYNC", value: "REALTIME", status: "synced" },
+        { icon: Database, label: "COMPLIANCE_DB", value: "SOX/GDPR/PCI", status: "certified" },
+        { icon: Shield, label: "AUDIT_TRAIL", value: "IMMUTABLE", status: "logged" }
+      ]
+    }
+  },
+  signatures: {
+    agent: {
+      name: "UPDATE CLIENT",
+      features: [
+        { icon: Database, label: "UPDATE_FREQ", value: "4x daily", status: "scheduled" },
+        { icon: Activity, label: "DELTA_UPDATES", value: "ENABLED", status: "efficient" },
+        { icon: Shield, label: "ROLLBACK_CAP", value: "3 versions", status: "safe" }
+      ]
+    },
+    epo: {
+      name: "UPDATE SERVER",
+      features: [
+        { icon: Network, label: "BANDWIDTH_OPT", value: "ADAPTIVE", status: "optimized" },
+        { icon: Database, label: "SIG_DATABASE", value: "15.2GB", status: "current" },
+        { icon: Zap, label: "DISTRIBUTION", value: "STAGED", status: "controlled" }
+      ]
+    },
+    cloud: {
+      name: "SIGNATURE FORGE",
+      features: [
+        { icon: Activity, label: "SIG_GENERATION", value: "24/7", status: "continuous" },
+        { icon: Database, label: "THREAT_SAMPLES", value: "1.8M/day", status: "processing" },
+        { icon: Shield, label: "QUALITY_GATE", value: "99.98%", status: "verified" }
+      ]
+    }
+  },
+  correlation: {
+    agent: {
+      name: "EVENT COLLECTOR",
+      features: [
+        { icon: Activity, label: "LOG_RATE", value: "450 eps", status: "collecting" },
+        { icon: Database, label: "BUFFER_SIZE", value: "2MB local", status: "buffering" },
+        { icon: Network, label: "SIEM_FORWARD", value: "SYSLOG/CEF", status: "forwarding" }
+      ]
+    },
+    epo: {
+      name: "CORRELATION ENGINE",
+      features: [
+        { icon: Zap, label: "EVENT_PRIORITY", value: "5-TIER", status: "prioritizing" },
+        { icon: Shield, label: "INCIDENT_TRIG", value: "AUTOMATED", status: "responsive" },
+        { icon: Database, label: "FORENSIC_RET", value: "90 days", status: "retained" }
+      ]
+    },
+    cloud: {
+      name: "ANALYTICS PLATFORM",
+      features: [
+        { icon: Activity, label: "PATTERN_DETECT", value: "AI/ML", status: "learning" },
+        { icon: Database, label: "DATA_LAKE", value: "PETABYTE", status: "scalable" },
+        { icon: Network, label: "API_ENDPOINTS", value: "REST/GraphQL", status: "integrated" }
+      ]
+    }
+  },
+  protection: {
+    agent: {
+      name: "NETWORK FIREWALL",
+      features: [
+        { icon: Shield, label: "FIREWALL_RULES", value: "1,247 active", status: "filtering" },
+        { icon: Activity, label: "WEB_FILTERING", value: "20 categories", status: "blocking" },
+        { icon: Network, label: "IPS_SIGNATURES", value: "47,892", status: "detecting" }
+      ]
+    },
+    epo: {
+      name: "PROTECTION ORCHESTRATOR",
+      features: [
+        { icon: Database, label: "TRAFFIC_ANALYSIS", value: "DEEP PACKET", status: "inspecting" },
+        { icon: Zap, label: "BLOCK_STATISTICS", value: "2.1K/hr", status: "protecting" },
+        { icon: Monitor, label: "BANDWIDTH_MON", value: "85% util", status: "monitoring" }
+      ]
+    },
+    cloud: {
+      name: "THREAT PREVENTION",
+      features: [
+        { icon: Activity, label: "URL_REPUTATION", value: "GLOBAL DB", status: "checking" },
+        { icon: Shield, label: "DNS_FILTERING", value: "MALICIOUS", status: "blocking" },
+        { icon: Database, label: "IP_BLACKLIST", value: "25M entries", status: "maintained" }
+      ]
+    }
+  }
+};
+
 export const AnimatedArchitecture = () => {
   const [currentScenario, setCurrentScenario] = useState<keyof typeof communicationScenarios>('monitoring');
   const [activePackets, setActivePackets] = useState<DataPacket[]>([]);
@@ -210,41 +370,49 @@ export const AnimatedArchitecture = () => {
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-network-pulse" />
                 </div>
                 <h4 className="text-xl font-semibold text-card-foreground mb-2 font-mono">
-                  ENDPOINT DEVICES
+                  {mechanismDetails[currentScenario].agent.name}
                 </h4>
                 <p className="text-muted-foreground mb-4 text-xs uppercase tracking-wider">
                   Workstations • Laptops • Servers
                 </p>
                 
-                {/* Technical Status Display */}
+                {/* Dynamic Technical Status Display */}
                 <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="w-3 h-3 text-emerald-400" />
-                      <span className="font-mono">TRELLIX_AGENT</span>
-                    </div>
-                    <div className="flex space-x-1">
-                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-data-packet" />
-                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-data-packet" style={{ animationDelay: '0.3s' }} />
-                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-data-packet" style={{ animationDelay: '0.6s' }} />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Activity className="w-3 h-3 text-blue-400" />
-                      <span className="font-mono">ENS_PROTECTION</span>
-                    </div>
-                    <span className="text-emerald-400 font-mono text-xs">ACTIVE</span>
-                  </div>
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Wifi className="w-3 h-3 text-trellix-orange" />
-                      <span className="font-mono">MONITORING</span>
-                    </div>
-                    <div className="w-12 h-1 bg-background rounded overflow-hidden">
-                      <div className="h-full bg-trellix-orange animate-flow-right" />
-                    </div>
-                  </div>
+                  {mechanismDetails[currentScenario].agent.features.map((feature, index) => {
+                    const IconComponent = feature.icon;
+                    const statusColors = {
+                      active: 'text-emerald-400',
+                      ready: 'text-blue-400',
+                      monitoring: 'text-trellix-orange',
+                      detecting: 'text-yellow-400',
+                      normal: 'text-emerald-400',
+                      enforced: 'text-purple-400',
+                      compliant: 'text-emerald-400',
+                      clean: 'text-green-400',
+                      scheduled: 'text-blue-400',
+                      efficient: 'text-emerald-400',
+                      safe: 'text-green-400',
+                      collecting: 'text-trellix-orange',
+                      buffering: 'text-yellow-400',
+                      forwarding: 'text-blue-400',
+                      filtering: 'text-red-400',
+                      blocking: 'text-red-500',
+                      optimal: 'text-emerald-400',
+                      fast: 'text-green-400'
+                    };
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
+                        <div className="flex items-center space-x-2">
+                          <IconComponent className={`w-3 h-3 ${statusColors[feature.status] || 'text-muted-foreground'}`} />
+                          <span className="font-mono text-xs">{feature.label}</span>
+                        </div>
+                        <span className={`font-mono text-xs ${statusColors[feature.status] || 'text-muted-foreground'}`}>
+                          {feature.value}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -282,42 +450,47 @@ export const AnimatedArchitecture = () => {
                   <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-emerald-400 rounded-full animate-network-pulse" />
                 </div>
                 <h4 className="text-xl font-semibold text-card-foreground mb-2 font-mono">
-                  EPO SERVER
+                  {mechanismDetails[currentScenario].epo.name}
                 </h4>
                 <p className="text-muted-foreground mb-4 text-xs uppercase tracking-wider">
                   Central Management Console
                 </p>
                 
-                {/* Server Metrics */}
+                {/* Dynamic Server Metrics */}
                 <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Database className="w-3 h-3 text-blue-400" />
-                      <span className="font-mono">POLICY_ENGINE</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <div className="w-8 h-1 bg-background rounded overflow-hidden">
-                        <div className="h-full bg-blue-400 animate-flow-right" style={{ animationDelay: '0.3s' }} />
+                  {mechanismDetails[currentScenario].epo.features.map((feature, index) => {
+                    const IconComponent = feature.icon;
+                    const statusColors = {
+                      active: 'text-emerald-400',
+                      optimal: 'text-emerald-400',
+                      normal: 'text-blue-400',
+                      current: 'text-green-400',
+                      fast: 'text-green-400',
+                      hybrid: 'text-purple-400',
+                      managed: 'text-blue-400',
+                      ordered: 'text-trellix-orange',
+                      optimized: 'text-emerald-400',
+                      controlled: 'text-blue-400',
+                      prioritizing: 'text-yellow-400',
+                      responsive: 'text-emerald-400',
+                      retained: 'text-blue-400',
+                      inspecting: 'text-trellix-orange',
+                      protecting: 'text-red-400',
+                      monitoring: 'text-blue-400'
+                    };
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
+                        <div className="flex items-center space-x-2">
+                          <IconComponent className={`w-3 h-3 ${statusColors[feature.status] || 'text-muted-foreground'}`} />
+                          <span className="font-mono text-xs">{feature.label}</span>
+                        </div>
+                        <span className={`font-mono text-xs ${statusColors[feature.status] || 'text-muted-foreground'}`}>
+                          {feature.value}
+                        </span>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Network className="w-3 h-3 text-emerald-400" />
-                      <span className="font-mono">AGENT_DEPLOY</span>
-                    </div>
-                    <span className="text-emerald-400 font-mono">READY</span>
-                  </div>
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Zap className="w-3 h-3 text-yellow-400" />
-                      <span className="font-mono">THREAT_INTEL</span>
-                    </div>
-                    <div className="flex space-x-1">
-                      <div className="w-1 h-1 bg-yellow-400 rounded-full animate-data-packet" style={{ animationDelay: '0.8s' }} />
-                      <div className="w-1 h-1 bg-yellow-400 rounded-full animate-data-packet" style={{ animationDelay: '1.1s' }} />
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -360,44 +533,48 @@ export const AnimatedArchitecture = () => {
                   <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-red-400 rounded-full animate-data-packet" />
                 </div>
                 <h4 className="text-xl font-semibold text-card-foreground mb-2 font-mono">
-                  TRELLIX CLOUD
+                  {mechanismDetails[currentScenario].cloud.name}
                 </h4>
                 <p className="text-muted-foreground mb-4 text-xs uppercase tracking-wider">
                   Global Threat Intelligence
                 </p>
                 
-                {/* Cloud Services Status */}
+                {/* Dynamic Cloud Services Status */}
                 <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="w-3 h-3 text-emerald-400" />
-                      <span className="font-mono">SIGNATURES</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <span className="text-emerald-400 font-mono text-xs">99.9%</span>
-                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-data-packet" style={{ animationDelay: '0.7s' }} />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Activity className="w-3 h-3 text-blue-400" />
-                      <span className="font-mono">ANALYTICS</span>
-                    </div>
-                    <div className="w-12 h-1 bg-background rounded overflow-hidden">
-                      <div className="h-full bg-blue-400 animate-circuit-trace" style={{ animationDelay: '1.2s' }} />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
-                    <div className="flex items-center space-x-2">
-                      <Zap className="w-3 h-3 text-red-400" />
-                      <span className="font-mono">RESEARCH</span>
-                    </div>
-                    <div className="flex space-x-1">
-                      <div className="w-1 h-1 bg-red-400 rounded-full animate-data-packet" style={{ animationDelay: '1.7s' }} />
-                      <div className="w-1 h-1 bg-red-400 rounded-full animate-data-packet" style={{ animationDelay: '2s' }} />
-                      <div className="w-1 h-1 bg-red-400 rounded-full animate-data-packet" style={{ animationDelay: '2.3s' }} />
-                    </div>
-                  </div>
+                  {mechanismDetails[currentScenario].cloud.features.map((feature, index) => {
+                    const IconComponent = feature.icon;
+                    const statusColors = {
+                      streaming: 'text-blue-400',
+                      learning: 'text-purple-400',
+                      available: 'text-emerald-400',
+                      analyzing: 'text-yellow-400',
+                      training: 'text-purple-400',
+                      updated: 'text-emerald-400',
+                      synced: 'text-emerald-400',
+                      certified: 'text-green-400',
+                      logged: 'text-blue-400',
+                      continuous: 'text-trellix-orange',
+                      processing: 'text-yellow-400',
+                      verified: 'text-emerald-400',
+                      scalable: 'text-blue-400',
+                      integrated: 'text-purple-400',
+                      checking: 'text-blue-400',
+                      blocking: 'text-red-400',
+                      maintained: 'text-emerald-400'
+                    };
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between bg-background/50 rounded px-2 py-1">
+                        <div className="flex items-center space-x-2">
+                          <IconComponent className={`w-3 h-3 ${statusColors[feature.status] || 'text-muted-foreground'}`} />
+                          <span className="font-mono text-xs">{feature.label}</span>
+                        </div>
+                        <span className={`font-mono text-xs ${statusColors[feature.status] || 'text-muted-foreground'}`}>
+                          {feature.value}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
