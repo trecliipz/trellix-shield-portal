@@ -30,9 +30,9 @@ const securityUpdates = [
     type: "DAT V3 Definition Files",
     urgency: "critical",
     platforms: [
-      { name: "Windows", version: "v3.1234.5678", date: "Jan 11, 2025", size: "45.2 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
-      { name: "macOS", version: "v3.1234.5678", date: "Jan 11, 2025", size: "42.8 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
-      { name: "Linux", version: "v3.1234.5678", date: "Jan 11, 2025", size: "48.1 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
+      { name: "Windows", version: "3.1456.7890", date: "Jan 11, 2025", size: "45.2 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
+      { name: "macOS", version: "3.1456.7890", date: "Jan 11, 2025", size: "42.8 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
+      { name: "Linux", version: "3.1456.7890", date: "Jan 11, 2025", size: "48.1 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
     ],
     description: "Latest DAT V3 definition files with enhanced machine learning detection patterns and behavioral analysis.",
     frequency: "Daily updates"
@@ -41,9 +41,9 @@ const securityUpdates = [
     type: "MEDDAT Mobile Endpoint",
     urgency: "important",
     platforms: [
-      { name: "Windows", version: "MEDDAT.2024.11.15", date: "Jan 10, 2025", size: "28.5 MB", icon: <Monitor className="h-4 w-4" />, status: "updated" },
-      { name: "macOS", version: "MEDDAT.2024.11.15", date: "Jan 10, 2025", size: "24.8 MB", icon: <Apple className="h-4 w-4" />, status: "updated" },
-      { name: "Linux", version: "MEDDAT.2024.11.15", date: "Jan 10, 2025", size: "31.2 MB", icon: <Smartphone className="h-4 w-4" />, status: "updated" }
+      { name: "Windows", version: "2025.01.11.001", date: "Jan 11, 2025", size: "28.5 MB", icon: <Monitor className="h-4 w-4" />, status: "updated" },
+      { name: "macOS", version: "2025.01.11.001", date: "Jan 11, 2025", size: "24.8 MB", icon: <Apple className="h-4 w-4" />, status: "updated" },
+      { name: "Linux", version: "2025.01.11.001", date: "Jan 11, 2025", size: "31.2 MB", icon: <Smartphone className="h-4 w-4" />, status: "updated" }
     ],
     description: "Mobile and endpoint detection files for advanced threat hunting and mobile device security.",
     frequency: "Weekly updates"
@@ -52,9 +52,9 @@ const securityUpdates = [
     type: "Security Engines",
     urgency: "important",
     platforms: [
-      { name: "Windows", version: "6810", date: "Jun 30, 2025", size: "8.35 MB", icon: <Monitor className="h-4 w-4" />, status: "stable" },
-      { name: "macOS", version: "6810", date: "Jun 30, 2025", size: "7.14 MB", icon: <Apple className="h-4 w-4" />, status: "stable" },
-      { name: "Linux", version: "6810", date: "Jun 30, 2025", size: "10.8 MB", icon: <Smartphone className="h-4 w-4" />, status: "stable" }
+      { name: "Windows", version: "6912.1000", date: "Jan 10, 2025", size: "8.35 MB", icon: <Monitor className="h-4 w-4" />, status: "stable" },
+      { name: "macOS", version: "6912.1000", date: "Jan 10, 2025", size: "7.14 MB", icon: <Apple className="h-4 w-4" />, status: "stable" },
+      { name: "Linux", version: "6912.1000", date: "Jan 10, 2025", size: "10.8 MB", icon: <Smartphone className="h-4 w-4" />, status: "stable" }
     ],
     description: "Core scanning engines with enhanced detection capabilities and performance improvements.",
     frequency: "Monthly updates"
@@ -63,9 +63,9 @@ const securityUpdates = [
     type: "TIE Threat Intelligence",
     urgency: "critical",
     platforms: [
-      { name: "Windows", version: "TIE.2025.01.11", date: "Jan 11, 2025", size: "85.3 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
-      { name: "macOS", version: "TIE.2025.01.11", date: "Jan 11, 2025", size: "76.8 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
-      { name: "Linux", version: "TIE.2025.01.11", date: "Jan 11, 2025", size: "82.1 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
+      { name: "Windows", version: "7.2.1.456", date: "Jan 11, 2025", size: "85.3 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
+      { name: "macOS", version: "7.2.1.456", date: "Jan 11, 2025", size: "76.8 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
+      { name: "Linux", version: "7.2.1.456", date: "Jan 11, 2025", size: "82.1 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
     ],
     description: "Threat Intelligence Exchange content with global reputation data and file intelligence services.",
     frequency: "Real-time updates"
@@ -74,9 +74,9 @@ const securityUpdates = [
     type: "Exploit Prevention Content",
     urgency: "critical",
     platforms: [
-      { name: "Windows", version: "EP.2025.01.10", date: "Jan 10, 2025", size: "156.7 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
-      { name: "macOS", version: "EP.2025.01.10", date: "Jan 10, 2025", size: "124.3 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
-      { name: "Linux", version: "EP.2025.01.10", date: "Jan 10, 2025", size: "143.9 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
+      { name: "Windows", version: "12.8.2025.0111", date: "Jan 11, 2025", size: "156.7 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
+      { name: "macOS", version: "12.8.2025.0111", date: "Jan 11, 2025", size: "124.3 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
+      { name: "Linux", version: "12.8.2025.0111", date: "Jan 11, 2025", size: "143.9 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
     ],
     description: "Advanced exploit prevention signatures and behavioral rules for comprehensive endpoint protection.",
     frequency: "As needed"
@@ -169,7 +169,7 @@ export const Features = () => {
                         </div>
                       </div>
                       <div className="flex flex-col text-right">
-                        <span className="text-xs text-muted-foreground font-mono">v{platform.version}</span>
+                        <span className="text-xs text-muted-foreground font-mono">{platform.version}</span>
                         <span className="text-xs text-muted-foreground">{platform.date}</span>
                         <span className="text-xs text-muted-foreground font-medium">{platform.size}</span>
                       </div>
