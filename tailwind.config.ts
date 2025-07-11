@@ -61,7 +61,18 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				trellix: {
+					orange: 'hsl(var(--trellix-orange))',
+					'orange-hover': 'hsl(var(--trellix-orange-hover))',
+					dark: 'hsl(var(--trellix-dark))',
+					darker: 'hsl(var(--trellix-darker))'
 				}
+			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-hero': 'var(--gradient-hero)',
+				'gradient-card': 'var(--gradient-card)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
