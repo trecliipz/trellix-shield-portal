@@ -188,6 +188,44 @@ const securityUpdates: SecurityUpdate[] = [
     fileName: 'exploit-prevention-20250110-lnx.zip',
     sha256: 'B8A9C0D1E2F3G4H5I6J7K8L9M0N1O2P3Q4R5S6T7U8V9W0X1Y2Z3A4B5C6D7E8F9',
     description: 'Comprehensive exploit prevention for Linux environments and containers.'
+  },
+  // AMCore Content Package
+  {
+    id: '14',
+    name: 'AMCore Content Package',
+    type: 'Content',
+    platform: 'Windows',
+    version: '5947.0',
+    releaseDate: '2025-01-11',
+    fileSize: '92.4 MB',
+    fileName: 'amcore-5947-win.zip',
+    sha256: 'C9D8E7F6A5B4932176543A8B7C6D5E4F321098ABCDEF9876543210FEDCBA0987',
+    description: 'Enhanced malware detection patterns and behavioral analysis for Windows.',
+    isRecommended: true
+  },
+  {
+    id: '15',
+    name: 'AMCore Content Package',
+    type: 'Content',
+    platform: 'macOS',
+    version: '5947.0',
+    releaseDate: '2025-01-11',
+    fileSize: '87.2 MB',
+    fileName: 'amcore-5947-mac.zip',
+    sha256: 'D0E9F8A7B6C5043287654B9C8D7E6F5A432109BCDEF0987654321FEDCBA09876',
+    description: 'Enhanced malware detection patterns and behavioral analysis for macOS.'
+  },
+  {
+    id: '16',
+    name: 'AMCore Content Package',
+    type: 'Content',
+    platform: 'Linux',
+    version: '5947.0',
+    releaseDate: '2025-01-11',
+    fileSize: '95.8 MB',
+    fileName: 'amcore-5947-lnx.zip',
+    sha256: 'E1F0A9B8C7D6154398765C0D9E8F7A6B543210CDEF10987654321FEDCBA09876',
+    description: 'Enhanced malware detection patterns and behavioral analysis for Linux.'
   }
 ];
 

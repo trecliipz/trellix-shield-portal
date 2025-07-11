@@ -80,6 +80,17 @@ const securityUpdates = [
     ],
     description: "Advanced exploit prevention signatures and behavioral rules for comprehensive endpoint protection.",
     frequency: "As needed"
+  },
+  {
+    type: "AMCore Content Package",
+    urgency: "important",
+    platforms: [
+      { name: "Windows", version: "5947.0", date: "Jan 11, 2025", size: "92.4 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
+      { name: "macOS", version: "5947.0", date: "Jan 11, 2025", size: "87.2 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
+      { name: "Linux", version: "5947.0", date: "Jan 11, 2025", size: "95.8 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
+    ],
+    description: "Enhanced malware detection patterns and behavioral analysis for advanced threat protection.",
+    frequency: "Weekly updates"
   }
 ];
 
