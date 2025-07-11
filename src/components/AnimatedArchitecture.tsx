@@ -84,7 +84,7 @@ const packetLabels = {
   update: 'Signature Update'
 };
 
-// Mechanism-specific technical details
+// Comprehensive mechanism-specific technical details
 const mechanismDetails = {
   monitoring: {
     agent: {
@@ -110,6 +110,22 @@ const mechanismDetails = {
         { icon: Activity, label: "ANALYTICS_ENGINE", value: "ML PROCESSING", status: "learning" },
         { icon: Database, label: "STORAGE_TIER", value: "HOT: 45TB", status: "available" }
       ]
+    },
+    details: {
+      protocols: ["HTTPS (443)", "SNMP (161)", "WS-Management (5985/5986)"],
+      algorithms: ["Exponential Backoff", "Circuit Breaker", "Health Score Calculation"],
+      performance: {
+        "Agent Response Time": "< 50ms",
+        "Data Collection Rate": "450 metrics/sec",
+        "Compression Ratio": "4:1",
+        "Bandwidth Usage": "2.1 MB/s avg"
+      },
+      configurations: {
+        "Heartbeat Frequency": "Configurable: 5s-300s",
+        "Retry Logic": "3 attempts with exponential backoff",
+        "Failover Threshold": "3 consecutive failures",
+        "Buffer Size": "Local: 10MB, Remote: 100MB"
+      }
     }
   },
   threat: {
@@ -136,6 +152,28 @@ const mechanismDetails = {
         { icon: Activity, label: "ML_MODELS", value: "47 ACTIVE", status: "training" },
         { icon: Database, label: "IOC_DATABASE", value: "450M entries", status: "updated" }
       ]
+    },
+    details: {
+      protocols: ["HTTPS (443)", "AMQP (5672)", "MQTT (1883/8883)"],
+      algorithms: ["Multi-Vector Analysis", "Behavioral Heuristics", "Machine Learning Classification", "Sandbox Emulation"],
+      performance: {
+        "Scan Throughput": "15,000 files/sec",
+        "Detection Latency": "< 100ms",
+        "Memory Usage": "< 512MB",
+        "CPU Impact": "< 5% avg"
+      },
+      configurations: {
+        "Scan Sensitivity": "Low/Medium/High/Custom",
+        "Exclusion Lists": "Path/Process/Extension based",
+        "Quarantine Policy": "Auto/Manual/Disabled",
+        "Cloud Lookup": "Real-time reputation checking"
+      },
+      engines: {
+        "Static Analysis": "Signature-based detection",
+        "Dynamic Analysis": "Behavioral monitoring",
+        "Machine Learning": "Neural network classification",
+        "Sandboxing": "Isolated execution environment"
+      }
     }
   },
   policy: {
@@ -162,6 +200,28 @@ const mechanismDetails = {
         { icon: Database, label: "COMPLIANCE_DB", value: "SOX/GDPR/PCI", status: "certified" },
         { icon: Shield, label: "AUDIT_TRAIL", value: "IMMUTABLE", status: "logged" }
       ]
+    },
+    details: {
+      protocols: ["HTTPS (8443)", "LDAP/LDAPS (389/636)", "SAML 2.0", "OAuth 2.0"],
+      algorithms: ["Policy Conflict Resolution", "Inheritance Chain", "Priority-based Execution", "Delta Deployment"],
+      performance: {
+        "Deployment Speed": "< 5 minutes globally",
+        "Rollback Time": "< 30 seconds",
+        "Policy Size": "Average 2KB per rule",
+        "Sync Frequency": "Real-time + hourly validation"
+      },
+      configurations: {
+        "Deployment Strategy": "Phased/Immediate/Scheduled",
+        "Conflict Resolution": "Last-wins/Priority-based/Manual",
+        "Validation Rules": "Schema/Business logic/Dependencies",
+        "Override Permissions": "Role-based with approval workflow"
+      },
+      compliance: {
+        "Standards Supported": "SOX, GDPR, PCI-DSS, HIPAA, ISO 27001",
+        "Audit Capabilities": "Real-time monitoring, Historical reports",
+        "Change Management": "Approval workflows, Version control",
+        "Risk Assessment": "Impact analysis, Rollback planning"
+      }
     }
   },
   signatures: {
@@ -188,6 +248,28 @@ const mechanismDetails = {
         { icon: Database, label: "THREAT_SAMPLES", value: "1.8M/day", status: "processing" },
         { icon: Shield, label: "QUALITY_GATE", value: "99.98%", status: "verified" }
       ]
+    },
+    details: {
+      protocols: ["HTTPS (443)", "FTP/FTPS (21/990)", "BitTorrent", "P2P Distribution"],
+      algorithms: ["Delta Compression", "Binary Diff", "Adaptive Bandwidth", "Progressive Download"],
+      performance: {
+        "Update Size": "Delta: 5-50MB, Full: 2-15GB",
+        "Compression Ratio": "15:1 average",
+        "Download Speed": "Adaptive to bandwidth",
+        "Verification Time": "< 10 seconds"
+      },
+      configurations: {
+        "Update Schedule": "Hourly/Daily/Weekly/Custom",
+        "Bandwidth Throttling": "Time-based limits",
+        "Staging Groups": "Pilot/Canary/Production waves",
+        "Rollback Strategy": "Automatic on failure threshold"
+      },
+      quality: {
+        "Testing Pipeline": "Automated sandbox validation",
+        "False Positive Rate": "< 0.001%",
+        "Coverage Analysis": "99.97% malware family coverage",
+        "Release Process": "Multi-stage validation gates"
+      }
     }
   },
   correlation: {
@@ -214,6 +296,28 @@ const mechanismDetails = {
         { icon: Database, label: "DATA_LAKE", value: "PETABYTE", status: "scalable" },
         { icon: Network, label: "API_ENDPOINTS", value: "REST/GraphQL", status: "integrated" }
       ]
+    },
+    details: {
+      protocols: ["Syslog (514)", "CEF/LEEF", "REST API (443)", "Kafka (9092)", "Elasticsearch (9200)"],
+      algorithms: ["Complex Event Processing", "Machine Learning Clustering", "Anomaly Detection", "Temporal Correlation"],
+      performance: {
+        "Event Throughput": "100,000 EPS",
+        "Query Response": "< 200ms average",
+        "Storage Efficiency": "10:1 compression",
+        "Real-time Processing": "< 5 second latency"
+      },
+      configurations: {
+        "Correlation Rules": "500+ pre-built, Custom rule engine",
+        "Retention Policies": "Hot/Warm/Cold storage tiers",
+        "Alert Thresholds": "Configurable severity levels",
+        "Integration Points": "SOAR, SIEM, Ticketing systems"
+      },
+      analytics: {
+        "Machine Learning": "Unsupervised clustering, Supervised classification",
+        "Behavioral Analytics": "User/Entity baseline modeling",
+        "Threat Hunting": "Query engine with threat intel correlation",
+        "Forensics": "Timeline reconstruction, Evidence preservation"
+      }
     }
   },
   protection: {
@@ -240,6 +344,28 @@ const mechanismDetails = {
         { icon: Shield, label: "DNS_FILTERING", value: "MALICIOUS", status: "blocking" },
         { icon: Database, label: "IP_BLACKLIST", value: "25M entries", status: "maintained" }
       ]
+    },
+    details: {
+      protocols: ["TCP/UDP Layer 4", "HTTP/HTTPS (80/443)", "DNS (53)", "SMTP (25/587)", "FTP (21)"],
+      algorithms: ["Deep Packet Inspection", "Stateful Inspection", "Application Layer Gateway", "Behavioral Analysis"],
+      performance: {
+        "Throughput": "10 Gbps line rate",
+        "Latency": "< 1ms additional",
+        "Concurrent Sessions": "2M+ connections",
+        "Rule Processing": "100,000 rules/second"
+      },
+      configurations: {
+        "Firewall Modes": "Transparent/Routed/NAT",
+        "IPS Sensitivity": "Prevention/Detection/Monitor",
+        "Content Filtering": "Category/URL/Content-based",
+        "SSL Inspection": "Inbound/Outbound with certificate management"
+      },
+      protection: {
+        "Web Filtering": "90+ categories, Real-time classification",
+        "Application Control": "3000+ applications identified",
+        "Anti-Malware": "Multi-engine scanning",
+        "Data Loss Prevention": "Content inspection and blocking"
+      }
     }
   }
 };
@@ -429,12 +555,6 @@ export const AnimatedArchitecture = () => {
                 </div>
                 {/* Direction Indicator */}
                 <ArrowRight className="absolute right-0 top-1/2 transform -translate-y-1/2 h-4 w-4 text-trellix-orange rotate-90 lg:rotate-0" />
-                {/* Port Information */}
-                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-                  <div className="text-xs text-muted-foreground font-mono">PORT 443</div>
-                  <div className="text-xs text-emerald-400 font-mono">HTTPS/TLS</div>
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full mx-auto mt-1 animate-network-pulse" title="Port Status: Secure" />
-                </div>
               </div>
             </div>
 
@@ -507,12 +627,6 @@ export const AnimatedArchitecture = () => {
                   <div className="w-3 h-3 bg-emerald-400 rounded-full animate-flow-right opacity-90 shadow-[0_0_8px_rgb(52,211,153)]" style={{ animationDelay: '1s' }} />
                 </div>
                 <ArrowRight className="absolute right-0 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-400 rotate-90 lg:rotate-0" />
-                {/* Port Information */}
-                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-                  <div className="text-xs text-muted-foreground font-mono">PORT 8443</div>
-                  <div className="text-xs text-emerald-400 font-mono">SSL/VPN</div>
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full mx-auto mt-1 animate-network-pulse" title="Port Status: Encrypted" />
-                </div>
               </div>
             </div>
 
@@ -580,151 +694,217 @@ export const AnimatedArchitecture = () => {
             </Card>
           </div>
 
-          {/* Network Ports and Technical Information */}
-          <div className="w-full max-w-6xl">
-            <h3 className="text-2xl font-semibold text-center text-primary mb-6 font-mono">
-              TRELLIX NETWORK ARCHITECTURE
+          {/* Data Packet Legend */}
+          <div className="mt-8 bg-card border border-border rounded-lg p-6 w-full max-w-4xl">
+            <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-trellix-orange" />
+              Data Packet Types
             </h3>
-            
-            {/* Data Packet Legend */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {Object.entries(packetColors).map(([type, color]) => (
-                <div key={type} className="flex items-center gap-2 p-2 bg-card rounded-lg border border-border">
-                  <div className={`w-3 h-3 rounded-full ${color}`} />
-                  <span className="text-sm text-card-foreground font-mono">{packetLabels[type as keyof typeof packetLabels]}</span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(packetColors).map(([type, colorClass]) => (
+                <div key={type} className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full ${colorClass} border border-white/30`} />
+                  <span className="text-sm text-muted-foreground">{packetLabels[type as keyof typeof packetLabels]}</span>
                 </div>
               ))}
             </div>
-
-            {/* Port Information Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Primary Communication Ports */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-primary mb-4 font-mono">
-                  PRIMARY PORTS
-                </h4>
-                <Card className="bg-emerald-400/10 border-emerald-400">
+          </div>
+          
+          {/* Dynamic Technical Information */}
+          <div className="mt-8 w-full max-w-6xl">
+            <div className="bg-gradient-to-br from-card via-card to-secondary/5 border border-border rounded-lg p-6 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-5">
+                <div className="grid grid-cols-8 grid-rows-8 h-full">
+                  {Array.from({length: 64}).map((_, i) => (
+                    <div key={i} className="border border-primary/20" />
+                  ))}
+                </div>
+              </div>
+              
+              <h3 className="text-xl font-semibold text-card-foreground mb-6 flex items-center gap-2 relative z-10">
+                <Network className="h-6 w-6 text-trellix-orange" />
+                {communicationScenarios[currentScenario].name} - Technical Details
+              </h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
+                {/* Protocols & Communication */}
+                <Card className="bg-gradient-to-br from-emerald-900/20 to-emerald-700/10 border-emerald-500/30">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-semibold text-emerald-400 font-mono">PORT 443</h5>
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-network-pulse" title="Secure Active" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">HTTPS/SSL - Primary EPO Communication</p>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>• Agent Status Reports</div>
-                      <div>• Policy Distribution</div>
-                      <div>• Threat Response</div>
+                    <h4 className="text-sm font-semibold text-emerald-300 mb-3 flex items-center gap-2">
+                      <Network className="h-4 w-4" />
+                      PROTOCOLS & COMMUNICATION
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      {mechanismDetails[currentScenario].details.protocols.map((protocol, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                          <span className="text-emerald-400 font-mono">{protocol}</span>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
                 
-                <Card className="bg-blue-400/10 border-blue-400">
+                {/* Algorithms & Processing */}
+                <Card className="bg-gradient-to-br from-blue-900/20 to-blue-700/10 border-blue-500/30">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-semibold text-blue-400 font-mono">PORT 8443</h5>
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-network-pulse" title="Management Active" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">EPO Web Console - Admin Interface</p>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>• Web Management</div>
-                      <div>• Policy Configuration</div>
-                      <div>• System Dashboard</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Secondary Ports */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-primary mb-4 font-mono">
-                  SECONDARY PORTS
-                </h4>
-                <Card className="bg-yellow-400/10 border-yellow-400">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-semibold text-yellow-400 font-mono">PORT 445</h5>
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full animate-data-packet" title="File Transfer" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">SMB - File Sharing & Updates</p>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>• Signature Updates</div>
-                      <div>• Definition Files</div>
-                      <div>• Network Shares</div>
+                    <h4 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      ALGORITHMS & PROCESSING
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      {mechanismDetails[currentScenario].details.algorithms.map((algorithm, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                          <span className="text-blue-400">{algorithm}</span>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
                 
-                <Card className="bg-orange-400/10 border-orange-400">
+                {/* Performance Metrics */}
+                <Card className="bg-gradient-to-br from-trellix-orange/20 to-yellow-700/10 border-trellix-orange/30">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-semibold text-orange-400 font-mono">PORT 1433</h5>
-                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-network-pulse" title="Database Active" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">SQL Server - Database Communication</p>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>• Event Storage</div>
-                      <div>• Policy Database</div>
-                      <div>• Audit Logs</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* System Ports & Metrics */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-primary mb-4 font-mono">
-                  SYSTEM STATUS
-                </h4>
-                <Card className="bg-purple-400/10 border-purple-400">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-semibold text-purple-400 font-mono">RPC/NetBIOS</h5>
-                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-network-pulse" title="System Services" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">Ports 135, 139 - System Services</p>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>• RPC Endpoint Mapper</div>
-                      <div>• NetBIOS Sessions</div>
-                      <div>• Windows Integration</div>
+                    <h4 className="text-sm font-semibold text-trellix-orange mb-3 flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      PERFORMANCE METRICS
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      {Object.entries(mechanismDetails[currentScenario].details.performance).map(([key, value]) => (
+                        <div key={key} className="flex justify-between items-center">
+                          <span className="text-muted-foreground">{key}</span>
+                          <span className="text-trellix-orange font-mono">{value}</span>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
                 
-                <Card className="bg-trellix-orange/10 border-trellix-orange">
+                {/* Configuration Parameters */}
+                <Card className="bg-gradient-to-br from-purple-900/20 to-purple-700/10 border-purple-500/30">
                   <CardContent className="p-4">
-                    <h5 className="font-semibold text-trellix-orange mb-2 font-mono">NETWORK METRICS</h5>
-                    <div className="space-y-3 text-xs">
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>Throughput</span>
-                          <span className="text-emerald-400">98.7%</span>
+                    <h4 className="text-sm font-semibold text-purple-300 mb-3 flex items-center gap-2">
+                      <Monitor className="h-4 w-4" />
+                      CONFIGURATION PARAMETERS
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      {Object.entries(mechanismDetails[currentScenario].details.configurations).map(([key, value]) => (
+                        <div key={key} className="space-y-1">
+                          <div className="text-purple-300 font-medium">{key}</div>
+                          <div className="text-muted-foreground ml-2">{value}</div>
                         </div>
-                        <div className="w-full h-1 bg-background rounded overflow-hidden">
-                          <div className="h-full bg-emerald-400 animate-flow-right" style={{ width: '98.7%' }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>Latency</span>
-                          <span className="text-yellow-400">8ms</span>
-                        </div>
-                        <div className="w-full h-1 bg-background rounded overflow-hidden">
-                          <div className="h-full bg-yellow-400 animate-network-pulse" style={{ width: '8%' }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>Security</span>
-                          <span className="text-emerald-400">TLS 1.3</span>
-                        </div>
-                        <div className="w-full h-1 bg-background rounded overflow-hidden">
-                          <div className="h-full bg-emerald-400" style={{ width: '100%' }} />
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
               </div>
+              
+              {/* Additional detailed sections for specific mechanisms */}
+              {currentScenario === 'threat' && mechanismDetails[currentScenario].details.engines && (
+                <div className="mt-6">
+                  <Card className="bg-gradient-to-br from-red-900/20 to-red-700/10 border-red-500/30">
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-semibold text-red-300 mb-3 flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        DETECTION ENGINES
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        {Object.entries(mechanismDetails[currentScenario].details.engines!).map(([key, value]) => (
+                          <div key={key} className="space-y-1">
+                            <div className="text-red-300 font-medium">{key}</div>
+                            <div className="text-muted-foreground">{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+              
+              {currentScenario === 'policy' && mechanismDetails[currentScenario].details.compliance && (
+                <div className="mt-6">
+                  <Card className="bg-gradient-to-br from-green-900/20 to-green-700/10 border-green-500/30">
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-semibold text-green-300 mb-3 flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        COMPLIANCE & GOVERNANCE
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        {Object.entries(mechanismDetails[currentScenario].details.compliance!).map(([key, value]) => (
+                          <div key={key} className="space-y-1">
+                            <div className="text-green-300 font-medium">{key}</div>
+                            <div className="text-muted-foreground">{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+              
+              {currentScenario === 'signatures' && mechanismDetails[currentScenario].details.quality && (
+                <div className="mt-6">
+                  <Card className="bg-gradient-to-br from-indigo-900/20 to-indigo-700/10 border-indigo-500/30">
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-semibold text-indigo-300 mb-3 flex items-center gap-2">
+                        <Database className="h-4 w-4" />
+                        QUALITY ASSURANCE
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        {Object.entries(mechanismDetails[currentScenario].details.quality!).map(([key, value]) => (
+                          <div key={key} className="space-y-1">
+                            <div className="text-indigo-300 font-medium">{key}</div>
+                            <div className="text-muted-foreground">{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+              
+              {currentScenario === 'correlation' && mechanismDetails[currentScenario].details.analytics && (
+                <div className="mt-6">
+                  <Card className="bg-gradient-to-br from-cyan-900/20 to-cyan-700/10 border-cyan-500/30">
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-semibold text-cyan-300 mb-3 flex items-center gap-2">
+                        <Activity className="h-4 w-4" />
+                        ANALYTICS & INTELLIGENCE
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        {Object.entries(mechanismDetails[currentScenario].details.analytics!).map(([key, value]) => (
+                          <div key={key} className="space-y-1">
+                            <div className="text-cyan-300 font-medium">{key}</div>
+                            <div className="text-muted-foreground">{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+              
+              {currentScenario === 'protection' && mechanismDetails[currentScenario].details.protection && (
+                <div className="mt-6">
+                  <Card className="bg-gradient-to-br from-orange-900/20 to-orange-700/10 border-orange-500/30">
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-semibold text-orange-300 mb-3 flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        PROTECTION CAPABILITIES
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        {Object.entries(mechanismDetails[currentScenario].details.protection!).map(([key, value]) => (
+                          <div key={key} className="space-y-1">
+                            <div className="text-orange-300 font-medium">{key}</div>
+                            <div className="text-muted-foreground">{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           </div>
         </div>
