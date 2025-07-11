@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useAsync } from "@/hooks/useAsync";
 import { 
   Search, 
   Plus, 
@@ -23,6 +27,13 @@ import {
 export const SystemManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [discoveryInProgress, setDiscoveryInProgress] = useState(false);
+  
+  const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { loading: operationLoading, execute } = useAsync();
 
   // Mock managed systems data
   const managedSystems = [
@@ -119,6 +130,82 @@ export const SystemManagement = () => {
     return matchesSearch && matchesFilter;
   });
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 2000)));
+      toast({
+        title: "Systems Refreshed",
+        description: "System data has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh system data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleAddSystem = () => {
+    toast({
+      title: "Add System",
+      description: "System addition dialog would open here.",
+    });
+  };
+
+  const handleManageSystem = (systemId: string) => {
+    toast({
+      title: "System Management",
+      description: `Managing system ${systemId}. System details would be displayed.`,
+    });
+  };
+
+  const handleDeployAgent = async () => {
+    const confirmed = await confirm({
+      title: "Deploy Agent",
+      description: "Are you sure you want to deploy agents to the selected systems?",
+      confirmText: "Deploy"
+    });
+
+    if (confirmed) {
+      try {
+        await execute(() => new Promise(resolve => setTimeout(resolve, 3000)));
+        toast({
+          title: "Agent Deployment Started",
+          description: "Agents are being deployed to the selected systems.",
+        });
+      } catch (error) {
+        toast({
+          title: "Deployment Failed",
+          description: "Failed to deploy agents. Please check system connectivity.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleStartDiscovery = async () => {
+    setDiscoveryInProgress(true);
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 5000)));
+      toast({
+        title: "Discovery Complete",
+        description: "Network discovery has completed. 12 new systems discovered.",
+      });
+    } catch (error) {
+      toast({
+        title: "Discovery Failed",
+        description: "Network discovery failed. Please check network settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setDiscoveryInProgress(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -131,11 +218,16 @@ export const SystemManagement = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleAddSystem}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add System
               </Button>
@@ -223,7 +315,11 @@ export const SystemManagement = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleManageSystem(system.id)}
+                          >
                             Manage
                           </Button>
                         </TableCell>
@@ -297,8 +393,12 @@ export const SystemManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button className="w-full">
-                      Start Discovery
+                    <Button 
+                      className="w-full"
+                      onClick={handleStartDiscovery}
+                      disabled={discoveryInProgress}
+                    >
+                      {discoveryInProgress ? 'Discovering...' : 'Start Discovery'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -328,8 +428,12 @@ export const SystemManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button className="w-full">
-                      Deploy Agent
+                    <Button 
+                      className="w-full"
+                      onClick={handleDeployAgent}
+                      disabled={operationLoading}
+                    >
+                      {operationLoading ? 'Deploying...' : 'Deploy Agent'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -338,6 +442,7 @@ export const SystemManagement = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 };

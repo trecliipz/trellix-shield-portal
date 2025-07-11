@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useAsync } from "@/hooks/useAsync";
 import { 
   Shield, 
   Plus, 
@@ -20,6 +24,11 @@ import {
 
 export const PolicyManagement = () => {
   const [selectedPolicy, setSelectedPolicy] = useState(null);
+  const [importing, setImporting] = useState(false);
+  
+  const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { loading: operationLoading, execute } = useAsync();
 
   // Mock policy data
   const policies = [
@@ -116,6 +125,77 @@ export const PolicyManagement = () => {
     return 'text-red-600';
   };
 
+  const handleNewPolicy = () => {
+    toast({
+      title: "New Policy",
+      description: "Policy creation wizard would open here.",
+    });
+  };
+
+  const handleImportPolicy = async () => {
+    setImporting(true);
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 2000)));
+      toast({
+        title: "Policy Imported",
+        description: "Policy has been imported successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Import Failed",
+        description: "Failed to import policy. Please check the file format.",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleEditPolicy = (policyId: string) => {
+    toast({
+      title: "Edit Policy",
+      description: `Editing policy ${policyId}. Policy editor would open here.`,
+    });
+  };
+
+  const handleCopyPolicy = (policyId: string) => {
+    toast({
+      title: "Policy Copied",
+      description: `Policy ${policyId} has been copied successfully.`,
+    });
+  };
+
+  const handleDeletePolicy = async (policyId: string) => {
+    const confirmed = await confirm({
+      title: "Delete Policy",
+      description: "Are you sure you want to delete this policy? This action cannot be undone.",
+      confirmText: "Delete"
+    });
+
+    if (confirmed) {
+      try {
+        await execute(() => new Promise(resolve => setTimeout(resolve, 1000)));
+        toast({
+          title: "Policy Deleted",
+          description: "Policy has been deleted successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Delete Failed",
+          description: "Failed to delete policy. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleCreateFromTemplate = (templateName: string) => {
+    toast({
+      title: "Creating Policy",
+      description: `Creating new policy from ${templateName} template.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -128,11 +208,16 @@ export const PolicyManagement = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleImportPolicy}
+                disabled={importing}
+              >
                 <Copy className="h-4 w-4 mr-2" />
-                Import
+                {importing ? 'Importing...' : 'Import'}
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleNewPolicy}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Policy
               </Button>
@@ -194,13 +279,25 @@ export const PolicyManagement = () => {
                         <TableCell>{policy.lastModified}</TableCell>
                         <TableCell>
                           <div className="flex space-x-1">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditPolicy(policy.id)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleCopyPolicy(policy.id)}
+                            >
                               <Copy className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeletePolicy(policy.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -235,7 +332,11 @@ export const PolicyManagement = () => {
                             ))}
                           </div>
                         </div>
-                        <Button className="w-full" variant="outline">
+                        <Button 
+                          className="w-full" 
+                          variant="outline"
+                          onClick={() => handleCreateFromTemplate(template.name)}
+                        >
                           <Plus className="h-4 w-4 mr-2" />
                           Create from Template
                         </Button>
@@ -356,6 +457,7 @@ export const PolicyManagement = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 };

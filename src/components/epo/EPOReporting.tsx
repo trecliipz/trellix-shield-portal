@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useAsync } from "@/hooks/useAsync";
 import { 
   BarChart3, 
   FileText, 
@@ -21,6 +25,10 @@ import {
 
 export const EPOReporting = () => {
   const [reportPeriod, setReportPeriod] = useState('last7days');
+  
+  const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { loading: operationLoading, execute } = useAsync();
 
   // Mock reports data
   const generatedReports = [
@@ -120,6 +128,57 @@ export const EPOReporting = () => {
     }
   };
 
+  const handleSchedule = () => {
+    toast({
+      title: "Schedule Report",
+      description: "Report scheduling interface would open here.",
+    });
+  };
+
+  const handleNewReport = () => {
+    toast({
+      title: "New Report",
+      description: "Report builder interface would open here.",
+    });
+  };
+
+  const handleDownloadReport = (reportId: string) => {
+    toast({
+      title: "Downloading Report",
+      description: `Report ${reportId} download has started.`,
+    });
+  };
+
+  const handleViewReport = (reportId: string) => {
+    toast({
+      title: "Viewing Report",
+      description: `Opening report ${reportId} for viewing.`,
+    });
+  };
+
+  const handleGenerateNow = async (templateName: string) => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 3000)));
+      toast({
+        title: "Report Generated",
+        description: `${templateName} has been generated successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleScheduleReport = (templateName: string) => {
+    toast({
+      title: "Scheduling Report",
+      description: `Setting up schedule for ${templateName}.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -132,11 +191,11 @@ export const EPOReporting = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleSchedule}>
                 <Calendar className="h-4 w-4 mr-2" />
                 Schedule
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleNewReport}>
                 <FileText className="h-4 w-4 mr-2" />
                 New Report
               </Button>
@@ -332,10 +391,19 @@ export const EPOReporting = () => {
                         <TableCell>{getStatusBadge(report.status)}</TableCell>
                         <TableCell>
                           <div className="flex space-x-1">
-                            <Button variant="ghost" size="sm" disabled={report.status !== 'completed'}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              disabled={report.status !== 'completed'}
+                              onClick={() => handleDownloadReport(report.id)}
+                            >
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleViewReport(report.id)}
+                            >
                               <FileText className="h-4 w-4" />
                             </Button>
                           </div>
@@ -375,10 +443,18 @@ export const EPOReporting = () => {
                           </div>
                         </div>
                         <div className="flex space-x-2">
-                          <Button className="flex-1" variant="outline">
-                            Generate Now
+                          <Button 
+                            className="flex-1" 
+                            variant="outline"
+                            onClick={() => handleGenerateNow(template.name)}
+                            disabled={operationLoading}
+                          >
+                            {operationLoading ? 'Generating...' : 'Generate Now'}
                           </Button>
-                          <Button className="flex-1">
+                          <Button 
+                            className="flex-1"
+                            onClick={() => handleScheduleReport(template.name)}
+                          >
                             Schedule
                           </Button>
                         </div>
@@ -454,6 +530,7 @@ export const EPOReporting = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 };

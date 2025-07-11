@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useAsync } from "@/hooks/useAsync";
 import { 
   Activity, 
   AlertTriangle, 
@@ -22,6 +26,11 @@ import {
 export const EventMonitor = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { loading: operationLoading, execute } = useAsync();
 
   // Mock security events data
   const securityEvents = [
@@ -149,6 +158,60 @@ export const EventMonitor = () => {
     return matchesSearch && matchesFilter;
   });
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 1500)));
+      toast({
+        title: "Events Refreshed",
+        description: "Event data has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh event data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleAlertRules = () => {
+    toast({
+      title: "Alert Rules",
+      description: "Alert rules management would open here.",
+    });
+  };
+
+  const handleViewEvent = (eventId: string) => {
+    toast({
+      title: "Event Details",
+      description: `Viewing details for event ${eventId}.`,
+    });
+  };
+
+  const handleArchiveEvent = (eventId: string) => {
+    toast({
+      title: "Event Archived",
+      description: `Event ${eventId} has been archived.`,
+    });
+  };
+
+  const handleEditRule = (ruleId: string) => {
+    toast({
+      title: "Edit Rule",
+      description: `Editing alert rule ${ruleId}.`,
+    });
+  };
+
+  const handleTestRule = (ruleId: string) => {
+    toast({
+      title: "Testing Rule",
+      description: `Sending test notification for rule ${ruleId}.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -161,11 +224,16 @@ export const EventMonitor = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleAlertRules}>
                 <Bell className="h-4 w-4 mr-2" />
                 Alert Rules
               </Button>
@@ -284,10 +352,18 @@ export const EventMonitor = () => {
                         <TableCell className="text-sm">{event.assignee}</TableCell>
                         <TableCell>
                           <div className="flex space-x-1">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleViewEvent(event.id)}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleArchiveEvent(event.id)}
+                            >
                               <Archive className="h-4 w-4" />
                             </Button>
                           </div>
@@ -325,9 +401,22 @@ export const EventMonitor = () => {
                         </TableCell>
                         <TableCell className="text-sm">{rule.lastTriggered}</TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
+                          <div className="flex space-x-1">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleEditRule(rule.id)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleTestRule(rule.id)}
+                            >
+                              Test
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -467,6 +556,7 @@ export const EventMonitor = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 };

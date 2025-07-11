@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useAsync } from "@/hooks/useAsync";
 import { 
   Clock, 
   Plus, 
@@ -19,6 +23,11 @@ import {
 } from 'lucide-react';
 
 export const TaskScheduler = () => {
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { loading: operationLoading, execute } = useAsync();
   // Mock scheduled tasks data
   const scheduledTasks = [
     {
@@ -140,6 +149,91 @@ export const TaskScheduler = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 1500)));
+      toast({
+        title: "Tasks Refreshed",
+        description: "Task data has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh task data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleNewTask = () => {
+    toast({
+      title: "New Task",
+      description: "Task creation wizard would open here.",
+    });
+  };
+
+  const handlePlayTask = (taskId: string) => {
+    toast({
+      title: "Task Started",
+      description: `Task ${taskId} has been started successfully.`,
+    });
+  };
+
+  const handlePauseTask = (taskId: string) => {
+    toast({
+      title: "Task Paused",
+      description: `Task ${taskId} has been paused.`,
+    });
+  };
+
+  const handleEditTask = (taskId: string) => {
+    toast({
+      title: "Edit Task",
+      description: `Editing task ${taskId}. Task editor would open here.`,
+    });
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    const confirmed = await confirm({
+      title: "Delete Task",
+      description: "Are you sure you want to delete this task? This action cannot be undone.",
+      confirmText: "Delete"
+    });
+
+    if (confirmed) {
+      try {
+        await execute(() => new Promise(resolve => setTimeout(resolve, 1000)));
+        toast({
+          title: "Task Deleted",
+          description: "Task has been deleted successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Delete Failed",
+          description: "Failed to delete task. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleCreateTask = (templateName: string) => {
+    toast({
+      title: "Creating Task",
+      description: `Creating new task from ${templateName} template.`,
+    });
+  };
+
+  const handleViewDetails = (historyId: string) => {
+    toast({
+      title: "Task Details",
+      description: `Viewing details for task execution ${historyId}.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -152,11 +246,16 @@ export const TaskScheduler = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleNewTask}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Task
               </Button>
@@ -206,16 +305,34 @@ export const TaskScheduler = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-1">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handlePlayTask(task.id)}
+                              disabled={task.status === 'active'}
+                            >
                               <Play className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handlePauseTask(task.id)}
+                              disabled={task.status === 'paused'}
+                            >
                               <Pause className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditTask(task.id)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteTask(task.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -267,7 +384,11 @@ export const TaskScheduler = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewDetails(history.id)}
+                          >
                             View Details
                           </Button>
                         </TableCell>
@@ -326,7 +447,11 @@ export const TaskScheduler = () => {
                             ))}
                           </div>
                         </div>
-                        <Button className="w-full" variant="outline">
+                        <Button 
+                          className="w-full" 
+                          variant="outline"
+                          onClick={() => handleCreateTask(template.name)}
+                        >
                           <Plus className="h-4 w-4 mr-2" />
                           Create Task
                         </Button>
@@ -412,6 +537,7 @@ export const TaskScheduler = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 };

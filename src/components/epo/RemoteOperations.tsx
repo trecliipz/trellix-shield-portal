@@ -7,6 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useAsync } from "@/hooks/useAsync";
 import { 
   Terminal, 
   Power, 
@@ -26,6 +30,10 @@ import {
 export const RemoteOperations = () => {
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [commandText, setCommandText] = useState('');
+  
+  const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { loading: operationLoading, execute } = useAsync();
 
   // Mock data for remote operations
   const managedSystems = [
@@ -123,6 +131,156 @@ export const RemoteOperations = () => {
     }
   };
 
+  const handleOperationLog = () => {
+    toast({
+      title: "Operation Log",
+      description: "Operation log viewer would open here.",
+    });
+  };
+
+  const handleQuickCommand = () => {
+    toast({
+      title: "Quick Command",
+      description: "Quick command interface would open here.",
+    });
+  };
+
+  const handleExecuteCommand = async () => {
+    if (!commandText.trim()) {
+      toast({
+        title: "No Command",
+        description: "Please enter a command to execute.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "Execute Command",
+      description: `Are you sure you want to execute this command on the selected systems?`,
+      confirmText: "Execute"
+    });
+
+    if (confirmed) {
+      try {
+        await execute(() => new Promise(resolve => setTimeout(resolve, 3000)));
+        toast({
+          title: "Command Executed",
+          description: "Command has been executed successfully on the selected systems.",
+        });
+        setCommandText('');
+      } catch (error) {
+        toast({
+          title: "Execution Failed",
+          description: "Failed to execute command. Please check system connectivity.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleSaveScript = () => {
+    if (!commandText.trim()) {
+      toast({
+        title: "No Command",
+        description: "Please enter a command to save.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Script Saved",
+      description: "Command has been saved as a script for future use.",
+    });
+  };
+
+  const handleUseCommand = (command: string) => {
+    setCommandText(command);
+    toast({
+      title: "Command Loaded",
+      description: "Command has been loaded into the editor.",
+    });
+  };
+
+  const handleWakeSystem = async (systemId: string) => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 2000)));
+      toast({
+        title: "Wake Signal Sent",
+        description: `Wake-on-LAN signal sent to ${systemId}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Wake Failed",
+        description: "Failed to send wake signal. Please check network configuration.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkWake = async () => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 3000)));
+      toast({
+        title: "Bulk Wake Operation",
+        description: "Wake signals sent to all selected systems.",
+      });
+    } catch (error) {
+      toast({
+        title: "Bulk Wake Failed",
+        description: "Failed to execute bulk wake operation.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeployFile = async () => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 4000)));
+      toast({
+        title: "File Deployment Started",
+        description: "File is being deployed to the selected systems.",
+      });
+    } catch (error) {
+      toast({
+        title: "Deployment Failed",
+        description: "Failed to deploy file. Please check system connectivity.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRetrieveFiles = async () => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 3000)));
+      toast({
+        title: "File Retrieval Started",
+        description: "Files are being collected from the selected systems.",
+      });
+    } catch (error) {
+      toast({
+        title: "Retrieval Failed",
+        description: "Failed to retrieve files. Please check file paths and permissions.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleServiceControl = (action: string, service: string) => {
+    toast({
+      title: `Service ${action}`,
+      description: `${action} operation initiated for ${service} service.`,
+    });
+  };
+
+  const handleLicenseAction = (action: string, product: string) => {
+    toast({
+      title: `License ${action}`,
+      description: `${action} operation for ${product} licenses.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -135,11 +293,11 @@ export const RemoteOperations = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleOperationLog}>
                 <FileText className="h-4 w-4 mr-2" />
                 Operation Log
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleQuickCommand}>
                 <Terminal className="h-4 w-4 mr-2" />
                 Quick Command
               </Button>
@@ -191,11 +349,15 @@ export const RemoteOperations = () => {
                       />
                     </div>
                     <div className="flex space-x-2">
-                      <Button className="flex-1">
+                      <Button 
+                        className="flex-1"
+                        onClick={handleExecuteCommand}
+                        disabled={operationLoading}
+                      >
                         <Play className="h-4 w-4 mr-2" />
-                        Execute
+                        {operationLoading ? 'Executing...' : 'Execute'}
                       </Button>
-                      <Button variant="outline">
+                      <Button variant="outline" onClick={handleSaveScript}>
                         <FileText className="h-4 w-4 mr-2" />
                         Save as Script
                       </Button>
@@ -225,7 +387,12 @@ export const RemoteOperations = () => {
                             <div className="text-xs font-mono bg-muted p-2 rounded">
                               {cmd.command}
                             </div>
-                            <Button size="sm" variant="outline" className="w-full">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full"
+                              onClick={() => handleUseCommand(cmd.command)}
+                            >
                               Use Command
                             </Button>
                           </div>
@@ -267,14 +434,15 @@ export const RemoteOperations = () => {
                               </TableCell>
                               <TableCell>{getStatusBadge(system.status)}</TableCell>
                               <TableCell>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  disabled={system.status === 'online'}
-                                >
-                                  <Power className="h-4 w-4 mr-1" />
-                                  Wake
-                                </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                disabled={system.status === 'online' || operationLoading}
+                                onClick={() => handleWakeSystem(system.id)}
+                              >
+                                <Power className="h-4 w-4 mr-1" />
+                                {operationLoading ? 'Waking...' : 'Wake'}
+                              </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -319,9 +487,13 @@ export const RemoteOperations = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button className="w-full">
+                    <Button 
+                      className="w-full"
+                      onClick={handleBulkWake}
+                      disabled={operationLoading}
+                    >
                       <Zap className="h-4 w-4 mr-2" />
-                      Execute Wake Operation
+                      {operationLoading ? 'Executing...' : 'Execute Wake Operation'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -359,9 +531,13 @@ export const RemoteOperations = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button className="w-full">
+                    <Button 
+                      className="w-full"
+                      onClick={handleDeployFile}
+                      disabled={operationLoading}
+                    >
                       <Upload className="h-4 w-4 mr-2" />
-                      Deploy File
+                      {operationLoading ? 'Deploying...' : 'Deploy File'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -404,9 +580,13 @@ export const RemoteOperations = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button className="w-full">
+                    <Button 
+                      className="w-full"
+                      onClick={handleRetrieveFiles}
+                      disabled={operationLoading}
+                    >
                       <Download className="h-4 w-4 mr-2" />
-                      Retrieve Files
+                      {operationLoading ? 'Retrieving...' : 'Retrieve Files'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -642,6 +822,7 @@ export const RemoteOperations = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 };

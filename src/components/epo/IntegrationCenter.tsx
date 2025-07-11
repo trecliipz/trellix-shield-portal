@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useAsync } from "@/hooks/useAsync";
 import { 
   Plug, 
   Settings, 
@@ -18,6 +22,9 @@ import {
 } from 'lucide-react';
 
 export const IntegrationCenter = () => {
+  const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { loading: operationLoading, execute } = useAsync();
   // Mock integration data
   const activeIntegrations = [
     {
@@ -187,6 +194,87 @@ export const IntegrationCenter = () => {
     }
   };
 
+  const handleAPISettings = () => {
+    toast({
+      title: "API Settings",
+      description: "API management interface would open here.",
+    });
+  };
+
+  const handleNewIntegration = () => {
+    toast({
+      title: "New Integration",
+      description: "Integration setup wizard would open here.",
+    });
+  };
+
+  const handleConfigureIntegration = (integrationId: string) => {
+    toast({
+      title: "Configure Integration",
+      description: `Configuring integration ${integrationId}.`,
+    });
+  };
+
+  const handleTestIntegration = async (integrationId: string) => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 2000)));
+      toast({
+        title: "Test Successful",
+        description: `Integration ${integrationId} is working correctly.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Integration test failed. Please check configuration.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfigureConnector = (connectorName: string) => {
+    if (connectorName.includes('Coming Soon')) {
+      toast({
+        title: "Coming Soon",
+        description: `${connectorName} connector is not yet available.`,
+      });
+    } else {
+      toast({
+        title: "Configure Connector",
+        description: `Setting up ${connectorName} integration.`,
+      });
+    }
+  };
+
+  const handleConfigureWebhook = (webhookId: string) => {
+    toast({
+      title: "Configure Webhook",
+      description: `Configuring webhook ${webhookId}.`,
+    });
+  };
+
+  const handleTestWebhook = async (webhookId: string) => {
+    try {
+      await execute(() => new Promise(resolve => setTimeout(resolve, 1500)));
+      toast({
+        title: "Webhook Test Sent",
+        description: `Test payload sent to webhook ${webhookId}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Webhook test failed. Please check the endpoint.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateWebhook = () => {
+    toast({
+      title: "Create Webhook",
+      description: "Webhook creation wizard would open here.",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -199,11 +287,11 @@ export const IntegrationCenter = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleAPISettings}>
                 <Settings className="h-4 w-4 mr-2" />
                 API Settings
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleNewIntegration}>
                 <Plug className="h-4 w-4 mr-2" />
                 New Integration
               </Button>
@@ -300,10 +388,19 @@ export const IntegrationCenter = () => {
                         <TableCell className="text-sm">{integration.configuredBy}</TableCell>
                         <TableCell>
                           <div className="flex space-x-1">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleConfigureIntegration(integration.id)}
+                            >
                               <Settings className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleTestIntegration(integration.id)}
+                              disabled={operationLoading}
+                            >
                               <Activity className="h-4 w-4" />
                             </Button>
                           </div>
@@ -349,6 +446,7 @@ export const IntegrationCenter = () => {
                           className="w-full" 
                           variant={connector.supported ? "default" : "outline"}
                           disabled={!connector.supported}
+                          onClick={() => handleConfigureConnector(connector.name)}
                         >
                           {connector.supported ? "Configure" : "Coming Soon"}
                         </Button>
@@ -397,11 +495,20 @@ export const IntegrationCenter = () => {
                         <TableCell className="text-sm">{webhook.lastTriggered}</TableCell>
                         <TableCell>
                           <div className="flex space-x-1">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleConfigureWebhook(webhook.id)}
+                            >
                               <Settings className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
-                              Test
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleTestWebhook(webhook.id)}
+                              disabled={operationLoading}
+                            >
+                              {operationLoading ? 'Testing...' : 'Test'}
                             </Button>
                           </div>
                         </TableCell>
@@ -419,7 +526,7 @@ export const IntegrationCenter = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button>
+                  <Button onClick={handleCreateWebhook}>
                     <Webhook className="h-4 w-4 mr-2" />
                     Create Webhook
                   </Button>
@@ -527,6 +634,7 @@ export const IntegrationCenter = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 };
