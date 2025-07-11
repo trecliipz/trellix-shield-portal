@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "./AuthModal";
+import { ContactForm } from "./ContactForm";
+import { MessageSquare } from "lucide-react";
 
 interface HeaderProps {
   isLoggedIn: boolean;
@@ -11,6 +13,7 @@ interface HeaderProps {
 
 export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderProps) => {
   const [authModalType, setAuthModalType] = useState<'login' | 'register' | null>(null);
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -58,6 +61,15 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
             <div className="flex items-center space-x-4">
               {isLoggedIn ? (
                 <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsContactFormOpen(true)}
+                    className="hidden sm:flex"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Contact Admin
+                  </Button>
                   <span className="text-primary mr-4 hidden sm:block">
                     Welcome, {currentUser?.name}!
                   </span>
@@ -84,6 +96,12 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
         type={authModalType}
         onClose={() => setAuthModalType(null)}
         onLogin={onLogin}
+      />
+      
+      <ContactForm
+        isOpen={isContactFormOpen}
+        onClose={() => setIsContactFormOpen(false)}
+        currentUser={currentUser}
       />
     </>
   );

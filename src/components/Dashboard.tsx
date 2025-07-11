@@ -8,6 +8,9 @@ import { UserManagement } from "@/components/UserManagement";
 import { AgentManagement } from "@/components/AgentManagement";
 import { AdminAnalytics } from "@/components/AdminAnalytics";
 import { DATManagement } from "@/components/DATManagement";
+import { AdminMessages } from "@/components/AdminMessages";
+import { SecurityCompliance } from "@/components/SecurityCompliance";
+import { AuditLog } from "@/components/AuditLog";
 
 interface DashboardProps {
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
@@ -207,11 +210,14 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
         </div>
 
         <Tabs defaultValue="downloads" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8">
-            <TabsTrigger value="downloads">Agent Downloads</TabsTrigger>
-            <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="agents">Agent Management</TabsTrigger>
-            <TabsTrigger value="dat">Security Updates</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-8 mb-8">
+            <TabsTrigger value="downloads">Downloads</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="agents">Agents</TabsTrigger>
+            <TabsTrigger value="dat">Updates</TabsTrigger>
+            <TabsTrigger value="messages">Messages</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="audit">Audit Log</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -261,6 +267,18 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
           <TabsContent value="dat">
             <DATManagement />
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <AdminMessages />
+          </TabsContent>
+
+          <TabsContent value="security">
+            <SecurityCompliance />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <AuditLog />
           </TabsContent>
 
           <TabsContent value="analytics">
