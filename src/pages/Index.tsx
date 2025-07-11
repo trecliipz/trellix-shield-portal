@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { Dashboard } from "@/components/Dashboard";
-import { Architecture } from "@/components/Architecture";
+import { AnimatedArchitecture } from "@/components/AnimatedArchitecture";
 import { Features } from "@/components/Features";
 
 const Index = () => {
@@ -48,7 +48,7 @@ const Index = () => {
         {!isLoggedIn ? (
           <>
             <Hero onGetStarted={handleGetStarted} />
-            <Architecture />
+            <AnimatedArchitecture />
             <Features />
           </>
         ) : (
