@@ -27,6 +27,7 @@ export const AgentManagement = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [uploadingAgent, setUploadingAgent] = useState<Agent | null>(null);
   const [newAgent, setNewAgent] = useState({
     name: '',
     version: '',
@@ -34,6 +35,7 @@ export const AgentManagement = () => {
     features: '',
     file: null as File | null
   });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -161,6 +163,34 @@ export const AgentManagement = () => {
     toast({
       title: "Success",
       description: "Agent status updated",
+    });
+  };
+
+  const handleUploadAgent = (agent: Agent) => {
+    if (!uploadFile) {
+      toast({
+        title: "Error",
+        description: "Please select a file to upload",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const updatedAgent = {
+      ...agent,
+      size: `${Math.round(uploadFile.size / (1024 * 1024))} MB`,
+      fileName: uploadFile.name,
+      uploadDate: new Date().toISOString().split('T')[0]
+    };
+
+    const updatedAgents = agents.map(a => a.id === agent.id ? updatedAgent : a);
+    saveAgents(updatedAgents);
+    setUploadingAgent(null);
+    setUploadFile(null);
+    
+    toast({
+      title: "Success",
+      description: "Agent file updated successfully",
     });
   };
 
@@ -365,6 +395,38 @@ export const AgentManagement = () => {
                               </Button>
                             </div>
                           )}
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => setUploadingAgent(agent)}>
+                            <Upload className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Upload New File for: {uploadingAgent?.name}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="upload-file">Select New Agent File</Label>
+                              <Input
+                                id="upload-file"
+                                type="file"
+                                accept=".msi,.exe,.zip"
+                                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                              />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Current file: {uploadingAgent?.fileName}
+                            </p>
+                            <Button 
+                              onClick={() => uploadingAgent && handleUploadAgent(uploadingAgent)} 
+                              className="w-full"
+                            >
+                              Update Agent File
+                            </Button>
+                          </div>
                         </DialogContent>
                       </Dialog>
                       <Button 

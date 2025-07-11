@@ -21,6 +21,19 @@ const Index = () => {
       return true;
     }
     
+    // Check for users with temp passwords
+    const users = JSON.parse(localStorage.getItem('admin_users') || '[]');
+    const user = users.find((u: any) => u.email === email);
+    if (user && user.tempPassword === password) {
+      setIsLoggedIn(true);
+      setCurrentUser({ 
+        email: email, 
+        name: user.name,
+        role: user.role
+      });
+      return true;
+    }
+    
     // Regular user authentication
     if (email && password) {
       setIsLoggedIn(true);

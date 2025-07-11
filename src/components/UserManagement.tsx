@@ -17,6 +17,9 @@ interface User {
   status: 'active' | 'suspended';
   registrationDate: string;
   lastLogin: string;
+  hashedPassword?: string;
+  tempPassword?: string;
+  passwordResetDate?: string;
 }
 
 export const UserManagement = () => {
@@ -93,6 +96,27 @@ export const UserManagement = () => {
     toast({
       title: "Status Updated",
       description: `User ${newStatus === 'active' ? 'activated' : 'suspended'}`,
+    });
+  };
+
+  const handlePasswordReset = (userId: string) => {
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const updatedUsers = users.map(user =>
+      user.id === userId ? { 
+        ...user, 
+        tempPassword,
+        passwordResetDate: new Date().toISOString().split('T')[0]
+      } : user
+    );
+    saveUsers(updatedUsers);
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(tempPassword);
+    
+    toast({
+      title: "Password Reset",
+      description: `Temporary password: ${tempPassword} (copied to clipboard)`,
+      duration: 10000,
     });
   };
 
@@ -243,6 +267,15 @@ export const UserManagement = () => {
                                 <SelectItem value="suspended">Suspended</SelectItem>
                               </SelectContent>
                             </Select>
+                          </div>
+                          <div className="flex space-x-2 mt-4">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => selectedUser && handlePasswordReset(selectedUser.id)}
+                              className="flex-1"
+                            >
+                              Reset Password
+                            </Button>
                           </div>
                         </div>
                       </DialogContent>

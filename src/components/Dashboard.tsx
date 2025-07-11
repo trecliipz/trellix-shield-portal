@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -63,8 +64,35 @@ const agentDownloads: Record<string, AgentDownload> = {
 };
 
 export const Dashboard = ({ currentUser }: DashboardProps) => {
-  const handleDownload = (agentType: string) => {
-    const download = agentDownloads[agentType];
+  const [dynamicAgents, setDynamicAgents] = useState<AgentDownload[]>([]);
+
+  useEffect(() => {
+    loadDynamicAgents();
+  }, []);
+
+  const loadDynamicAgents = () => {
+    const savedAgents = localStorage.getItem('admin_agents');
+    if (savedAgents) {
+      const agentData = JSON.parse(savedAgents);
+      const activeAgents = agentData
+        .filter((agent: any) => agent.status === 'active')
+        .map((agent: any) => ({
+          name: `${agent.name} v${agent.version}`,
+          size: agent.size,
+          file: agent.fileName,
+          description: agent.description,
+          features: agent.features,
+          icon: <Shield className="h-8 w-8 text-primary" />
+        }));
+      setDynamicAgents(activeAgents);
+    } else {
+      // Fallback to hardcoded agents if no saved data
+      setDynamicAgents(Object.values(agentDownloads));
+    }
+  };
+
+  const handleDownload = (agentIndex: number) => {
+    const download = dynamicAgents[agentIndex];
     if (!download) return;
 
     const confirmDownload = window.confirm(
@@ -92,8 +120,8 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
   // Filter agents based on user role
   const availableAgents = currentUser?.role === 'admin' 
-    ? Object.entries(agentDownloads)
-    : Object.entries(agentDownloads).filter(([key]) => key === 'trellix-agent');
+    ? dynamicAgents
+    : dynamicAgents.slice(0, 1); // Regular users see only first agent
 
   // Regular user view - only agent downloads
   if (currentUser?.role !== 'admin') {
@@ -107,8 +135,8 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {availableAgents.map(([key, agent]) => (
-              <Card key={key} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+            {availableAgents.map((agent, index) => (
+              <Card key={index} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
                 <CardHeader>
                   <div className="flex items-center space-x-3 mb-2">
                     {agent.icon}
@@ -120,15 +148,15 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 mb-6 text-sm">
-                    {agent.features.map((feature, index) => (
-                      <li key={index} className="flex items-center space-x-2">
+                    {agent.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center space-x-2">
                         <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
                         <span className="text-muted-foreground">{feature}</span>
                       </li>
                     ))}
                   </ul>
                   <Button 
-                    onClick={() => handleDownload(key)}
+                    onClick={() => handleDownload(index)}
                     className="w-full"
                     size="lg"
                   >
@@ -167,8 +195,8 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
           <TabsContent value="downloads" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Object.entries(agentDownloads).map(([key, agent]) => (
-                <Card key={key} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+              {dynamicAgents.map((agent, index) => (
+                <Card key={index} className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
                   <CardHeader>
                     <div className="flex items-center space-x-3 mb-2">
                       {agent.icon}
@@ -180,15 +208,15 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2 mb-6 text-sm">
-                      {agent.features.map((feature, index) => (
-                        <li key={index} className="flex items-center space-x-2">
+                      {agent.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-center space-x-2">
                           <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
                           <span className="text-muted-foreground">{feature}</span>
                         </li>
                       ))}
                     </ul>
                     <Button 
-                      onClick={() => handleDownload(key)}
+                      onClick={() => handleDownload(index)}
                       className="w-full"
                       size="lg"
                     >
