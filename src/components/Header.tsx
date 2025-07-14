@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { AuthModal } from "./AuthModal";
 import { ContactForm } from "./ContactForm";
 import { MessageSquare, ChevronDown } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,10 +11,14 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-interface HeaderProps {}
+interface HeaderProps {
+  isLoggedIn: boolean;
+  currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
+  onLogin: (email: string, password: string) => boolean;
+  onLogout: () => void;
+}
 
-export const Header = ({}: HeaderProps) => {
-  const { user, signOut, isAdmin } = useAuth();
+export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderProps) => {
   const [authModalType, setAuthModalType] = useState<'login' | 'register' | null>(null);
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
 
@@ -138,9 +141,9 @@ export const Header = ({}: HeaderProps) => {
             </div>
 
             <div className="flex items-center space-x-4">
-              {user ? (
+              {isLoggedIn ? (
                 <>
-                  {isAdmin && (
+                  {currentUser?.role === 'admin' && (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -160,9 +163,9 @@ export const Header = ({}: HeaderProps) => {
                     Contact Admin
                   </Button>
                   <span className="text-primary mr-4 hidden sm:block">
-                    Welcome, {user.user_metadata?.name || user.email?.split('@')[0]}!
+                    Welcome, {currentUser?.name}!
                   </span>
-                  <Button variant="outline" onClick={signOut}>
+                  <Button variant="outline" onClick={onLogout}>
                     Logout
                   </Button>
                 </>
@@ -184,16 +187,13 @@ export const Header = ({}: HeaderProps) => {
       <AuthModal 
         type={authModalType}
         onClose={() => setAuthModalType(null)}
+        onLogin={onLogin}
       />
       
       <ContactForm
         isOpen={isContactFormOpen}
         onClose={() => setIsContactFormOpen(false)}
-        currentUser={user ? {
-          email: user.email || '',
-          name: user.user_metadata?.name || user.email?.split('@')[0] || '',
-          role: isAdmin ? 'admin' : 'user'
-        } : null}
+        currentUser={currentUser}
       />
     </>
   );

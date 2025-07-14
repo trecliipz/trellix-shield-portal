@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw } from 'lucide-react';
+import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 const features = [
   {
@@ -48,7 +46,6 @@ interface SecurityUpdateData {
 const Features = (): JSX.Element => {
   const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdateData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [platformVersions, setPlatformVersions] = useState<Record<string, Record<string, string>>>({});
 
   // Helper functions
@@ -177,11 +174,6 @@ const Features = (): JSX.Element => {
   useEffect(() => {
     fetchSecurityUpdates();
   }, []);
-
-  const handleRefresh = () => {
-    fetchSecurityUpdates();
-    toast.info('Refreshing security updates...', { duration: 2000 });
-  };
 
   return (
     <div className="py-20 bg-gradient-to-br from-background via-muted/20 to-background">
