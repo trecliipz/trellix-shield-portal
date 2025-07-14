@@ -1,1 +1,47 @@
 project_id = "enwjspegjxkqrcmzlzqg"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://lovable.dev"]
+jwt_expiry = 3600
+enable_signup = true
+enable_anonymous_sign_ins = false
+enable_email_confirmations = false
+enable_sms_confirmations = false
+
+[auth.external.google]
+# enabled = false
+# client_id = ""
+# secret = ""
+
+[auth.external.github]
+# enabled = false
+# client_id = ""
+# secret = ""
+
+[edge_functions]
+enabled = true
+verify_jwt = false
+
+[functions.fetch-security-updates]
+verify_jwt = false
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324

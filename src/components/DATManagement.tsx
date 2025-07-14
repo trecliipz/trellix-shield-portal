@@ -1,25 +1,26 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Download, Shield, Database, FileCheck, RefreshCw, Monitor, Apple, Smartphone, Bell, DownloadCloud, Clock, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RefreshCw, Download, Calendar, HardDrive, Shield, Activity, AlertTriangle, CheckCircle, Smartphone, Monitor, Server, Database, FileCheck, DownloadCloud, Clock, Bell } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SecurityUpdate {
   id: string;
   name: string;
-  type: 'DAT' | 'Engine' | 'Content';
-  platform: 'Windows' | 'macOS' | 'Linux';
+  type: 'dat' | 'engine' | 'content';
+  platform: string;
   version: string;
-  releaseDate: string;
-  fileSize: string;
-  fileName: string;
+  release_date: string;
+  file_size: number;
+  file_name: string;
   sha256: string;
   description: string;
-  isRecommended?: boolean;
+  is_recommended: boolean;
 }
 
 const securityUpdates: SecurityUpdate[] = [
@@ -232,48 +233,126 @@ const securityUpdates: SecurityUpdate[] = [
 export const DATManagement = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUpdates, setSelectedUpdates] = useState<string[]>([]);
-  const [notifications, setNotifications] = useState(3); // New updates count
+  const [notifications, setNotifications] = useState<number>(0);
+  const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Fetch security updates from Supabase
+  const fetchSecurityUpdates = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('security_updates')
+        .select('*')
+        .order('release_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching security updates:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch security updates",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSecurityUpdates(data?.map(update => ({
+        ...update,
+        type: update.type as 'dat' | 'engine' | 'content'
+      })) || []);
+      
+      // Count new updates (released within last 7 days)
+      const newUpdatesCount = data?.filter(update => {
+        const releaseDate = new Date(update.release_date);
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        return releaseDate > sevenDaysAgo;
+      }).length || 0;
+      
+      setNotifications(newUpdatesCount);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch security updates",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Trigger update fetch from external APIs
+  const triggerUpdateFetch = async () => {
+    try {
+      setRefreshing(true);
+      const { data, error } = await supabase.functions.invoke('fetch-security-updates');
+      
+      if (error) {
+        console.error('Error triggering update fetch:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch latest updates from servers",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Updates Refreshed",
+        description: `Found ${data.new_updates} new updates out of ${data.updates_found} total`,
+      });
+
+      // Refresh the local data
+      await fetchSecurityUpdates();
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh updates",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchSecurityUpdates();
+  }, []);
 
   const handleDownload = (update: SecurityUpdate) => {
     const confirmDownload = window.confirm(
-      `Download ${update.name}?\n\nPlatform: ${update.platform}\nVersion: ${update.version}\nSize: ${update.fileSize}\nFile: ${update.fileName}\n\nSHA-256: ${update.sha256.substring(0, 16)}...`
+      `Download ${update.name}?\n\nPlatform: ${update.platform}\nVersion: ${update.version}\nSize: ${formatFileSize(update.file_size)}\nFile: ${update.file_name}\n\nSHA-256: ${update.sha256?.substring(0, 16)}...`
     );
 
     if (confirmDownload) {
       // Create a temporary download link
       const link = document.createElement('a');
       link.href = `data:application/octet-stream;base64,${btoa(`Trellix ${update.type} Package - ${update.platform} v${update.version}`)}`;
-      link.download = update.fileName;
+      link.download = update.file_name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      toast.success(
-        `${update.name} download initiated!`,
-        {
-          description: `Platform: ${update.platform} | Version: ${update.version}`,
-          duration: 5000,
-        }
-      );
+      toast({
+        title: "Download Started",
+        description: `${update.name} download initiated for ${update.platform}`,
+      });
     }
   };
 
   const handleRefresh = async () => {
-    setRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setRefreshing(false);
-    // Simulate new updates found
-    setNotifications(Math.floor(Math.random() * 5) + 1);
-    toast.success("Security updates refreshed successfully!", {
-      description: "Found new updates available for download."
-    });
+    await triggerUpdateFetch();
   };
 
   const handleBulkDownload = () => {
     if (selectedUpdates.length === 0) {
-      toast.error("No updates selected", {
-        description: "Please select at least one update to download."
+      toast({
+        title: "No Updates Selected",
+        description: "Please select at least one update to download.",
+        variant: "destructive",
       });
       return;
     }
@@ -288,16 +367,16 @@ export const DATManagement = () => {
         if (update) {
           const link = document.createElement('a');
           link.href = `data:application/octet-stream;base64,${btoa(`Trellix ${update.type} Package - ${update.platform} v${update.version}`)}`;
-          link.download = update.fileName;
+          link.download = update.file_name;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
         }
       });
 
-      toast.success(`Bulk download initiated!`, {
+      toast({
+        title: "Bulk Download Started",
         description: `${selectedUpdates.length} security updates are being downloaded.`,
-        duration: 7000,
       });
 
       setSelectedUpdates([]);
@@ -324,34 +403,52 @@ export const DATManagement = () => {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'DAT': return <Database className="h-4 w-4" />;
-      case 'Engine': return <Shield className="h-4 w-4" />;
-      case 'Content': return <FileCheck className="h-4 w-4" />;
+      case 'dat': return <Database className="h-4 w-4" />;
+      case 'engine': return <Shield className="h-4 w-4" />;
+      case 'content': return <FileCheck className="h-4 w-4" />;
       default: return <Database className="h-4 w-4" />;
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'DAT': return 'default';
-      case 'Engine': return 'secondary';
-      case 'Content': return 'outline';
+      case 'dat': return 'default';
+      case 'engine': return 'secondary';
+      case 'content': return 'outline';
       default: return 'default';
     }
   };
 
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case 'Windows': return <Monitor className="h-4 w-4" />;
-      case 'macOS': return <Apple className="h-4 w-4" />;
-      case 'Linux': return <Smartphone className="h-4 w-4" />;
-      default: return <Monitor className="h-4 w-4" />;
-    }
+  const formatFileSize = (bytes: number): string => {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    if (bytes === 0) return '0 Bytes';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const datUpdates = securityUpdates.filter(u => u.type === 'DAT');
-  const engineUpdates = securityUpdates.filter(u => u.type === 'Engine');
-  const contentUpdates = securityUpdates.filter(u => u.type === 'Content');
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-32">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  const datUpdates = securityUpdates.filter(u => u.type === 'dat');
+  const engineUpdates = securityUpdates.filter(u => u.type === 'engine');
+  const contentUpdates = securityUpdates.filter(u => u.type === 'content');
 
   const renderUpdatesTable = (updates: SecurityUpdate[]) => {
     const isAllSelected = updates.every(u => selectedUpdates.includes(u.id));
@@ -409,7 +506,7 @@ export const DATManagement = () => {
                     <div>
                       <div className="font-medium flex items-center space-x-2">
                         <span>{update.name}</span>
-                        {new Date(update.releaseDate) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) && (
+                        {new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) && (
                           <Badge variant="destructive" className="text-xs px-1 py-0">NEW</Badge>
                         )}
                       </div>
@@ -427,13 +524,13 @@ export const DATManagement = () => {
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span>{new Date(update.releaseDate).toLocaleDateString()}</span>
+                    <span>{formatDate(update.release_date)}</span>
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">{update.fileSize}</TableCell>
+                <TableCell className="font-medium">{formatFileSize(update.file_size)}</TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
-                    {update.isRecommended && (
+                    {update.is_recommended && (
                       <Badge variant="default" className="flex items-center space-x-1">
                         <AlertTriangle className="h-3 w-3" />
                         <span>Critical</span>

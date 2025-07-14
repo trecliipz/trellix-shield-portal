@@ -1,102 +1,124 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Search, Zap, Globe, TrendingUp, Monitor, Apple, Smartphone, AlertTriangle, Clock, CheckCircle } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 const features = [
   {
-    icon: <Search className="h-12 w-12" />,
+    icon: <Shield className="h-12 w-12" />,
     title: "Advanced Threat Detection", 
     description: "Machine learning-powered detection of known and unknown threats with behavioral analysis."
   },
   {
-    icon: <Zap className="h-12 w-12" />,
+    icon: <Activity className="h-12 w-12" />,
     title: "Real-time Response",
     description: "Automated threat response and remediation to minimize impact and recovery time."
   },
   {
-    icon: <Globe className="h-12 w-12" />,
+    icon: <Users className="h-12 w-12" />,
     title: "Centralized Management",
     description: "Single console for managing security policies across all endpoints in your organization."
   },
   {
-    icon: <TrendingUp className="h-12 w-12" />,
+    icon: <Lock className="h-12 w-12" />,
     title: "Compliance Reporting", 
     description: "Comprehensive reporting and auditing capabilities for regulatory compliance."
   }
 ];
 
-const securityUpdates = [
-  {
-    type: "DAT V3 Definition Files",
-    urgency: "critical",
-    platforms: [
-      { name: "Windows", version: "3.1456.7890", date: "Jan 11, 2025", size: "45.2 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
-      { name: "macOS", version: "3.1456.7890", date: "Jan 11, 2025", size: "42.8 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
-      { name: "Linux", version: "3.1456.7890", date: "Jan 11, 2025", size: "48.1 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
-    ],
-    description: "Latest DAT V3 definition files with enhanced machine learning detection patterns and behavioral analysis.",
-    frequency: "Daily updates"
-  },
-  {
-    type: "MEDDAT Mobile Endpoint",
-    urgency: "important",
-    platforms: [
-      { name: "Windows", version: "2025.01.11.001", date: "Jan 11, 2025", size: "28.5 MB", icon: <Monitor className="h-4 w-4" />, status: "updated" },
-      { name: "macOS", version: "2025.01.11.001", date: "Jan 11, 2025", size: "24.8 MB", icon: <Apple className="h-4 w-4" />, status: "updated" },
-      { name: "Linux", version: "2025.01.11.001", date: "Jan 11, 2025", size: "31.2 MB", icon: <Smartphone className="h-4 w-4" />, status: "updated" }
-    ],
-    description: "Mobile and endpoint detection files for advanced threat hunting and mobile device security.",
-    frequency: "Weekly updates"
-  },
-  {
-    type: "Security Engines",
-    urgency: "important",
-    platforms: [
-      { name: "Windows", version: "6912.1000", date: "Jan 10, 2025", size: "8.35 MB", icon: <Monitor className="h-4 w-4" />, status: "stable" },
-      { name: "macOS", version: "6912.1000", date: "Jan 10, 2025", size: "7.14 MB", icon: <Apple className="h-4 w-4" />, status: "stable" },
-      { name: "Linux", version: "6912.1000", date: "Jan 10, 2025", size: "10.8 MB", icon: <Smartphone className="h-4 w-4" />, status: "stable" }
-    ],
-    description: "Core scanning engines with enhanced detection capabilities and performance improvements.",
-    frequency: "Monthly updates"
-  },
-  {
-    type: "TIE Threat Intelligence",
-    urgency: "critical",
-    platforms: [
-      { name: "Windows", version: "7.2.1.456", date: "Jan 11, 2025", size: "85.3 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
-      { name: "macOS", version: "7.2.1.456", date: "Jan 11, 2025", size: "76.8 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
-      { name: "Linux", version: "7.2.1.456", date: "Jan 11, 2025", size: "82.1 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
-    ],
-    description: "Threat Intelligence Exchange content with global reputation data and file intelligence services.",
-    frequency: "Real-time updates"
-  },
-  {
-    type: "Exploit Prevention Content",
-    urgency: "critical",
-    platforms: [
-      { name: "Windows", version: "12.8.2025.0111", date: "Jan 11, 2025", size: "156.7 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
-      { name: "macOS", version: "12.8.2025.0111", date: "Jan 11, 2025", size: "124.3 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
-      { name: "Linux", version: "12.8.2025.0111", date: "Jan 11, 2025", size: "143.9 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
-    ],
-    description: "Advanced exploit prevention signatures and behavioral rules for comprehensive endpoint protection.",
-    frequency: "As needed"
-  },
-  {
-    type: "AMCore Content Package",
-    urgency: "important",
-    platforms: [
-      { name: "Windows", version: "5947.0", date: "Jan 11, 2025", size: "92.4 MB", icon: <Monitor className="h-4 w-4" />, status: "new" },
-      { name: "macOS", version: "5947.0", date: "Jan 11, 2025", size: "87.2 MB", icon: <Apple className="h-4 w-4" />, status: "new" },
-      { name: "Linux", version: "5947.0", date: "Jan 11, 2025", size: "95.8 MB", icon: <Smartphone className="h-4 w-4" />, status: "new" }
-    ],
-    description: "Enhanced malware detection patterns and behavioral analysis for advanced threat protection.",
-    frequency: "Weekly updates"
-  }
-];
+interface SecurityUpdateData {
+  type: string;
+  urgency: string;
+  platforms: Array<{
+    name: string;
+    version: string;
+    date: string;
+    size: string;
+    icon: React.ReactNode;
+    status: string;
+  }>;
+  description: string;
+  frequency: string;
+}
 
-export const Features = () => {
+const Features = (): JSX.Element => {
+  const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdateData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch and aggregate security updates from Supabase
+  const fetchSecurityUpdates = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('security_updates')
+        .select('*')
+        .order('release_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching security updates:', error);
+        return;
+      }
+
+      // Group updates by type and platform
+      const groupedUpdates: { [key: string]: any } = {};
+      
+      data?.forEach(update => {
+        const typeKey = update.type === 'dat' ? 'DAT Files' : 
+                       update.type === 'content' ? 'AMCore Content' : 
+                       'Security Engine';
+        
+        if (!groupedUpdates[typeKey]) {
+          groupedUpdates[typeKey] = {
+            type: typeKey,
+            urgency: update.is_recommended ? 'critical' : 'important',
+            platforms: [],
+            description: update.description,
+            frequency: update.type === 'dat' ? 'Updated multiple times daily' : 
+                      update.type === 'content' ? 'Updated daily' : 'Updated weekly'
+          };
+        }
+
+        const formatFileSize = (bytes: number): string => {
+          const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+          if (bytes === 0) return '0 Bytes';
+          const i = Math.floor(Math.log(bytes) / Math.log(1024));
+          return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
+        };
+
+        const platformIcon = update.platform === 'Windows' ? '🪟' : 
+                           update.platform === 'Linux' ? '🐧' : '🍎';
+
+        const isNew = new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        
+        groupedUpdates[typeKey].platforms.push({
+          name: update.platform,
+          version: update.version,
+          date: new Date(update.release_date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          }),
+          size: formatFileSize(update.file_size),
+          icon: platformIcon,
+          status: isNew ? 'new' : update.is_recommended ? 'updated' : 'stable'
+        });
+      });
+
+      setSecurityUpdates(Object.values(groupedUpdates));
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSecurityUpdates();
+  }, []);
+
   return (
-    <section id="features" className="py-20">
+    <div className="py-20 bg-gradient-to-br from-background via-muted/20 to-background">
       <div className="container mx-auto px-4 lg:px-8">
         <h2 className="text-4xl font-bold text-center text-primary mb-12">
           Enterprise Security Features
@@ -127,71 +149,79 @@ export const Features = () => {
           Latest Security Updates by Platform
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-          {securityUpdates.map((update, index) => (
-            <Card key={index} className="modern-card group">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xl font-semibold text-card-foreground">
-                    {update.type}
-                  </h3>
-                  <div className="flex items-center space-x-2">
-                    {update.urgency === 'critical' && (
-                      <Badge variant="destructive" className="flex items-center space-x-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        <span>Critical</span>
-                      </Badge>
-                    )}
-                    {update.urgency === 'important' && (
-                      <Badge variant="default" className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>Important</span>
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <p className="text-muted-foreground text-sm mb-4">
-                  {update.description}
-                </p>
-                <div className="flex items-center justify-center mb-6">
-                  <Badge variant="outline" className="text-xs">
-                    {update.frequency}
-                  </Badge>
-                </div>
-                
-                <div className="space-y-4">
-                  {update.platforms.map((platform, platformIndex) => (
-                    <div key={platformIndex} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] border border-transparent hover:border-primary/20">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-2">
-                          {platform.icon}
-                          <span className="font-medium text-card-foreground">{platform.name}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {platform.status === 'new' && (
-                            <Badge variant="default" className="text-xs px-2 py-0">NEW</Badge>
-                          )}
-                          {platform.status === 'updated' && (
-                            <Badge variant="secondary" className="text-xs px-2 py-0">UPDATED</Badge>
-                          )}
-                          {platform.status === 'stable' && (
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col text-right">
-                        <span className="text-xs text-muted-foreground font-mono">{platform.version}</span>
-                        <span className="text-xs text-muted-foreground">{platform.date}</span>
-                        <span className="text-xs text-muted-foreground font-medium">{platform.size}</span>
-                      </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {securityUpdates.map((update, index) => (
+              <Card key={index} className="modern-card group">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xl font-semibold text-card-foreground">
+                      {update.type}
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      {update.urgency === 'critical' && (
+                        <Badge variant="destructive" className="flex items-center space-x-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>Critical</span>
+                        </Badge>
+                      )}
+                      {update.urgency === 'important' && (
+                        <Badge variant="default" className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>Important</span>
+                        </Badge>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </div>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    {update.description}
+                  </p>
+                  <div className="flex items-center justify-center mb-6">
+                    <Badge variant="outline" className="text-xs">
+                      {update.frequency}
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {update.platforms.map((platform, platformIndex) => (
+                      <div key={platformIndex} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] border border-transparent hover:border-primary/20">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg">{platform.icon}</span>
+                            <span className="font-medium text-card-foreground">{platform.name}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {platform.status === 'new' && (
+                              <Badge variant="default" className="text-xs px-2 py-0">NEW</Badge>
+                            )}
+                            {platform.status === 'updated' && (
+                              <Badge variant="secondary" className="text-xs px-2 py-0">UPDATED</Badge>
+                            )}
+                            {platform.status === 'stable' && (
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col text-right">
+                          <span className="text-xs text-muted-foreground font-mono">{platform.version}</span>
+                          <span className="text-xs text-muted-foreground">{platform.date}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{platform.size}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-    </section>
+    </div>
   );
 };
+
+export { Features };

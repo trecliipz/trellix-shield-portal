@@ -388,6 +388,93 @@ export type Database = {
         }
         Relationships: []
       }
+      security_updates: {
+        Row: {
+          changelog: string | null
+          created_at: string
+          description: string | null
+          download_url: string | null
+          file_name: string
+          file_size: number
+          id: string
+          is_recommended: boolean
+          name: string
+          platform: string
+          release_date: string
+          sha256: string | null
+          type: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          changelog?: string | null
+          created_at?: string
+          description?: string | null
+          download_url?: string | null
+          file_name: string
+          file_size?: number
+          id?: string
+          is_recommended?: boolean
+          name: string
+          platform: string
+          release_date?: string
+          sha256?: string | null
+          type: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          changelog?: string | null
+          created_at?: string
+          description?: string | null
+          download_url?: string | null
+          file_name?: string
+          file_size?: number
+          id?: string
+          is_recommended?: boolean
+          name?: string
+          platform?: string
+          release_date?: string
+          sha256?: string | null
+          type?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      update_logs: {
+        Row: {
+          api_response_time: number | null
+          created_at: string
+          error_message: string | null
+          fetch_timestamp: string
+          id: string
+          new_updates: number
+          status: string
+          updates_found: number
+        }
+        Insert: {
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          fetch_timestamp?: string
+          id?: string
+          new_updates?: number
+          status?: string
+          updates_found?: number
+        }
+        Update: {
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          fetch_timestamp?: string
+          id?: string
+          new_updates?: number
+          status?: string
+          updates_found?: number
+        }
+        Relationships: []
+      }
       user_locations: {
         Row: {
           created_at: string
