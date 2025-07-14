@@ -203,50 +203,259 @@ function getTabType(url: string): string {
 async function parseSecurityUpdates(html: string, tabType: string = 'updates'): Promise<SecurityUpdate[]> {
   const updates: SecurityUpdate[] = [];
   
-  // Parse HTML table structure - enhanced for real Trellix site
-  const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/gi;
-  const tables = html.match(tableRegex) || [];
+  console.log(`Starting enhanced parsing for ${tabType} tab`);
   
-  console.log(`Found ${tables.length} tables in ${tabType} tab`);
-  
-  for (const table of tables) {
-    // Extract table rows
-    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    const rows = table.match(rowRegex) || [];
-    
-    for (const row of rows) {
-      // Skip header rows
-      if (row.includes('<th')) continue;
-      
-      // Extract cell data
-      const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-      const cells: string[] = [];
-      let cellMatch;
-      
-      while ((cellMatch = cellRegex.exec(row)) !== null) {
-        // Clean HTML tags and extract text
-        const cellText = cellMatch[1]
-          .replace(/<[^>]*>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        cells.push(cellText);
-      }
-      
-      // Parse based on tab type
-      const update = parseRowByTabType(cells, tabType);
-      if (update) {
-        updates.push(update);
-      }
-    }
+  // Enhanced table parsing with multiple strategies
+  const parsedUpdates = await parseEnhancedTables(html, tabType);
+  if (parsedUpdates.length > 0) {
+    console.log(`Enhanced table parsing found ${parsedUpdates.length} updates`);
+    return parsedUpdates;
   }
   
-  // If table parsing didn't find anything, fallback to pattern matching
-  if (updates.length === 0) {
-    console.log(`No table data found, using pattern matching for ${tabType}`);
-    return parseWithPatterns(html, tabType);
+  // Fallback to improved pattern matching
+  console.log(`No enhanced table data found, using improved pattern matching for ${tabType}`);
+  return parseWithEnhancedPatterns(html, tabType);
+}
+
+// Enhanced table parsing with better column detection
+async function parseEnhancedTables(html: string, tabType: string): Promise<SecurityUpdate[]> {
+  const updates: SecurityUpdate[] = [];
+  
+  // Look for tables with specific classes or containing relevant data
+  const tableSelectors = [
+    /<table[^>]*class[^>]*downloads[^>]*>[\s\S]*?<\/table>/gi,
+    /<table[^>]*class[^>]*updates[^>]*>[\s\S]*?<\/table>/gi,
+    /<table[^>]*>[\s\S]*?<\/table>/gi
+  ];
+  
+  for (const selector of tableSelectors) {
+    const tables = html.match(selector) || [];
+    
+    for (const table of tables) {
+      // Extract header to understand column structure
+      const headerMatch = table.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i) || 
+                         table.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+      
+      let columnMap: Record<string, number> = {};
+      if (headerMatch) {
+        columnMap = identifyColumns(headerMatch[1]);
+        console.log(`Column mapping for ${tabType}:`, columnMap);
+      }
+      
+      // Extract data rows
+      const tbody = table.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
+      const bodyContent = tbody ? tbody[1] : table;
+      
+      const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+      const rows = bodyContent.match(rowRegex) || [];
+      
+      for (const row of rows) {
+        // Skip header rows and empty rows
+        if (row.includes('<th') || !row.includes('<td')) continue;
+        
+        const cells = extractCellData(row);
+        if (cells.length < 3) continue; // Need at least 3 columns for meaningful data
+        
+        const update = parseRowWithColumnMap(cells, columnMap, tabType);
+        if (update && isTargetPackage(update.name, tabType)) {
+          updates.push(update);
+        }
+      }
+    }
+    
+    if (updates.length > 0) break; // Found data, no need to try other selectors
   }
   
   return updates;
+}
+
+// Identify column positions based on header content
+function identifyColumns(headerHtml: string): Record<string, number> {
+  const cells = extractCellData(headerHtml);
+  const columnMap: Record<string, number> = {};
+  
+  cells.forEach((cell, index) => {
+    const lowerCell = cell.toLowerCase();
+    
+    // Map common column headers
+    if (lowerCell.includes('product') || lowerCell.includes('name') || lowerCell.includes('update')) {
+      columnMap.name = index;
+    } else if (lowerCell.includes('version') || lowerCell.includes('ver.')) {
+      columnMap.version = index;
+    } else if (lowerCell.includes('platform') || lowerCell.includes('os') || lowerCell.includes('system')) {
+      columnMap.platform = index;
+    } else if (lowerCell.includes('size') || lowerCell.includes('file size')) {
+      columnMap.size = index;
+    } else if (lowerCell.includes('date') || lowerCell.includes('released') || lowerCell.includes('updated')) {
+      columnMap.date = index;
+    } else if (lowerCell.includes('download') || lowerCell.includes('link')) {
+      columnMap.download = index;
+    }
+  });
+  
+  return columnMap;
+}
+
+// Extract cell data with better HTML cleaning
+function extractCellData(row: string): string[] {
+  const cellRegex = /<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi;
+  const cells: string[] = [];
+  let cellMatch;
+  
+  while ((cellMatch = cellRegex.exec(row)) !== null) {
+    let cellText = cellMatch[1];
+    
+    // Extract download URL if present
+    const linkMatch = cellText.match(/<a[^>]*href=["']([^"']*)["'][^>]*>/i);
+    if (linkMatch) {
+      // Store download URL separately if needed
+    }
+    
+    // Clean HTML and extract text
+    cellText = cellText
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    cells.push(cellText);
+  }
+  
+  return cells;
+}
+
+// Parse row using identified column mapping
+function parseRowWithColumnMap(cells: string[], columnMap: Record<string, number>, tabType: string): SecurityUpdate | null {
+  try {
+    const name = cells[columnMap.name || 0] || '';
+    const version = cells[columnMap.version || 1] || '';
+    const platform = cells[columnMap.platform || 2] || 'All Platforms';
+    const sizeText = cells[columnMap.size || 3] || '';
+    const dateText = cells[columnMap.date || 4] || '';
+    
+    if (!name || !version) return null;
+    
+    // Enhanced version extraction
+    const extractedVersion = extractEnhancedVersion(version);
+    const extractedPlatform = extractEnhancedPlatform(platform);
+    const fileSize = extractFileSize(sizeText);
+    const releaseDate = extractDate(dateText);
+    const updateType = categorizeUpdateTypeEnhanced(name, tabType);
+    
+    if (!isTargetPackage(name, tabType)) return null;
+    
+    return {
+      name: name.trim(),
+      type: updateType,
+      platform: extractedPlatform,
+      version: extractedVersion,
+      release_date: releaseDate,
+      file_size: fileSize,
+      file_name: generateFileName(updateType, extractedVersion, extractedPlatform),
+      sha256: generateMockSHA256(),
+      description: getUpdateDescription(updateType, tabType),
+      is_recommended: isRecommendedUpdate(updateType, name),
+      download_url: generateDownloadUrl(updateType, extractedVersion, extractedPlatform),
+      update_category: getCategoryForTab(tabType),
+      criticality_level: getCriticalityLevel(updateType, name),
+      target_systems: getTargetSystems(updateType),
+      dependencies: getDependencies(updateType),
+      compatibility_info: getCompatibilityInfo(updateType),
+      threat_coverage: getThreatCoverage(updateType),
+      deployment_notes: getDeploymentNotes(updateType)
+    };
+  } catch (error) {
+    console.error('Error parsing row with column map:', error);
+    return null;
+  }
+}
+
+// Check if this is a target package for the specified tab
+function isTargetPackage(name: string, tabType: string): boolean {
+  const lowerName = name.toLowerCase();
+  
+  switch (tabType) {
+    case 'updates':
+      return lowerName.includes('dat v3') || 
+             lowerName.includes('datv3') ||
+             lowerName.includes('amcore dat') || 
+             lowerName.includes('meddat');
+    
+    case 'engines':
+      return lowerName.includes('engine') || 
+             lowerName.includes('scanning');
+    
+    case 'content':
+      return lowerName.includes('tie') || 
+             lowerName.includes('threat intelligence') ||
+             lowerName.includes('exploit prevention') ||
+             lowerName.includes('content');
+    
+    default:
+      return true;
+  }
+}
+
+// Enhanced version extraction
+function extractEnhancedVersion(text: string): string {
+  // Try multiple version patterns
+  const patterns = [
+    /v?(\d+(?:\.\d+){2,})/i,  // Version with multiple dots (e.g., 4.0.00-100012)
+    /(\d+(?:\.\d+)*(?:-\d+)*)/,  // Version with optional dash
+    /version\s*(\d+(?:\.\d+)*)/i, // "Version X.X.X"
+    /(\d{4,})/  // Just a large number (like DAT numbers)
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return '1.0';
+}
+
+// Enhanced platform extraction
+function extractEnhancedPlatform(text: string): string {
+  const lowerText = text.toLowerCase();
+  
+  // Specific platform mappings
+  if (lowerText.includes('windows') && lowerText.includes('linux')) return 'Windows, Linux';
+  if (lowerText.includes('windows')) return 'Windows';
+  if (lowerText.includes('linux')) return 'Linux';
+  if (lowerText.includes('mac') || lowerText.includes('macos')) return 'Mac';
+  if (lowerText.includes('unix')) return 'Unix';
+  if (lowerText.includes('gateway')) return 'Email Gateway';
+  if (lowerText.includes('medical')) return 'Medical Devices';
+  if (lowerText.includes('tie')) return 'TIE Enabled Systems';
+  if (lowerText.includes('all') || lowerText.includes('universal')) return 'All Platforms';
+  
+  return 'All Platforms';
+}
+
+// Enhanced update type categorization
+function categorizeUpdateTypeEnhanced(name: string, tabType: string): string {
+  const lowerName = name.toLowerCase();
+  
+  // Tab-specific categorization
+  if (tabType === 'engines') return 'engine';
+  if (tabType === 'content') {
+    if (lowerName.includes('tie')) return 'tie';
+    if (lowerName.includes('exploit')) return 'exploit_prevention';
+    return 'content';
+  }
+  
+  // Specific type detection for updates tab
+  if (lowerName.includes('dat v3') || lowerName.includes('datv3')) return 'datv3';
+  if (lowerName.includes('meddat')) return 'meddat';
+  if (lowerName.includes('amcore')) return 'amcore_dat';
+  if (lowerName.includes('gateway')) return 'gateway_dat';
+  if (lowerName.includes('email')) return 'email_dat';
+  if (lowerName.includes('dat')) return 'dat';
+  
+  return 'content';
 }
 
 function parseRowByTabType(cells: string[], tabType: string): SecurityUpdate | null {
@@ -329,76 +538,90 @@ function parseRowByTabType(cells: string[], tabType: string): SecurityUpdate | n
 }
 
 function parseWithPatterns(html: string, tabType: string): SecurityUpdate[] {
+  return parseWithEnhancedPatterns(html, tabType);
+}
+
+// Enhanced pattern matching with tab-specific focus
+function parseWithEnhancedPatterns(html: string, tabType: string): SecurityUpdate[] {
   const updates: SecurityUpdate[] = [];
   
-  // Enhanced parsing patterns for all security update types
-  const updatePatterns = [
-    // DAT V3 pattern
-    { 
-      regex: /DAT\s+V?3?\s+(?:Version\s+)?(\d+)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'datv3',
-      category: 'endpoint',
-      criticality: 'high'
-    },
-    // Traditional DAT pattern
-    { 
-      regex: /(?:^|\s)DAT\s+(?:Version\s+)?(\d+)(?!\s+V3)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'dat',
-      category: 'endpoint',
-      criticality: 'high'
-    },
-    // MEDDAT pattern
-    { 
-      regex: /MED[-\s]?DAT\s+(?:Version\s+)?(\d+)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'meddat',
-      category: 'medical',
-      criticality: 'critical'
-    },
-    // TIE pattern
-    { 
-      regex: /TIE\s+(?:Intelligence\s+)?(?:Feed\s+)?(?:Version\s+)?(\d+(?:\.\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'tie',
-      category: 'tie',
-      criticality: 'medium'
-    },
-    // Exploit Prevention pattern
-    { 
-      regex: /Exploit\s+Prevention\s+(?:Version\s+)?(\d+(?:\.\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'exploit_prevention',
-      category: 'endpoint',
-      criticality: 'critical'
-    },
-    // AMCore DAT pattern
-    { 
-      regex: /AMCore\s+(?:Content\s+|DAT\s+)?(?:Version\s+)?(\d+)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'amcore_dat',
-      category: 'endpoint',
-      criticality: 'high'
-    },
-    // Gateway DAT pattern
-    { 
-      regex: /Gateway\s+DAT\s+(?:Version\s+)?(\d+)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'gateway_dat',
-      category: 'gateway',
-      criticality: 'high'
-    },
-    // Email DAT pattern
-    { 
-      regex: /Email\s+(?:Security\s+)?DAT\s+(?:Version\s+)?(\d+)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'email_dat',
-      category: 'email',
-      criticality: 'high'
-    },
-    // Security Engine pattern
-    { 
-      regex: /(?:Security\s+)?Engine\s+(?:Version\s+)?(\d+(?:\.\d+)*(?:\.\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
-      type: 'engine',
-      category: 'general',
-      criticality: 'medium'
-    }
-  ];
+  // Define patterns based on tab type with better specificity
+  let updatePatterns: any[] = [];
   
-  // Parse each update type
+  switch (tabType) {
+    case 'updates':
+      updatePatterns = [
+        // DAT V3 - specifically for updates tab
+        { 
+          regex: /DAT\s+V3?\s+(?:Version\s+)?(\d+(?:\.\d+)*(?:-\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'datv3',
+          category: 'endpoint',
+          criticality: 'high'
+        },
+        // AMCore DAT - for updates tab
+        { 
+          regex: /AMCore\s+(?:Content\s+|DAT\s+)?(?:Version\s+)?(\d+(?:\.\d+)*(?:-\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'amcore_dat',
+          category: 'endpoint',
+          criticality: 'high'
+        },
+        // MEDDAT - specialized for medical devices
+        { 
+          regex: /MED[-\s]?DAT\s+(?:Version\s+)?(\d+(?:\.\d+)*(?:-\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'meddat',
+          category: 'medical',
+          criticality: 'critical'
+        }
+      ];
+      break;
+      
+    case 'engines':
+      updatePatterns = [
+        // Security Engine updates
+        { 
+          regex: /(?:Security\s+)?Engine\s+(?:Version\s+)?(\d+(?:\.\d+)*(?:\.\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'engine',
+          category: 'general',
+          criticality: 'medium'
+        },
+        // Scanning Engine updates
+        { 
+          regex: /Scanning\s+Engine\s+(?:Version\s+)?(\d+(?:\.\d+)*(?:\.\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'scanning_engine',
+          category: 'general',
+          criticality: 'medium'
+        }
+      ];
+      break;
+      
+    case 'content':
+      updatePatterns = [
+        // TIE Intelligence Feed
+        { 
+          regex: /TIE\s+(?:Intelligence\s+)?(?:Feed\s+)?(?:Version\s+)?(\d+(?:\.\d+)*(?:-\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'tie',
+          category: 'tie',
+          criticality: 'medium'
+        },
+        // Exploit Prevention Content
+        { 
+          regex: /Exploit\s+Prevention\s+(?:Content\s+)?(?:Version\s+)?(\d+(?:\.\d+)*(?:-\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'exploit_prevention',
+          category: 'endpoint',
+          criticality: 'critical'
+        },
+        // General Content Updates
+        { 
+          regex: /Content\s+(?:Update\s+)?(?:Version\s+)?(\d+(?:\.\d+)*(?:-\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+          type: 'content',
+          category: 'content',
+          criticality: 'medium'
+        }
+      ];
+      break;
+  }
+  
+  // Parse each pattern for the specific tab
   for (const pattern of updatePatterns) {
     let match;
     while ((match = pattern.regex.exec(html)) !== null) {
@@ -419,7 +642,7 @@ function parseWithPatterns(html: string, tabType: string): SecurityUpdate[] {
           file_size: parseSizeToBytes(size, unit),
           file_name: `${updateType.replace('_', '-')}-${version}.zip`,
           sha256: generateMockSHA256(),
-          description: getUpdateDescription(updateType),
+          description: getUpdateDescription(updateType, tabType),
           is_recommended: pattern.criticality === 'critical' || pattern.criticality === 'high',
           download_url: `https://www.trellix.com/downloads/${updateType.replace('_', '-')}-${version}.zip`,
           update_category: pattern.category,
@@ -430,6 +653,56 @@ function parseWithPatterns(html: string, tabType: string): SecurityUpdate[] {
           threat_coverage: getThreatCoverage(updateType),
           deployment_notes: getDeploymentNotes(updateType)
         });
+      }
+    }
+  }
+  
+  // If no specific patterns found, use generic fallback patterns
+  if (updates.length === 0) {
+    console.log(`No specific patterns found for ${tabType}, using generic fallback`);
+    
+    const genericPatterns = [
+      // Generic version pattern with file size and date
+      { 
+        regex: /(?:Version\s+|v\.?\s*)?(\d+(?:\.\d+)*(?:-\d+)*)[\s\S]*?(\d+(?:\.\d+)?\s*(?:MB|GB|KB))[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/gi,
+        type: tabType === 'engines' ? 'engine' : tabType === 'content' ? 'content' : 'dat',
+        category: tabType,
+        criticality: 'medium'
+      }
+    ];
+    
+    for (const pattern of genericPatterns) {
+      let match;
+      while ((match = pattern.regex.exec(html)) !== null) {
+        const [, version, sizeStr, dateStr] = match;
+        const sizeMatch = sizeStr.match(/(\d+(?:\.\d+)?)\s*(MB|GB|KB)/i);
+        
+        if (sizeMatch) {
+          const [, size, unit] = sizeMatch;
+          const updateType = pattern.type as string;
+          const updateName = getUpdateDisplayName(updateType, version);
+          
+          updates.push({
+            name: updateName,
+            type: updateType,
+            platform: getPlatformForType(updateType),
+            version: version,
+            release_date: new Date(dateStr).toISOString(),
+            file_size: parseSizeToBytes(size, unit),
+            file_name: `${updateType.replace('_', '-')}-${version}.zip`,
+            sha256: generateMockSHA256(),
+            description: getUpdateDescription(updateType, tabType),
+            is_recommended: pattern.criticality === 'critical' || pattern.criticality === 'high',
+            download_url: `https://www.trellix.com/downloads/${updateType.replace('_', '-')}-${version}.zip`,
+            update_category: pattern.category,
+            criticality_level: pattern.criticality,
+            target_systems: getTargetSystems(updateType),
+            dependencies: getDependencies(updateType),
+            compatibility_info: getCompatibilityInfo(updateType),
+            threat_coverage: getThreatCoverage(updateType),
+            deployment_notes: getDeploymentNotes(updateType)
+          });
+        }
       }
     }
   }
