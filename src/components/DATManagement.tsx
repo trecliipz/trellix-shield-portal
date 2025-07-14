@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,37 +29,37 @@ const securityUpdates: SecurityUpdate[] = [
   {
     id: '1',
     name: 'DAT V3 Definition Update',
-    type: 'DAT',
+    type: 'dat',
     platform: 'Windows',
     version: 'v3.1234.5678',
-    releaseDate: '2025-01-11',
-    fileSize: '45.2 MB',
-    fileName: 'avvdat-v3123456.zip',
+    release_date: '2025-01-11',
+    file_size: 47415296, // 45.2 MB
+    file_name: 'avvdat-v3123456.zip',
     sha256: '4C09DB4914F16918E3A518B8D44E7E65527A90694BBBB460D5A5C4C965B385B7',
     description: 'Latest DAT V3 definition files with enhanced machine learning detection patterns.',
-    isRecommended: true
+    is_recommended: true
   },
   {
     id: '2',
     name: 'DAT V3 Definition Update',
-    type: 'DAT',
+    type: 'dat',
     platform: 'macOS',
     version: 'v3.1234.5678',
-    releaseDate: '2025-01-11',
-    fileSize: '42.8 MB',
-    fileName: 'avvdat-v3123456-mac.zip',
+    release_date: '2025-01-11',
+    file_size: 44879667, // 42.8 MB
+    file_name: 'avvdat-v3123456-mac.zip',
     sha256: '84570DE12504814C1D722085E49E9D2516192598AA36C3DA99B046DE9CD75C47',
     description: 'Latest DAT V3 definition files for macOS with behavioral analysis signatures.'
   },
   {
     id: '3',
     name: 'DAT V3 Definition Update',
-    type: 'DAT',
+    type: 'dat',
     platform: 'Linux',
     version: 'v3.1234.5678',
-    releaseDate: '2025-01-11',
-    fileSize: '48.1 MB',
-    fileName: 'avvdat-v3123456-lnx.zip',
+    release_date: '2025-01-11',
+    file_size: 50432819, // 48.1 MB
+    file_name: 'avvdat-v3123456-lnx.zip',
     sha256: 'D85D8B96891AB23788CADD2BAB7B052D813205CDE452125BC347800F2023969A',
     description: 'Latest DAT V3 definition files for Linux with advanced threat intelligence.'
   },
@@ -66,51 +67,51 @@ const securityUpdates: SecurityUpdate[] = [
   {
     id: '4',
     name: 'MEDDAT Mobile Endpoint Detection',
-    type: 'DAT',
+    type: 'dat',
     platform: 'Windows',
     version: 'MEDDAT.2024.11.15',
-    releaseDate: '2025-01-10',
-    fileSize: '28.5 MB',
-    fileName: 'meddat-20241115.zip',
+    release_date: '2025-01-10',
+    file_size: 29884416, // 28.5 MB
+    file_name: 'meddat-20241115.zip',
     sha256: 'A7B8C9D0E1F2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S1T2U3V4W5X6Y7Z8',
     description: 'Mobile and endpoint detection files for advanced threat hunting.',
-    isRecommended: true
+    is_recommended: true
   },
   // Engine Updates
   {
     id: '5',
     name: 'Security Engine Package',
-    type: 'Engine',
+    type: 'engine',
     platform: 'Windows',
     version: '6810',
-    releaseDate: '2025-06-30',
-    fileSize: '8.35 MB',
-    fileName: 'epo6810eng.zip',
+    release_date: '2025-06-30',
+    file_size: 8757683, // 8.35 MB
+    file_name: 'epo6810eng.zip',
     sha256: '4C09DB4914F16918E3A518B8D44E7E65527A90694BBBB460D5A5C4C965B385B7',
     description: 'Windows Engine Package for use with ePO - Enhanced scanning performance.',
-    isRecommended: true
+    is_recommended: true
   },
   {
     id: '6',
     name: 'Security Engine Package',
-    type: 'Engine',
+    type: 'engine',
     platform: 'macOS',
     version: '6810',
-    releaseDate: '2025-06-30',
-    fileSize: '7.14 MB',
-    fileName: 'epo6810mub.zip',
+    release_date: '2025-06-30',
+    file_size: 7487832, // 7.14 MB
+    file_name: 'epo6810mub.zip',
     sha256: '84570DE12504814C1D722085E49E9D2516192598AA36C3DA99B046DE9CD75C47',
     description: 'Mac OS Universal Engine Package for use with ePO.'
   },
   {
     id: '7',
     name: 'Security Engine Package',
-    type: 'Engine',
+    type: 'engine',
     platform: 'Linux',
     version: '6810',
-    releaseDate: '2025-06-30',
-    fileSize: '10.8 MB',
-    fileName: 'epo6810lnx.zip',
+    release_date: '2025-06-30',
+    file_size: 11324620, // 10.8 MB
+    file_name: 'epo6810lnx.zip',
     sha256: 'D85D8B96891AB23788CADD2BAB7B052D813205CDE452125BC347800F2023969A',
     description: 'Linux Engine Package for use with ePO - Optimized for server environments.'
   },
@@ -118,37 +119,37 @@ const securityUpdates: SecurityUpdate[] = [
   {
     id: '8',
     name: 'TIE Threat Intelligence Package',
-    type: 'Content',
+    type: 'content',
     platform: 'Windows',
     version: 'TIE.2025.01.11',
-    releaseDate: '2025-01-11',
-    fileSize: '85.3 MB',
-    fileName: 'tie-content-20250111-win.zip',
+    release_date: '2025-01-11',
+    file_size: 89478486, // 85.3 MB
+    file_name: 'tie-content-20250111-win.zip',
     sha256: '5D18EB5915F26928F4A529C9E55F8F76638B91705CCCC571E6A6D5D976C486C8',
     description: 'Threat Intelligence Exchange content with global reputation data.',
-    isRecommended: true
+    is_recommended: true
   },
   {
     id: '9',
     name: 'TIE Threat Intelligence Package',
-    type: 'Content',
+    type: 'content',
     platform: 'macOS',
     version: 'TIE.2025.01.11',
-    releaseDate: '2025-01-11',
-    fileSize: '76.8 MB',
-    fileName: 'tie-content-20250111-mac.zip',
+    release_date: '2025-01-11',
+    file_size: 80530636, // 76.8 MB
+    file_name: 'tie-content-20250111-mac.zip',
     sha256: '95681EF23615925E2E833186F5AB9E63527A91806DDDD571F7B7E6E087D397D9',
     description: 'Threat Intelligence Exchange content for macOS with file reputation services.'
   },
   {
     id: '10',
     name: 'TIE Threat Intelligence Package',
-    type: 'Content',
+    type: 'content',
     platform: 'Linux',
     version: 'TIE.2025.01.11',
-    releaseDate: '2025-01-11',
-    fileSize: '82.1 MB',
-    fileName: 'tie-content-20250111-lnx.zip',
+    release_date: '2025-01-11',
+    file_size: 86095626, // 82.1 MB
+    file_name: 'tie-content-20250111-lnx.zip',
     sha256: 'A96E9C07902BC34899DBEE3CAC8C163E724B92917EEEE682F8C8F7F198E408FA',
     description: 'Threat Intelligence Exchange content for Linux servers and workstations.'
   },
@@ -156,37 +157,37 @@ const securityUpdates: SecurityUpdate[] = [
   {
     id: '11',
     name: 'Exploit Prevention Content',
-    type: 'Content',
+    type: 'content',
     platform: 'Windows',
     version: 'EP.2025.01.10',
-    releaseDate: '2025-01-10',
-    fileSize: '156.7 MB',
-    fileName: 'exploit-prevention-20250110-win.zip',
+    release_date: '2025-01-10',
+    file_size: 164361011, // 156.7 MB
+    file_name: 'exploit-prevention-20250110-win.zip',
     sha256: 'F1E2D3C4B5A6978867F5E4D3C2B1A09876543210FEDCBA987654321098765432',
     description: 'Advanced exploit prevention signatures and behavioral rules for Windows.',
-    isRecommended: true
+    is_recommended: true
   },
   {
     id: '12',
     name: 'Exploit Prevention Content',
-    type: 'Content', 
+    type: 'content', 
     platform: 'macOS',
     version: 'EP.2025.01.10',
-    releaseDate: '2025-01-10',
-    fileSize: '124.3 MB',
-    fileName: 'exploit-prevention-20250110-mac.zip',
+    release_date: '2025-01-10',
+    file_size: 130338865, // 124.3 MB
+    file_name: 'exploit-prevention-20250110-mac.zip',
     sha256: 'E9F8G7H6I5J4K3L2M1N0O9P8Q7R6S5T4U3V2W1X0Y9Z8A7B6C5D4E3F2G1H0I9J8',
     description: 'Exploit prevention rules optimized for macOS application security.'
   },
   {
     id: '13',
     name: 'Exploit Prevention Content',
-    type: 'Content',
+    type: 'content',
     platform: 'Linux',
     version: 'EP.2025.01.10',
-    releaseDate: '2025-01-10',
-    fileSize: '143.9 MB',
-    fileName: 'exploit-prevention-20250110-lnx.zip',
+    release_date: '2025-01-10',
+    file_size: 150943539, // 143.9 MB
+    file_name: 'exploit-prevention-20250110-lnx.zip',
     sha256: 'B8A9C0D1E2F3G4H5I6J7K8L9M0N1O2P3Q4R5S6T7U8V9W0X1Y2Z3A4B5C6D7E8F9',
     description: 'Comprehensive exploit prevention for Linux environments and containers.'
   },
@@ -194,37 +195,37 @@ const securityUpdates: SecurityUpdate[] = [
   {
     id: '14',
     name: 'AMCore Content Package',
-    type: 'Content',
+    type: 'content',
     platform: 'Windows',
     version: '5947.0',
-    releaseDate: '2025-01-11',
-    fileSize: '92.4 MB',
-    fileName: 'amcore-5947-win.zip',
+    release_date: '2025-01-11',
+    file_size: 96909721, // 92.4 MB
+    file_name: 'amcore-5947-win.zip',
     sha256: 'C9D8E7F6A5B4932176543A8B7C6D5E4F321098ABCDEF9876543210FEDCBA0987',
     description: 'Enhanced malware detection patterns and behavioral analysis for Windows.',
-    isRecommended: true
+    is_recommended: true
   },
   {
     id: '15',
     name: 'AMCore Content Package',
-    type: 'Content',
+    type: 'content',
     platform: 'macOS',
     version: '5947.0',
-    releaseDate: '2025-01-11',
-    fileSize: '87.2 MB',
-    fileName: 'amcore-5947-mac.zip',
+    release_date: '2025-01-11',
+    file_size: 91416166, // 87.2 MB
+    file_name: 'amcore-5947-mac.zip',
     sha256: 'D0E9F8A7B6C5043287654B9C8D7E6F5A432109BCDEF0987654321FEDCBA09876',
     description: 'Enhanced malware detection patterns and behavioral analysis for macOS.'
   },
   {
     id: '16',
     name: 'AMCore Content Package',
-    type: 'Content',
+    type: 'content',
     platform: 'Linux',
     version: '5947.0',
-    releaseDate: '2025-01-11',
-    fileSize: '95.8 MB',
-    fileName: 'amcore-5947-lnx.zip',
+    release_date: '2025-01-11',
+    file_size: 100463034, // 95.8 MB
+    file_name: 'amcore-5947-lnx.zip',
     sha256: 'E1F0A9B8C7D6154398765C0D9E8F7A6B543210CDEF10987654321FEDCBA09876',
     description: 'Enhanced malware detection patterns and behavioral analysis for Linux.'
   }
@@ -234,7 +235,7 @@ export const DATManagement = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUpdates, setSelectedUpdates] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<number>(0);
-  const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdate[]>([]);
+  const [securityUpdatesState, setSecurityUpdatesState] = useState<SecurityUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -257,7 +258,7 @@ export const DATManagement = () => {
         return;
       }
 
-      setSecurityUpdates(data?.map(update => ({
+      setSecurityUpdatesState(data?.map(update => ({
         ...update,
         type: update.type as 'dat' | 'engine' | 'content'
       })) || []);
@@ -363,7 +364,7 @@ export const DATManagement = () => {
 
     if (confirmDownload) {
       selectedUpdates.forEach(updateId => {
-        const update = securityUpdates.find(u => u.id === updateId);
+        const update = securityUpdatesState.find(u => u.id === updateId);
         if (update) {
           const link = document.createElement('a');
           link.href = `data:application/octet-stream;base64,${btoa(`Trellix ${update.type} Package - ${update.platform} v${update.version}`)}`;
@@ -419,6 +420,15 @@ export const DATManagement = () => {
     }
   };
 
+  const getPlatformIcon = (platform: string) => {
+    switch (platform.toLowerCase()) {
+      case 'windows': return <Monitor className="h-3 w-3" />;
+      case 'macos': return <Smartphone className="h-3 w-3" />;
+      case 'linux': return <Server className="h-3 w-3" />;
+      default: return <Monitor className="h-3 w-3" />;
+    }
+  };
+
   const formatFileSize = (bytes: number): string => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 Bytes';
@@ -446,9 +456,9 @@ export const DATManagement = () => {
     );
   }
 
-  const datUpdates = securityUpdates.filter(u => u.type === 'dat');
-  const engineUpdates = securityUpdates.filter(u => u.type === 'engine');
-  const contentUpdates = securityUpdates.filter(u => u.type === 'content');
+  const datUpdates = securityUpdatesState.filter(u => u.type === 'dat');
+  const engineUpdates = securityUpdatesState.filter(u => u.type === 'engine');
+  const contentUpdates = securityUpdatesState.filter(u => u.type === 'content');
 
   const renderUpdatesTable = (updates: SecurityUpdate[]) => {
     const isAllSelected = updates.every(u => selectedUpdates.includes(u.id));
@@ -634,7 +644,7 @@ export const DATManagement = () => {
               <CardTitle>All Security Updates</CardTitle>
             </CardHeader>
             <CardContent>
-              {renderUpdatesTable(securityUpdates)}
+              {renderUpdatesTable(securityUpdatesState)}
             </CardContent>
           </Card>
         </TabsContent>
