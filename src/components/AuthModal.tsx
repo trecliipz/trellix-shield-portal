@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -35,10 +36,10 @@ const registerSchema = z.object({
 interface AuthModalProps {
   type: 'login' | 'register' | null;
   onClose: () => void;
-  onLogin: (email: string, password: string) => boolean;
 }
 
-export const AuthModal = ({ type, onClose, onLogin }: AuthModalProps) => {
+export const AuthModal = ({ type, onClose }: AuthModalProps) => {
+  const { signIn, signUp } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -64,12 +65,11 @@ export const AuthModal = ({ type, onClose, onLogin }: AuthModalProps) => {
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
-      const success = onLogin(values.email, values.password);
-      if (success) {
-        toast.success("Login successful! Welcome to Trellix Agent Portal.");
+      const { error } = await signIn(values.email, values.password);
+      if (!error) {
         onClose();
       } else {
-        toast.error("Invalid credentials. Please try again.");
+        toast.error(error);
       }
     } catch (error) {
       toast.error("An error occurred during login.");
@@ -81,10 +81,17 @@ export const AuthModal = ({ type, onClose, onLogin }: AuthModalProps) => {
   const handleRegister = async (values: z.infer<typeof registerSchema>) => {
     setIsSubmitting(true);
     try {
-      toast.success("Account created successfully! You can now login.");
-      registerForm.reset();
-      onClose();
-      // In a real app, you would register the user here
+      const { error } = await signUp(values.email, values.password, {
+        name: values.name,
+        company: values.company
+      });
+      
+      if (!error) {
+        registerForm.reset();
+        onClose();
+      } else {
+        toast.error(error);
+      }
     } catch (error) {
       toast.error("An error occurred during registration.");
     } finally {

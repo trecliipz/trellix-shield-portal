@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AuthModal } from "./AuthModal";
 import { ContactForm } from "./ContactForm";
 import { MessageSquare, ChevronDown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,14 +12,10 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-interface HeaderProps {
-  isLoggedIn: boolean;
-  currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
-  onLogin: (email: string, password: string) => boolean;
-  onLogout: () => void;
-}
+interface HeaderProps {}
 
-export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderProps) => {
+export const Header = ({}: HeaderProps) => {
+  const { user, signOut, isAdmin } = useAuth();
   const [authModalType, setAuthModalType] = useState<'login' | 'register' | null>(null);
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
 
@@ -141,9 +138,9 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
             </div>
 
             <div className="flex items-center space-x-4">
-              {isLoggedIn ? (
+              {user ? (
                 <>
-                  {currentUser?.role === 'admin' && (
+                  {isAdmin && (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -163,9 +160,9 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
                     Contact Admin
                   </Button>
                   <span className="text-primary mr-4 hidden sm:block">
-                    Welcome, {currentUser?.name}!
+                    Welcome, {user.user_metadata?.name || user.email?.split('@')[0]}!
                   </span>
-                  <Button variant="outline" onClick={onLogout}>
+                  <Button variant="outline" onClick={signOut}>
                     Logout
                   </Button>
                 </>
@@ -187,13 +184,16 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
       <AuthModal 
         type={authModalType}
         onClose={() => setAuthModalType(null)}
-        onLogin={onLogin}
       />
       
       <ContactForm
         isOpen={isContactFormOpen}
         onClose={() => setIsContactFormOpen(false)}
-        currentUser={currentUser}
+        currentUser={user ? {
+          email: user.email || '',
+          name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+          role: isAdmin ? 'admin' : 'user'
+        } : null}
       />
     </>
   );

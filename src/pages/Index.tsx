@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { Dashboard } from "@/components/Dashboard";
@@ -6,73 +5,34 @@ import { AnimatedArchitecture } from "@/components/AnimatedArchitecture";
 import { Features } from "@/components/Features";
 import { Support } from "@/components/Support";
 import { Documentation } from "@/components/Documentation";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ email: string; name: string; role: 'admin' | 'user' } | null>(null);
-
-  const handleLogin = (email: string, password: string): boolean => {
-    // Check for admin credentials
-    if (email === 'admin@trellix.com' && password === '12345678') {
-      setIsLoggedIn(true);
-      setCurrentUser({ 
-        email: email, 
-        name: 'Admin',
-        role: 'admin'
-      });
-      return true;
-    }
-    
-    // Check for users with temp passwords
-    const users = JSON.parse(localStorage.getItem('admin_users') || '[]');
-    const user = users.find((u: any) => u.email === email);
-    if (user && user.tempPassword === password) {
-      setIsLoggedIn(true);
-      setCurrentUser({ 
-        email: email, 
-        name: user.name,
-        role: user.role
-      });
-      return true;
-    }
-    
-    // Regular user authentication
-    if (email && password) {
-      setIsLoggedIn(true);
-      setCurrentUser({ 
-        email: email, 
-        name: email.split('@')[0],
-        role: 'user'
-      });
-      return true;
-    }
-    return false;
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-  };
+  const { user, isAdmin, loading } = useAuth();
 
   const handleGetStarted = () => {
-    if (!isLoggedIn) {
+    if (!user) {
       // This will be handled by the AuthModal in Header
       const event = new CustomEvent('openAuthModal', { detail: 'register' });
       window.dispatchEvent(event);
     }
   };
 
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <Header 
-        isLoggedIn={isLoggedIn}
-        currentUser={currentUser}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
-      />
+      <Header />
       
       <main className="pt-20">
-        {!isLoggedIn ? (
+        {!user ? (
           <>
             <Hero onGetStarted={handleGetStarted} />
             <AnimatedArchitecture />
@@ -81,7 +41,11 @@ const Index = () => {
             <Documentation />
           </>
         ) : (
-          <Dashboard currentUser={currentUser} />
+          <Dashboard currentUser={{
+            email: user.email || '',
+            name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+            role: isAdmin ? 'admin' : 'user'
+          }} />
         )}
       </main>
     </div>
