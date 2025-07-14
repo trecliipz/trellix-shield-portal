@@ -391,7 +391,11 @@ export type Database = {
       security_updates: {
         Row: {
           changelog: string | null
+          compatibility_info: Json | null
           created_at: string
+          criticality_level: string | null
+          dependencies: Json | null
+          deployment_notes: string | null
           description: string | null
           download_url: string | null
           file_name: string
@@ -402,13 +406,20 @@ export type Database = {
           platform: string
           release_date: string
           sha256: string | null
+          target_systems: Json | null
+          threat_coverage: string[] | null
           type: string
+          update_category: string | null
           updated_at: string
           version: string
         }
         Insert: {
           changelog?: string | null
+          compatibility_info?: Json | null
           created_at?: string
+          criticality_level?: string | null
+          dependencies?: Json | null
+          deployment_notes?: string | null
           description?: string | null
           download_url?: string | null
           file_name: string
@@ -419,13 +430,20 @@ export type Database = {
           platform: string
           release_date?: string
           sha256?: string | null
+          target_systems?: Json | null
+          threat_coverage?: string[] | null
           type: string
+          update_category?: string | null
           updated_at?: string
           version: string
         }
         Update: {
           changelog?: string | null
+          compatibility_info?: Json | null
           created_at?: string
+          criticality_level?: string | null
+          dependencies?: Json | null
+          deployment_notes?: string | null
           description?: string | null
           download_url?: string | null
           file_name?: string
@@ -436,7 +454,10 @@ export type Database = {
           platform?: string
           release_date?: string
           sha256?: string | null
+          target_systems?: Json | null
+          threat_coverage?: string[] | null
           type?: string
+          update_category?: string | null
           updated_at?: string
           version?: string
         }

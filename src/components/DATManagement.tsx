@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RefreshCw, Download, Calendar, HardDrive, Shield, Activity, AlertTriangle, CheckCircle, Smartphone, Monitor, Server, Database, FileCheck, DownloadCloud, Clock, Bell } from 'lucide-react';
+import { RefreshCw, Download, Calendar, HardDrive, Shield, Activity, AlertTriangle, CheckCircle, Smartphone, Monitor, Server, Database, FileCheck, DownloadCloud, Clock, Bell, Heart, Globe, Zap, Mail, Cog, Package, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,15 +13,22 @@ import { supabase } from '@/integrations/supabase/client';
 interface SecurityUpdate {
   id: string;
   name: string;
-  type: 'dat' | 'engine' | 'content';
+  type: string;
   platform: string;
   version: string;
   release_date: string;
   file_size: number;
   file_name: string;
-  sha256: string;
-  description: string;
+  sha256?: string;
+  description?: string;
   is_recommended: boolean;
+  update_category?: string;
+  criticality_level?: string;
+  target_systems?: string[];
+  dependencies?: string[];
+  compatibility_info?: any;
+  threat_coverage?: string[];
+  deployment_notes?: string;
 }
 
 const securityUpdates: SecurityUpdate[] = [
@@ -270,7 +277,10 @@ export const DATManagement = () => {
 
       setSecurityUpdatesState(data?.map(update => ({
         ...update,
-        type: update.type as 'dat' | 'engine' | 'content'
+        type: update.type as string,
+        target_systems: Array.isArray(update.target_systems) ? update.target_systems : [],
+        dependencies: Array.isArray(update.dependencies) ? update.dependencies : [],
+        threat_coverage: Array.isArray(update.threat_coverage) ? update.threat_coverage : []
       })) || []);
       
       // Count new updates (released within last 7 days)
@@ -413,20 +423,67 @@ export const DATManagement = () => {
   };
 
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'dat': return <Database className="h-4 w-4" />;
-      case 'engine': return <Shield className="h-4 w-4" />;
-      case 'content': return <FileCheck className="h-4 w-4" />;
-      default: return <Database className="h-4 w-4" />;
+    switch (type.toLowerCase()) {
+      case 'dat':
+      case 'datv3':
+        return <Shield className="h-4 w-4" />;
+      case 'meddat':
+        return <Heart className="h-4 w-4" />;
+      case 'tie':
+        return <Globe className="h-4 w-4" />;
+      case 'exploit_prevention':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'amcore_dat':
+        return <Zap className="h-4 w-4" />;
+      case 'gateway_dat':
+      case 'email_dat':
+        return <Mail className="h-4 w-4" />;
+      case 'engine':
+        return <Cog className="h-4 w-4" />;
+      case 'content':
+        return <Package className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
     }
   };
 
   const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'dat': return 'default';
-      case 'engine': return 'secondary';
-      case 'content': return 'outline';
-      default: return 'default';
+    switch (type.toLowerCase()) {
+      case 'dat':
+      case 'datv3':
+        return 'destructive';
+      case 'meddat':
+        return 'secondary';
+      case 'tie':
+        return 'outline';
+      case 'exploit_prevention':
+        return 'destructive';
+      case 'amcore_dat':
+        return 'secondary';
+      case 'gateway_dat':
+      case 'email_dat':
+        return 'outline';
+      case 'engine':
+        return 'default';
+      case 'content':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
+
+  const getCriticalityColor = (level?: string) => {
+    switch (level?.toLowerCase()) {
+      case 'critical':
+        return 'destructive';
+      case 'high':
+        return 'secondary';
+      case 'medium':
+        return 'outline';
+      case 'low':
+        return 'default';
+      default:
+        return 'outline';
     }
   };
 
@@ -521,17 +578,16 @@ export const DATManagement = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-2">
-                    {getTypeIcon(update.type)}
-                    <div>
-                      <div className="font-medium flex items-center space-x-2">
-                        <span>{update.name}</span>
-                        {new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) && (
-                          <Badge variant="destructive" className="text-xs px-1 py-0">NEW</Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{update.description}</div>
-                    </div>
+                  <div className="flex gap-2">
+                    <Badge variant={getTypeColor(update.type)} className="flex items-center gap-1">
+                      {getTypeIcon(update.type)}
+                      {update.type.toUpperCase().replace('_', ' ')}
+                    </Badge>
+                    {update.criticality_level && (
+                      <Badge variant={getCriticalityColor(update.criticality_level)}>
+                        {update.criticality_level.toUpperCase()}
+                      </Badge>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
