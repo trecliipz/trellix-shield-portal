@@ -399,17 +399,32 @@ function isTargetPackage(name: string, tabType: string): boolean {
   }
 }
 
-// Enhanced version extraction
+// Enhanced version extraction with DAT-specific priority
 function extractEnhancedVersion(text: string): string {
-  // Try multiple version patterns
-  const patterns = [
-    /v?(\d+(?:\.\d+){2,})/i,  // Version with multiple dots (e.g., 4.0.00-100012)
-    /(\d+(?:\.\d+)*(?:-\d+)*)/,  // Version with optional dash
-    /version\s*(\d+(?:\.\d+)*)/i, // "Version X.X.X"
-    /(\d{4,})/  // Just a large number (like DAT numbers)
+  // DAT-specific patterns (highest priority for clean 4-digit versions)
+  const datPatterns = [
+    /V3_(\d{4})dat\.exe/i,  // V3_5949dat.exe format
+    /V3_(\d{4})\.exe/i,     // V3_5949.exe format
+    /(\d{4})\.0(?:\s|$)/,   // 5949.0 format (decimal DAT versions)
+    /^(\d{4})(?:\s|$)/,     // Clean 4-digit at start (5949)
   ];
   
-  for (const pattern of patterns) {
+  // Try DAT-specific patterns first
+  for (const pattern of datPatterns) {
+    const match = text.match(pattern);
+    if (match) return match[1];
+  }
+  
+  // General version patterns (for engines and other updates)
+  const generalPatterns = [
+    /v?(\d+(?:\.\d+){2,})/i,  // Version with multiple dots (e.g., 4.0.00-100012)
+    /version\s*(\d+(?:\.\d+)*)/i, // "Version X.X.X"
+    /(\d+(?:\.\d+)*(?:-\d+)*)/,  // Version with optional dash
+    /(\d{4,})/  // Just a large number fallback
+  ];
+  
+  // Try general patterns
+  for (const pattern of generalPatterns) {
     const match = text.match(pattern);
     if (match) return match[1];
   }
