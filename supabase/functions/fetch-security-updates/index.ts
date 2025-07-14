@@ -171,7 +171,14 @@ serve(async (req) => {
  });
 
 // Parse security updates from Trellix HTML content
-async function parseSecurityUpdates(html: string): Promise<SecurityUpdate[]> {
+// Helper function to determine tab type from URL
+function getTabType(url: string): string {
+  if (url.includes('selectedTab=engines')) return 'engines';
+  if (url.includes('selectedTab=content')) return 'content';
+  return 'updates';
+}
+
+async function parseSecurityUpdates(html: string, tabType: string = 'updates'): Promise<SecurityUpdate[]> {
   const updates: SecurityUpdate[] = [];
   
   // Enhanced parsing patterns for all security update types
@@ -312,7 +319,7 @@ function getPlatformForType(type: string): string {
   return platforms[type] || 'All Platforms';
 }
 
-function getUpdateDescription(type: string): string {
+function getUpdateDescription(type: string, tabType: string = 'updates'): string {
   const descriptions: Record<string, string> = {
     'dat': 'Traditional DAT file containing virus definitions and signatures',
     'datv3': 'Next-generation DAT Version 3 with enhanced detection capabilities',

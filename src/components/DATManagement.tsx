@@ -275,13 +275,17 @@ export const DATManagement = () => {
         return;
       }
 
-      setSecurityUpdatesState(data?.map(update => ({
+      setSecurityUpdatesState((data?.map(update => ({
         ...update,
         type: update.type as string,
-        target_systems: Array.isArray(update.target_systems) ? update.target_systems : [],
-        dependencies: Array.isArray(update.dependencies) ? update.dependencies : [],
+        target_systems: Array.isArray(update.target_systems) 
+          ? (update.target_systems as any[]).map(item => typeof item === 'string' ? item : String(item)) 
+          : [],
+        dependencies: Array.isArray(update.dependencies) 
+          ? (update.dependencies as any[]).map(item => typeof item === 'string' ? item : String(item))
+          : [],
         threat_coverage: Array.isArray(update.threat_coverage) ? update.threat_coverage : []
-      })) || []);
+      })) || []) as SecurityUpdate[]);
       
       // Count new updates (released within last 7 days)
       const newUpdatesCount = data?.filter(update => {

@@ -45,6 +45,7 @@ interface SecurityUpdateData {
 const Features = (): JSX.Element => {
   const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdateData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [platformVersions, setPlatformVersions] = useState<Record<string, Record<string, string>>>({});
 
   // Fetch and aggregate security updates from Supabase
   const fetchSecurityUpdates = async () => {
