@@ -49,7 +49,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 44879667, // 42.8 MB
     file_name: 'avvdat-v3123456-mac.zip',
     sha256: '84570DE12504814C1D722085E49E9D2516192598AA36C3DA99B046DE9CD75C47',
-    description: 'Latest DAT V3 definition files for macOS with behavioral analysis signatures.'
+    description: 'Latest DAT V3 definition files for macOS with behavioral analysis signatures.',
+    is_recommended: false
   },
   {
     id: '3',
@@ -61,7 +62,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 50432819, // 48.1 MB
     file_name: 'avvdat-v3123456-lnx.zip',
     sha256: 'D85D8B96891AB23788CADD2BAB7B052D813205CDE452125BC347800F2023969A',
-    description: 'Latest DAT V3 definition files for Linux with advanced threat intelligence.'
+    description: 'Latest DAT V3 definition files for Linux with advanced threat intelligence.',
+    is_recommended: false
   },
   // MEDDAT Files
   {
@@ -101,7 +103,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 7487832, // 7.14 MB
     file_name: 'epo6810mub.zip',
     sha256: '84570DE12504814C1D722085E49E9D2516192598AA36C3DA99B046DE9CD75C47',
-    description: 'Mac OS Universal Engine Package for use with ePO.'
+    description: 'Mac OS Universal Engine Package for use with ePO.',
+    is_recommended: false
   },
   {
     id: '7',
@@ -113,7 +116,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 11324620, // 10.8 MB
     file_name: 'epo6810lnx.zip',
     sha256: 'D85D8B96891AB23788CADD2BAB7B052D813205CDE452125BC347800F2023969A',
-    description: 'Linux Engine Package for use with ePO - Optimized for server environments.'
+    description: 'Linux Engine Package for use with ePO - Optimized for server environments.',
+    is_recommended: false
   },
   // TIE Content Updates
   {
@@ -139,7 +143,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 80530636, // 76.8 MB
     file_name: 'tie-content-20250111-mac.zip',
     sha256: '95681EF23615925E2E833186F5AB9E63527A91806DDDD571F7B7E6E087D397D9',
-    description: 'Threat Intelligence Exchange content for macOS with file reputation services.'
+    description: 'Threat Intelligence Exchange content for macOS with file reputation services.',
+    is_recommended: false
   },
   {
     id: '10',
@@ -151,7 +156,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 86095626, // 82.1 MB
     file_name: 'tie-content-20250111-lnx.zip',
     sha256: 'A96E9C07902BC34899DBEE3CAC8C163E724B92917EEEE682F8C8F7F198E408FA',
-    description: 'Threat Intelligence Exchange content for Linux servers and workstations.'
+    description: 'Threat Intelligence Exchange content for Linux servers and workstations.',
+    is_recommended: false
   },
   // Exploit Prevention Content
   {
@@ -177,7 +183,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 130338865, // 124.3 MB
     file_name: 'exploit-prevention-20250110-mac.zip',
     sha256: 'E9F8G7H6I5J4K3L2M1N0O9P8Q7R6S5T4U3V2W1X0Y9Z8A7B6C5D4E3F2G1H0I9J8',
-    description: 'Exploit prevention rules optimized for macOS application security.'
+    description: 'Exploit prevention rules optimized for macOS application security.',
+    is_recommended: false
   },
   {
     id: '13',
@@ -189,7 +196,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 150943539, // 143.9 MB
     file_name: 'exploit-prevention-20250110-lnx.zip',
     sha256: 'B8A9C0D1E2F3G4H5I6J7K8L9M0N1O2P3Q4R5S6T7U8V9W0X1Y2Z3A4B5C6D7E8F9',
-    description: 'Comprehensive exploit prevention for Linux environments and containers.'
+    description: 'Comprehensive exploit prevention for Linux environments and containers.',
+    is_recommended: false
   },
   // AMCore Content Package
   {
@@ -215,7 +223,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 91416166, // 87.2 MB
     file_name: 'amcore-5947-mac.zip',
     sha256: 'D0E9F8A7B6C5043287654B9C8D7E6F5A432109BCDEF0987654321FEDCBA09876',
-    description: 'Enhanced malware detection patterns and behavioral analysis for macOS.'
+    description: 'Enhanced malware detection patterns and behavioral analysis for macOS.',
+    is_recommended: false
   },
   {
     id: '16',
@@ -227,7 +236,8 @@ const securityUpdates: SecurityUpdate[] = [
     file_size: 100463034, // 95.8 MB
     file_name: 'amcore-5947-lnx.zip',
     sha256: 'E1F0A9B8C7D6154398765C0D9E8F7A6B543210CDEF10987654321FEDCBA09876',
-    description: 'Enhanced malware detection patterns and behavioral analysis for Linux.'
+    description: 'Enhanced malware detection patterns and behavioral analysis for Linux.',
+    is_recommended: false
   }
 ];
 
