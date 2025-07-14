@@ -741,3 +741,4 @@ async function processUpdates(supabase: any, updates: SecurityUpdate[], startTim
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     }
   );
+}
