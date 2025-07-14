@@ -37,6 +37,7 @@ interface SecurityUpdateData {
     size: string;
     icon: React.ReactNode;
     status: string;
+    criticality?: string;
   }>;
   description: string;
   frequency: string;
@@ -46,6 +47,38 @@ const Features = (): JSX.Element => {
   const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdateData[]>([]);
   const [loading, setLoading] = useState(true);
   const [platformVersions, setPlatformVersions] = useState<Record<string, Record<string, string>>>({});
+
+  // Helper functions
+  const formatFileSize = (bytes: number): string => {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    if (bytes === 0) return '0 Bytes';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const getPlatformIcon = (platform: string): string => {
+    if (platform.toLowerCase().includes('windows')) return '🪟';
+    if (platform.toLowerCase().includes('linux')) return '🐧';
+    if (platform.toLowerCase().includes('mac')) return '🍎';
+    if (platform.toLowerCase().includes('medical')) return '🏥';
+    if (platform.toLowerCase().includes('gateway')) return '🌐';
+    if (platform.toLowerCase().includes('email')) return '📧';
+    return '💻';
+  };
+
+  const getUpdateFrequency = (type: string): string => {
+    const frequencies: Record<string, string> = {
+      'dat': 'Updated multiple times daily',
+      'datv3': 'Updated daily',
+      'meddat': 'Updated weekly',
+      'amcore_dat': 'Updated daily',
+      'tie': 'Updated continuously',
+      'exploit_prevention': 'Updated as needed',
+      'engine': 'Updated weekly',
+      'content': 'Updated daily'
+    };
+    return frequencies[type] || 'Updated regularly';
+  };
 
   // Fetch and aggregate security updates from Supabase
   const fetchSecurityUpdates = async () => {
@@ -61,48 +94,72 @@ const Features = (): JSX.Element => {
         return;
       }
 
-      // Group updates by type and platform
+      // Group updates by type and platform for better display
       const groupedUpdates: { [key: string]: any } = {};
+      const platformVersions: { [key: string]: { [key: string]: any } } = {};
       
       data?.forEach(update => {
-        const typeKey = update.type === 'dat' ? 'DAT Files' : 
-                       update.type === 'content' ? 'AMCore Content' : 
-                       'Security Engine';
+        const typeKey = update.type === 'dat' ? 'DAT Files' :
+                       update.type === 'datv3' ? 'DAT V3' :
+                       update.type === 'meddat' ? 'MEDDAT' :
+                       update.type === 'amcore_dat' ? 'AMCore Content' :
+                       update.type === 'tie' ? 'TIE Intelligence' :
+                       update.type === 'exploit_prevention' ? 'Exploit Prevention' :
+                       update.type === 'engine' ? 'Security Engine' :
+                       update.type === 'content' ? 'Content Updates' : 
+                       'Security Updates';
         
         if (!groupedUpdates[typeKey]) {
           groupedUpdates[typeKey] = {
             type: typeKey,
             urgency: update.is_recommended ? 'critical' : 'important',
             platforms: [],
-            description: update.description,
-            frequency: update.type === 'dat' ? 'Updated multiple times daily' : 
-                      update.type === 'content' ? 'Updated daily' : 'Updated weekly'
+            description: update.description || `${typeKey} for comprehensive threat protection`,
+            frequency: getUpdateFrequency(update.type)
           };
         }
 
-        const formatFileSize = (bytes: number): string => {
-          const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-          if (bytes === 0) return '0 Bytes';
-          const i = Math.floor(Math.log(bytes) / Math.log(1024));
-          return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
-        };
-
-        const platformIcon = update.platform === 'Windows' ? '🪟' : 
-                           update.platform === 'Linux' ? '🐧' : '🍎';
-
-        const isNew = new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        // Track platform-specific versions
+        if (!platformVersions[typeKey]) {
+          platformVersions[typeKey] = {};
+        }
         
-        groupedUpdates[typeKey].platforms.push({
-          name: update.platform,
-          version: update.version,
-          date: new Date(update.release_date).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-          }),
-          size: formatFileSize(update.file_size),
-          icon: platformIcon,
-          status: isNew ? 'new' : update.is_recommended ? 'updated' : 'stable'
+        const platformKey = update.platform || 'All Platforms';
+        if (!platformVersions[typeKey][platformKey] || 
+            new Date(update.release_date) > new Date(platformVersions[typeKey][platformKey].date)) {
+          platformVersions[typeKey][platformKey] = {
+            version: update.version,
+            date: update.release_date,
+            size: update.file_size,
+            isNew: new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            criticality: update.criticality_level,
+            isRecommended: update.is_recommended
+          };
+        }
+      });
+
+      // Convert platform versions to display format
+      Object.keys(groupedUpdates).forEach(typeKey => {
+        const platforms = platformVersions[typeKey];
+        Object.keys(platforms).forEach(platformName => {
+          const platform = platforms[platformName];
+          const platformIcon = getPlatformIcon(platformName);
+          
+          groupedUpdates[typeKey].platforms.push({
+            name: platformName,
+            version: platform.version,
+            date: new Date(platform.date).toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              year: 'numeric' 
+            }),
+            size: formatFileSize(platform.size),
+            icon: platformIcon,
+            status: platform.isNew ? 'new' : 
+                   platform.isRecommended ? 'updated' : 
+                   'stable',
+            criticality: platform.criticality
+          });
         });
       });
 
@@ -191,10 +248,19 @@ const Features = (): JSX.Element => {
                     {update.platforms.map((platform, platformIndex) => (
                       <div key={platformIndex} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] border border-transparent hover:border-primary/20">
                         <div className="flex items-center space-x-3">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-lg">{platform.icon}</span>
-                            <span className="font-medium text-card-foreground">{platform.name}</span>
-                          </div>
+                         <div className="flex items-center space-x-2">
+                           <span className="text-lg">{platform.icon}</span>
+                           <span className="font-medium text-card-foreground">{platform.name}</span>
+                           {platform.criticality && (
+                             <Badge 
+                               variant={platform.criticality === 'critical' ? 'destructive' : 
+                                       platform.criticality === 'high' ? 'secondary' : 'outline'}
+                               className="text-xs"
+                             >
+                               {platform.criticality}
+                             </Badge>
+                           )}
+                         </div>
                           <div className="flex items-center space-x-2">
                             {platform.status === 'new' && (
                               <Badge variant="default" className="text-xs px-2 py-0">NEW</Badge>

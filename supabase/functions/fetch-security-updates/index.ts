@@ -43,29 +43,51 @@ serve(async (req) => {
     console.log('Starting security updates fetch...');
     const startTime = Date.now();
 
-    // Fetch real security updates from Trellix downloads page
-    const trellixUrl = 'https://www.trellix.com/downloads/security-updates/';
+    // Fetch real security updates from all three Trellix tabs
+    const trellixUrls = [
+      'https://www.trellix.com/downloads/security-updates/?selectedTab=updates',
+      'https://www.trellix.com/downloads/security-updates/?selectedTab=engines',
+      'https://www.trellix.com/downloads/security-updates/?selectedTab=content'
+    ];
+    
+    let allUpdates: SecurityUpdate[] = [];
     
     try {
-      const response = await fetch(trellixUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Security-Updates-Bot/1.0)'
+      // Fetch all tabs sequentially to avoid rate limiting
+      for (const url of trellixUrls) {
+        console.log(`Fetching ${url}...`);
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; Security-Updates-Bot/1.0)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate'
+          }
+        });
+        
+        if (!response.ok) {
+          console.warn(`Failed to fetch ${url}: ${response.status}`);
+          continue;
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const html = await response.text();
+        const tabType = getTabType(url);
+        console.log(`Successfully fetched ${tabType} tab, parsing content...`);
+        
+        // Parse the HTML to extract security update information for this tab
+        const tabUpdates = await parseSecurityUpdates(html, tabType);
+        console.log(`Parsed ${tabUpdates.length} updates from ${tabType} tab`);
+        
+        allUpdates = allUpdates.concat(tabUpdates);
+        
+        // Add delay between requests to be respectful
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      const html = await response.text();
-      console.log('Successfully fetched Trellix page, parsing content...');
+      console.log(`Total parsed updates: ${allUpdates.length}`);
       
-      // Parse the HTML to extract security update information
-      const updates = await parseSecurityUpdates(html);
-      console.log(`Parsed ${updates.length} updates from Trellix`);
-      
-      // Process real updates
-      await processUpdates(supabase, updates, startTime);
+      // Process all real updates
+      await processUpdates(supabase, allUpdates, startTime);
       
     } catch (error) {
       console.error('Error fetching from Trellix:', error);
@@ -181,6 +203,134 @@ function getTabType(url: string): string {
 async function parseSecurityUpdates(html: string, tabType: string = 'updates'): Promise<SecurityUpdate[]> {
   const updates: SecurityUpdate[] = [];
   
+  // Parse HTML table structure - enhanced for real Trellix site
+  const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/gi;
+  const tables = html.match(tableRegex) || [];
+  
+  console.log(`Found ${tables.length} tables in ${tabType} tab`);
+  
+  for (const table of tables) {
+    // Extract table rows
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    const rows = table.match(rowRegex) || [];
+    
+    for (const row of rows) {
+      // Skip header rows
+      if (row.includes('<th')) continue;
+      
+      // Extract cell data
+      const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+      const cells: string[] = [];
+      let cellMatch;
+      
+      while ((cellMatch = cellRegex.exec(row)) !== null) {
+        // Clean HTML tags and extract text
+        const cellText = cellMatch[1]
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        cells.push(cellText);
+      }
+      
+      // Parse based on tab type
+      const update = parseRowByTabType(cells, tabType);
+      if (update) {
+        updates.push(update);
+      }
+    }
+  }
+  
+  // If table parsing didn't find anything, fallback to pattern matching
+  if (updates.length === 0) {
+    console.log(`No table data found, using pattern matching for ${tabType}`);
+    return parseWithPatterns(html, tabType);
+  }
+  
+  return updates;
+}
+
+function parseRowByTabType(cells: string[], tabType: string): SecurityUpdate | null {
+  if (cells.length < 3) return null;
+  
+  try {
+    // Common parsing logic for all tabs
+    let name = '', version = '', platform = 'All Platforms', type = tabType;
+    let fileSize = 0, releaseDate = new Date().toISOString();
+    let fileName = '', downloadUrl = '';
+    
+    // Tab-specific parsing
+    switch (tabType) {
+      case 'updates':
+        // Updates tab: typically [Name, Version, Platform, Size, Date, Download]
+        if (cells.length >= 4) {
+          name = cells[0] || '';
+          version = extractVersion(cells[1]) || '1.0';
+          platform = extractPlatform(cells[2]) || 'All Platforms';
+          fileSize = extractFileSize(cells[3]) || 0;
+          releaseDate = extractDate(cells[4]) || new Date().toISOString();
+          type = categorizeUpdateType(name);
+        }
+        break;
+        
+      case 'engines':
+        // Engines tab: typically [Engine Name, Version, Platform, Size, Date]
+        if (cells.length >= 3) {
+          name = cells[0] || '';
+          version = extractVersion(cells[1]) || '1.0';
+          platform = extractPlatform(cells[2]) || 'All Platforms';
+          fileSize = extractFileSize(cells[3]) || 0;
+          releaseDate = extractDate(cells[4]) || new Date().toISOString();
+          type = 'engine';
+        }
+        break;
+        
+      case 'content':
+        // Content tab: typically [Content Name, Version, Type, Size, Date]
+        if (cells.length >= 3) {
+          name = cells[0] || '';
+          version = extractVersion(cells[1]) || '1.0';
+          platform = extractPlatform(cells[2]) || 'All Platforms';
+          fileSize = extractFileSize(cells[3]) || 0;
+          releaseDate = extractDate(cells[4]) || new Date().toISOString();
+          type = 'content';
+        }
+        break;
+    }
+    
+    if (!name || !version) return null;
+    
+    fileName = generateFileName(type, version, platform);
+    downloadUrl = generateDownloadUrl(type, version, platform);
+    
+    return {
+      name: name,
+      type: type,
+      platform: platform,
+      version: version,
+      release_date: releaseDate,
+      file_size: fileSize,
+      file_name: fileName,
+      sha256: generateMockSHA256(),
+      description: getUpdateDescription(type, tabType),
+      is_recommended: isRecommendedUpdate(type, name),
+      download_url: downloadUrl,
+      update_category: getCategoryForTab(tabType),
+      criticality_level: getCriticalityLevel(type, name),
+      target_systems: getTargetSystems(type),
+      dependencies: getDependencies(type),
+      compatibility_info: getCompatibilityInfo(type),
+      threat_coverage: getThreatCoverage(type),
+      deployment_notes: getDeploymentNotes(type)
+    };
+  } catch (error) {
+    console.error('Error parsing row:', error);
+    return null;
+  }
+}
+
+function parseWithPatterns(html: string, tabType: string): SecurityUpdate[] {
+  const updates: SecurityUpdate[] = [];
+  
   // Enhanced parsing patterns for all security update types
   const updatePatterns = [
     // DAT V3 pattern
@@ -285,6 +435,94 @@ async function parseSecurityUpdates(html: string, tabType: string = 'updates'): 
   }
   
   return updates;
+}
+
+// Helper functions for parsing table data
+function extractVersion(text: string): string {
+  const versionMatch = text.match(/(\d+(?:\.\d+)*(?:\.\d+)*)/);
+  return versionMatch ? versionMatch[1] : '1.0';
+}
+
+function extractPlatform(text: string): string {
+  const platformKeywords = {
+    'windows': 'Windows',
+    'linux': 'Linux', 
+    'mac': 'Mac',
+    'unix': 'Unix',
+    'all': 'All Platforms',
+    'gateway': 'Email Gateway',
+    'medical': 'Medical Devices'
+  };
+  
+  const lowerText = text.toLowerCase();
+  for (const [keyword, platform] of Object.entries(platformKeywords)) {
+    if (lowerText.includes(keyword)) {
+      return platform;
+    }
+  }
+  
+  return 'All Platforms';
+}
+
+function extractFileSize(text: string): number {
+  const sizeMatch = text.match(/(\d+(?:\.\d+)?)\s*(MB|GB|KB)/i);
+  if (sizeMatch) {
+    const [, size, unit] = sizeMatch;
+    return parseSizeToBytes(size, unit);
+  }
+  return 0;
+}
+
+function extractDate(text: string): string {
+  const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) {
+    return new Date(dateMatch[1]).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+function categorizeUpdateType(name: string): string {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('dat v3') || lowerName.includes('datv3')) return 'datv3';
+  if (lowerName.includes('meddat')) return 'meddat';
+  if (lowerName.includes('amcore')) return 'amcore_dat';
+  if (lowerName.includes('gateway')) return 'gateway_dat';
+  if (lowerName.includes('email')) return 'email_dat';
+  if (lowerName.includes('tie')) return 'tie';
+  if (lowerName.includes('exploit')) return 'exploit_prevention';
+  if (lowerName.includes('dat')) return 'dat';
+  return 'content';
+}
+
+function generateFileName(type: string, version: string, platform: string): string {
+  const platformSuffix = platform.toLowerCase().includes('windows') ? '.exe' : 
+                        platform.toLowerCase().includes('linux') ? '.tar.gz' : '.zip';
+  return `${type.replace('_', '-')}-${version}${platformSuffix}`;
+}
+
+function generateDownloadUrl(type: string, version: string, platform: string): string {
+  return `https://www.trellix.com/downloads/${type.replace('_', '-')}-${version}.zip`;
+}
+
+function isRecommendedUpdate(type: string, name: string): boolean {
+  return type === 'datv3' || type === 'meddat' || type === 'exploit_prevention' || 
+         name.toLowerCase().includes('critical') || name.toLowerCase().includes('recommended');
+}
+
+function getCategoryForTab(tabType: string): string {
+  const categories: Record<string, string> = {
+    'updates': 'endpoint',
+    'engines': 'general',
+    'content': 'content'
+  };
+  return categories[tabType] || 'general';
+}
+
+function getCriticalityLevel(type: string, name: string): string {
+  if (type === 'meddat' || name.toLowerCase().includes('critical')) return 'critical';
+  if (type === 'datv3' || type === 'exploit_prevention') return 'high';
+  if (type === 'engine') return 'medium';
+  return 'medium';
 }
 
 function getUpdateDisplayName(type: string, version: string): string {
