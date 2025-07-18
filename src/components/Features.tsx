@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar } from 'lucide-react';
+import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { AgentCompatibility } from './AgentCompatibility';
 
 const features = [
   {
@@ -175,6 +177,10 @@ const Features = (): JSX.Element => {
     fetchSecurityUpdates();
   }, []);
 
+  const handleRefresh = () => {
+    fetchSecurityUpdates();
+  };
+
   return (
     <div className="py-20 bg-gradient-to-br from-background via-muted/20 to-background">
       <div className="container mx-auto px-4 lg:px-8">
@@ -203,9 +209,25 @@ const Features = (): JSX.Element => {
           ))}
         </div>
 
-        <h2 className="text-3xl font-bold text-center text-primary mb-12">
-          Latest Security Updates by Platform
-        </h2>
+        {/* New Agent Compatibility Section */}
+        <div className="mb-16">
+          <AgentCompatibility />
+        </div>
+
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold text-primary">
+            Latest Security Updates by Platform
+          </h2>
+          <Button 
+            onClick={handleRefresh} 
+            disabled={loading}
+            variant="outline"
+            className="flex items-center space-x-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh Updates</span>
+          </Button>
+        </div>
         
         {loading ? (
           <div className="flex items-center justify-center h-32">
