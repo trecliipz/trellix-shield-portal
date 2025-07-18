@@ -1,14 +1,11 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Monitor, 
   Laptop, 
   Server, 
-  Download, 
   CheckCircle, 
   AlertTriangle,
   Info,
@@ -198,13 +195,7 @@ export const AgentCompatibility = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge(version.status)}
-                        <Button size="sm" variant="outline">
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-                      </div>
+                      {getStatusBadge(version.status)}
                     </div>
                   ))}
                 </div>
