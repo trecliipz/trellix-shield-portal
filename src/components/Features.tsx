@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentCompatibility } from './AgentCompatibility';
 import { MLDashboard } from './MLDashboard';
+import { CyberAttacksSection } from './CyberAttacksSection';
 
 const features = [
   {
@@ -239,6 +240,9 @@ const Features = (): JSX.Element => {
         <div className="mb-16">
           <AgentCompatibility />
         </div>
+
+        {/* Cyber Attacks Section */}
+        <CyberAttacksSection />
 
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold text-primary">
