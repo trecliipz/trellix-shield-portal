@@ -24,7 +24,9 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Edit
+  Edit,
+  Settings,
+  Activity
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,7 +94,6 @@ export const UserProfile = () => {
       
       if (orgData) {
         setOrganization(orgData);
-        // Set EPO config if exists
         if (orgData.group_name && orgData.organization_name) {
           epoForm.reset({
             groupName: orgData.group_name,
@@ -123,7 +124,6 @@ export const UserProfile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !organization) return;
 
-      // Check endpoint limit for starter plan
       if (userPlan.endpointLimit > 0 && endpoints.length >= userPlan.endpointLimit) {
         toast.error(`Endpoint limit reached. Upgrade to add more than ${userPlan.endpointLimit} endpoints.`);
         return;
@@ -194,7 +194,6 @@ export const UserProfile = () => {
   };
 
   const handleDownloadAgent = () => {
-    // This would typically generate a download link or initiate download
     toast.success("Security agent download initiated. Check your downloads folder.");
   };
 
@@ -225,40 +224,50 @@ export const UserProfile = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="container mx-auto">
-          <div className="text-center">Loading profile...</div>
+          <div className="text-center text-muted-foreground">Loading profile...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <Card className="mb-6">
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Enhanced Header */}
+        <Card className="modern-card border-border/50">
           <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">
-                  {user?.user_metadata?.name || 'User'}
-                </h1>
-                <p className="text-gray-600">{user?.email}</p>
-                <p className="text-sm text-blue-600">
-                  {organization?.industry || 'IT Security'} • Security Administrator
-                </p>
-              </div>
-              <div className="ml-auto">
-                <div className="flex items-center space-x-2 text-green-600">
-                  <Shield className="w-5 h-5" />
-                  <span className="font-semibold">Security Clearance: Active</span>
+            <div className="flex items-center space-x-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-primary to-trellix-orange rounded-full flex items-center justify-center shadow-lg">
+                  <User className="w-10 h-10 text-primary-foreground" />
                 </div>
-                <div className="text-sm text-blue-600 mt-1">
-                  Plan: {userPlan.displayName}
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-4 border-background">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-foreground">
+                  {user?.user_metadata?.name || 'Security Administrator'}
+                </h1>
+                <p className="text-muted-foreground text-lg">{user?.email}</p>
+                <div className="flex items-center space-x-4 mt-2">
+                  <Badge variant="outline" className="border-green-500/50 text-green-400">
+                    <Building2 className="w-4 h-4 mr-1" />
+                    {organization?.industry || 'IT Security'}
+                  </Badge>
+                  <Badge variant="outline" className="border-blue-500/50 text-blue-400">
+                    <Activity className="w-4 h-4 mr-1" />
+                    Security Clearance: Active
+                  </Badge>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Current Plan</div>
+                <div className="text-2xl font-bold text-primary">{userPlan.displayName}</div>
+                <div className="text-sm text-muted-foreground">
+                  ${userPlan.pricePerEndpoint}/endpoint/month
                 </div>
               </div>
             </div>
@@ -266,182 +275,245 @@ export const UserProfile = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Agent Download & Configuration */}
-          <Card>
+          {/* Security Agent & EPO Configuration */}
+          <Card className="modern-card">
             <CardHeader>
               <CardTitle className="flex items-center space-x-3">
-                <Download className="w-6 h-6 text-blue-600" />
-                <span>Security Agent</span>
+                <Download className="w-6 h-6 text-primary" />
+                <span>Security Agent & Configuration</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={handleDownloadAgent}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                <Download className="w-5 h-5 mr-2" />
-                Download Latest Security Agent
-              </Button>
-
-              <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-medium text-gray-700 flex items-center">
-                    <Building2 className="w-5 h-5 mr-2" />
-                    Trellix EPO Configuration
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                  <h3 className="font-semibold text-foreground mb-2 flex items-center">
+                    <Shield className="w-5 h-5 mr-2 text-primary" />
+                    Latest Security Agent v2.1.5
                   </h3>
-                  <Dialog open={showEpoConfig} onOpenChange={setShowEpoConfig}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>EPO Configuration</DialogTitle>
-                      </DialogHeader>
-                      <Form {...epoForm}>
-                        <form onSubmit={epoForm.handleSubmit(handleSaveEpoConfig)} className="space-y-4">
-                          <FormField
-                            control={epoForm.control}
-                            name="groupName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Group Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="e.g., Finance_Workstations" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={epoForm.control}
-                            name="ouName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Organizational Unit (OU)</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="e.g., Finance_Department" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button type="submit" className="w-full">Save Configuration</Button>
-                        </form>
-                      </Form>
-                    </DialogContent>
-                  </Dialog>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Enhanced threat detection with real-time monitoring capabilities
+                  </p>
+                  <Button 
+                    onClick={handleDownloadAgent}
+                    className="w-full glow-button"
+                  >
+                    <Download className="w-5 h-5 mr-2" />
+                    Download Security Agent
+                  </Button>
                 </div>
-                
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <p className="text-sm text-gray-600">
-                    <strong>Group:</strong> {organization?.group_name || 'Not configured'}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <strong>OU:</strong> {organization?.organization_name || 'Not configured'}
-                  </p>
+
+                <div className="border-t border-border pt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-foreground flex items-center">
+                      <Building2 className="w-5 h-5 mr-2 text-trellix-orange" />
+                      Trellix EPO Configuration
+                    </h3>
+                    <Dialog open={showEpoConfig} onOpenChange={setShowEpoConfig}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-card border-border">
+                        <DialogHeader>
+                          <DialogTitle className="text-foreground">EPO Configuration</DialogTitle>
+                        </DialogHeader>
+                        <Form {...epoForm}>
+                          <form onSubmit={epoForm.handleSubmit(handleSaveEpoConfig)} className="space-y-4">
+                            <FormField
+                              control={epoForm.control}
+                              name="groupName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-foreground">Group Name</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="e.g., Finance_Workstations" className="bg-background border-input" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={epoForm.control}
+                              name="ouName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-foreground">Organizational Unit (OU)</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="e.g., Finance_Department" className="bg-background border-input" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <Button type="submit" className="w-full">Save Configuration</Button>
+                          </form>
+                        </Form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  
+                  <div className="bg-muted/30 p-4 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Group:</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {organization?.group_name || 'Not configured'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">OU:</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {organization?.organization_name || 'Not configured'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Machine Management */}
-          <Card>
+          <Card className="modern-card">
             <CardHeader>
               <CardTitle className="flex items-center space-x-3">
-                <Monitor className="w-6 h-6 text-green-600" />
+                <Monitor className="w-6 h-6 text-green-500" />
                 <span>Machine Management</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Dialog open={showAddEndpoint} onOpenChange={setShowAddEndpoint}>
-                <DialogTrigger asChild>
-                  <Button className="w-full bg-green-600 hover:bg-green-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Machine
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Machine</DialogTitle>
-                  </DialogHeader>
-                  <Form {...endpointForm}>
-                    <form onSubmit={endpointForm.handleSubmit(handleAddEndpoint)} className="space-y-4">
-                      <FormField
-                        control={endpointForm.control}
-                        name="machineName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Machine Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g., WS-IT-01" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={endpointForm.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description (Optional)</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Brief description of the machine" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={endpointForm.control}
-                        name="osType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Operating System</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <div className="space-y-4">
+                <Dialog open={showAddEndpoint} onOpenChange={setShowAddEndpoint}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full bg-green-600 hover:bg-green-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add New Machine
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-card border-border">
+                    <DialogHeader>
+                      <DialogTitle className="text-foreground">Add New Machine</DialogTitle>
+                    </DialogHeader>
+                    <Form {...endpointForm}>
+                      <form onSubmit={endpointForm.handleSubmit(handleAddEndpoint)} className="space-y-4">
+                        <FormField
+                          control={endpointForm.control}
+                          name="machineName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Machine Name</FormLabel>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select OS type" />
-                                </SelectTrigger>
+                                <Input {...field} placeholder="e.g., WS-IT-01" className="bg-background border-input" />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="windows">Windows</SelectItem>
-                                <SelectItem value="macos">macOS</SelectItem>
-                                <SelectItem value="linux">Linux</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full">Add Machine</Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={endpointForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Description (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Brief description" className="bg-background border-input" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={endpointForm.control}
+                          name="osType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Operating System</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="bg-background border-input">
+                                    <SelectValue placeholder="Select OS type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="bg-popover border-border">
+                                  <SelectItem value="windows">Windows</SelectItem>
+                                  <SelectItem value="macos">macOS</SelectItem>
+                                  <SelectItem value="linux">Linux</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full">Add Machine</Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
 
-              {userPlan.endpointLimit > 0 && (
-                <div className="mt-3 text-sm text-gray-600">
-                  {endpoints.length}/{userPlan.endpointLimit} machines used
-                </div>
-              )}
+                {userPlan.endpointLimit > 0 && (
+                  <div className="bg-muted/30 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Endpoint Usage:</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {endpoints.length}/{userPlan.endpointLimit}
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 mt-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${Math.min((endpoints.length / userPlan.endpointLimit) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Machine Inventory */}
-        <Card className="mt-6">
+        {/* Quick Stats Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="modern-card border-blue-500/20">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center mb-2">
+                <CheckCircle className="w-8 h-8 text-blue-500 mr-2" />
+                <div className="text-3xl font-bold text-blue-500">{activeEndpoints}</div>
+              </div>
+              <div className="text-sm text-muted-foreground">Active Machines</div>
+            </CardContent>
+          </Card>
+          <Card className="modern-card border-yellow-500/20">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Clock className="w-8 h-8 text-yellow-500 mr-2" />
+                <div className="text-3xl font-bold text-yellow-500">{pendingEndpoints}</div>
+              </div>
+              <div className="text-sm text-muted-foreground">Pending Installs</div>
+            </CardContent>
+          </Card>
+          <Card className="modern-card border-green-500/20">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center mb-2">
+                <FileText className="w-8 h-8 text-green-500 mr-2" />
+                <div className="text-3xl font-bold text-green-500">${monthlyBilling}</div>
+              </div>
+              <div className="text-sm text-muted-foreground">Monthly Billing</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Machine Inventory & Billing */}
+        <Card className="modern-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center space-x-3">
                 <Server className="w-6 h-6 text-purple-600" />
                 <span>Machine Inventory & Billing</span>
               </CardTitle>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Total Machines: {endpoints.length}</span>
+              <div className="flex items-center space-x-4">
+                <Badge variant="outline" className="text-muted-foreground">
+                  Total: {endpoints.length} machines
+                </Badge>
                 <Button variant="outline" size="sm">
                   <FileText className="w-4 h-4 mr-2" />
                   Export Report
@@ -451,69 +523,54 @@ export const UserProfile = () => {
           </CardHeader>
           <CardContent>
             {endpoints.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Machine Name</TableHead>
-                    <TableHead>OS</TableHead>
-                    <TableHead>Date Added</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {endpoints.map((endpoint) => (
-                    <TableRow key={endpoint.id}>
-                      <TableCell className="font-medium">{endpoint.machine_name}</TableCell>
-                      <TableCell className="capitalize">{endpoint.os_type}</TableCell>
-                      <TableCell>
-                        {new Date(endpoint.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(endpoint.deployment_status)}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteEndpoint(endpoint.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="text-foreground">Machine Name</TableHead>
+                      <TableHead className="text-foreground">OS Type</TableHead>
+                      <TableHead className="text-foreground">Date Added</TableHead>
+                      <TableHead className="text-foreground">Status</TableHead>
+                      <TableHead className="text-foreground">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {endpoints.map((endpoint) => (
+                      <TableRow key={endpoint.id} className="hover:bg-muted/30">
+                        <TableCell className="font-medium text-foreground">{endpoint.machine_name}</TableCell>
+                        <TableCell className="capitalize text-muted-foreground">{endpoint.os_type}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(endpoint.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(endpoint.deployment_status)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteEndpoint(endpoint.id)}
+                            className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Monitor className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>No machines added yet. Add your first machine above.</p>
+              <div className="text-center py-12">
+                <Monitor className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No machines added yet</h3>
+                <p className="text-muted-foreground mb-4">Get started by adding your first machine above</p>
+                <Button onClick={() => setShowAddEndpoint(true)} variant="outline">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Your First Machine
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{activeEndpoints}</div>
-              <div className="text-sm text-gray-600">Active Machines</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{pendingEndpoints}</div>
-              <div className="text-sm text-gray-600">Pending Installs</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">${monthlyBilling}/month</div>
-              <div className="text-sm text-gray-600">Estimated Billing</div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
