@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot, Heart } from 'lucide-react';
+import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot, Heart, Globe } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,6 +87,9 @@ const Features = (): JSX.Element => {
     if (platform.toLowerCase().includes('healthcare')) return '⚕️';
     if (platform.toLowerCase().includes('gateway')) return '🌐';
     if (platform.toLowerCase().includes('email')) return '📧';
+    if (platform.toLowerCase().includes('server')) return '🖥️';
+    if (platform.toLowerCase().includes('tie')) return '🔗';
+    if (platform.toLowerCase().includes('exploit')) return '🛡️';
     return '💻';
   };
 
@@ -96,9 +98,9 @@ const Features = (): JSX.Element => {
       'dat': 'Updated multiple times daily',
       'datv3': 'Updated multiple times daily',
       'meddat': 'Updated weekly',
-      'amcore_dat': 'Updated daily',
       'tie': 'Updated continuously',
-      'exploit_prevention': 'Updated as needed',
+      'exploit_prevention': 'Updated as threats emerge',
+      'amcore_dat': 'Updated daily',
       'engine': 'Updated weekly',
       'content': 'Updated daily'
     };
@@ -119,16 +121,16 @@ const Features = (): JSX.Element => {
         return;
       }
 
-      // Group updates by type with priority for V3 DAT and MEDDAT
+      // Group updates by type with priority for V3 DAT, MEDDAT, TIE, and Exploit Prevention
       const groupedUpdates: { [key: string]: any } = {};
       
       data?.forEach(update => {
         const typeKey = update.type === 'dat' ? 'Standard DAT Files' :
                        update.type === 'datv3' ? 'V3 Virus Definition Files' :
                        update.type === 'meddat' ? 'Medical Device DAT Files' :
+                       update.type === 'tie' ? 'TIE Intelligence Updates' :
+                       update.type === 'exploit_prevention' ? 'Exploit Prevention Content' :
                        update.type === 'amcore_dat' ? 'AMCore Content' :
-                       update.type === 'tie' ? 'TIE Intelligence' :
-                       update.type === 'exploit_prevention' ? 'Exploit Prevention' :
                        update.type === 'engine' ? 'Security Engine' :
                        update.type === 'content' ? 'Content Updates' : 
                        'Security Updates';
@@ -163,12 +165,14 @@ const Features = (): JSX.Element => {
         });
       });
 
-      // Sort to prioritize V3 DAT and MEDDAT
+      // Sort to prioritize V3 DAT, MEDDAT, TIE, and Exploit Prevention
       const sortedUpdates = Object.values(groupedUpdates).sort((a: any, b: any) => {
         const priority = { 
           'V3 Virus Definition Files': 1, 
           'Medical Device DAT Files': 2, 
-          'Standard DAT Files': 3 
+          'TIE Intelligence Updates': 3,
+          'Exploit Prevention Content': 4,
+          'Standard DAT Files': 5 
         };
         return (priority[a.type as keyof typeof priority] || 99) - (priority[b.type as keyof typeof priority] || 99);
       });
@@ -186,9 +190,9 @@ const Features = (): JSX.Element => {
       'dat': 'Traditional virus definition files for comprehensive threat protection',
       'datv3': 'Next-generation V3 virus definition files with enhanced detection capabilities and improved performance',
       'meddat': 'Specialized threat definitions for medical device security and healthcare networks',
+      'tie': 'Global threat intelligence feeds with real-time reputation data and file reputation scoring',
+      'exploit_prevention': 'Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields',
       'amcore_dat': 'Advanced malware core content with behavioral analysis patterns',
-      'tie': 'Threat Intelligence Exchange feeds with global reputation data',
-      'exploit_prevention': 'Zero-day exploit protection rules and heuristics',
       'engine': 'Core scanning engine with latest detection capabilities',
       'content': 'General content updates and improvements'
     };
@@ -279,6 +283,12 @@ const Features = (): JSX.Element => {
                       {update.type === 'Medical Device DAT Files' && (
                         <Heart className="h-5 w-5 text-destructive" />
                       )}
+                      {update.type === 'TIE Intelligence Updates' && (
+                        <Globe className="h-5 w-5 text-blue-600" />
+                      )}
+                      {update.type === 'Exploit Prevention Content' && (
+                        <Lock className="h-5 w-5 text-orange-600" />
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       {update.urgency === 'critical' && (
@@ -341,6 +351,12 @@ const Features = (): JSX.Element => {
                             )}
                             {update.type === 'Medical Device DAT Files' && (
                               <Badge variant="destructive" className="text-xs">MED</Badge>
+                            )}
+                            {update.type === 'TIE Intelligence Updates' && (
+                              <Badge variant="outline" className="text-xs">INTEL</Badge>
+                            )}
+                            {update.type === 'Exploit Prevention Content' && (
+                              <Badge variant="destructive" className="text-xs">EP</Badge>
                             )}
                           </div>
                           <span className="text-xs text-muted-foreground">{platform.date}</span>

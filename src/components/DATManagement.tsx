@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RefreshCw, Download, ArrowLeft, Calendar, HardDrive, Shield, Activity, AlertTriangle, CheckCircle, Smartphone, Monitor, Server, Database, FileCheck, DownloadCloud, Clock, Bell, Heart, Globe, Zap, Mail, Cog, Package, FileText } from 'lucide-react';
+import { RefreshCw, Download, ArrowLeft, Calendar, HardDrive, Shield, Activity, AlertTriangle, CheckCircle, Smartphone, Monitor, Server, Database, FileCheck, DownloadCloud, Clock, Bell, Heart, Globe, Zap, Mail, Cog, Package, FileText, Lock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -220,7 +220,7 @@ export const DATManagement = () => {
       case 'tie':
         return <Globe className="h-4 w-4" />;
       case 'exploit_prevention':
-        return <AlertTriangle className="h-4 w-4" />;
+        return <Lock className="h-4 w-4" />;
       case 'amcore_dat':
         return <Zap className="h-4 w-4" />;
       case 'gateway_dat':
@@ -313,6 +313,8 @@ export const DATManagement = () => {
 
   const datUpdates = securityUpdatesState.filter(u => u.type === 'dat' || u.type === 'datv3');
   const meddatUpdates = securityUpdatesState.filter(u => u.type === 'meddat');
+  const tieUpdates = securityUpdatesState.filter(u => u.type === 'tie');
+  const exploitPreventionUpdates = securityUpdatesState.filter(u => u.type === 'exploit_prevention');
   const engineUpdates = securityUpdatesState.filter(u => u.type === 'engine');
   const contentUpdates = securityUpdatesState.filter(u => u.type === 'content');
 
@@ -445,7 +447,7 @@ export const DATManagement = () => {
                 </Badge>
               )}
             </h2>
-            <p className="text-muted-foreground">Download and manage DAT files, MEDDAT, and security updates</p>
+            <p className="text-muted-foreground">Download and manage DAT files, MEDDAT, TIE Intelligence, and security updates</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -462,7 +464,7 @@ export const DATManagement = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">DAT Files</CardTitle>
@@ -481,6 +483,26 @@ export const DATManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{meddatUpdates.length}</div>
             <p className="text-xs text-muted-foreground">Medical device security</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">TIE Intelligence</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{tieUpdates.length}</div>
+            <p className="text-xs text-muted-foreground">Threat intelligence feeds</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Exploit Prevention</CardTitle>
+            <Lock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{exploitPreventionUpdates.length}</div>
+            <p className="text-xs text-muted-foreground">Zero-day protection</p>
           </CardContent>
         </Card>
         <Card>
@@ -506,10 +528,12 @@ export const DATManagement = () => {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="all">All Updates</TabsTrigger>
           <TabsTrigger value="dat">DAT Files</TabsTrigger>
           <TabsTrigger value="meddat">MEDDAT Files</TabsTrigger>
+          <TabsTrigger value="tie">TIE Intelligence</TabsTrigger>
+          <TabsTrigger value="exploit_prevention">Exploit Prevention</TabsTrigger>
           <TabsTrigger value="engines">Engines</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
         </TabsList>
@@ -549,6 +573,34 @@ export const DATManagement = () => {
             </CardHeader>
             <CardContent>
               {renderUpdatesTable(meddatUpdates)}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tie" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>TIE Intelligence Updates</CardTitle>
+              <CardDescription>
+                Global threat intelligence feeds with real-time reputation data and file reputation scoring
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderUpdatesTable(tieUpdates)}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="exploit_prevention" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Exploit Prevention Content</CardTitle>
+              <CardDescription>
+                Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderUpdatesTable(exploitPreventionUpdates)}
             </CardContent>
           </Card>
         </TabsContent>

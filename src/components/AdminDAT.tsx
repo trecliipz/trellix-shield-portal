@@ -228,7 +228,7 @@ const AdminDAT: React.FC = () => {
     });
   };
 
-  // Group updates by type with priority for V3 DAT and MEDDAT
+  // Group updates by type with priority for V3 DAT, MEDDAT, TIE, and Exploit Prevention
   const updatesByType = securityUpdates.reduce((acc, update) => {
     if (!acc[update.type]) {
       acc[update.type] = [];
@@ -329,7 +329,7 @@ const AdminDAT: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold">DAT Management</h1>
           <p className="text-muted-foreground">
-            Manage and download security updates, V3 DAT files, MEDDAT, and threat intelligence
+            Manage and download security updates, V3 DAT files, MEDDAT, TIE Intelligence, and threat protection
           </p>
         </div>
         <div className="flex space-x-2">
@@ -347,7 +347,7 @@ const AdminDAT: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Updates</CardTitle>
@@ -378,6 +378,26 @@ const AdminDAT: React.FC = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">TIE Intelligence</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {securityUpdates.filter(u => u.type === 'tie').length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Exploit Prevention</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {securityUpdates.filter(u => u.type === 'exploit_prevention').length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Critical Updates</CardTitle>
           </CardHeader>
           <CardContent>
@@ -398,17 +418,19 @@ const AdminDAT: React.FC = () => {
         </Card>
       </div>
 
-      {/* Updates by Type with V3 DAT and MEDDAT priority */}
+      {/* Updates by Type with V3 DAT, MEDDAT, TIE, and Exploit Prevention priority */}
       <Tabs defaultValue="datv3" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          {/* Prioritize V3 DAT and MEDDAT */}
-          {['datv3', 'meddat', 'dat', 'tie', 'exploit_prevention'].map((type) => (
+        <TabsList className="grid w-full grid-cols-7">
+          {/* Prioritize V3 DAT, MEDDAT, TIE, and Exploit Prevention */}
+          {['datv3', 'meddat', 'tie', 'exploit_prevention', 'dat', 'engine', 'content'].map((type) => (
             updatesByType[type] && (
               <TabsTrigger key={type} value={type} className="flex items-center space-x-2">
                 {getTypeIcon(type)}
                 <span className="capitalize">
                   {type === 'datv3' ? 'V3 DAT' : 
                    type === 'meddat' ? 'MEDDAT' : 
+                   type === 'tie' ? 'TIE Intel' :
+                   type === 'exploit_prevention' ? 'Exploit Prev' :
                    type.replace('_', ' ')}
                 </span>
                 <Badge variant="secondary">{updatesByType[type].length}</Badge>
@@ -426,6 +448,8 @@ const AdminDAT: React.FC = () => {
                   <span className="capitalize">
                     {type === 'datv3' ? 'V3 Virus Definition Files' : 
                      type === 'meddat' ? 'Medical Device DAT Files' : 
+                     type === 'tie' ? 'TIE Intelligence Updates' :
+                     type === 'exploit_prevention' ? 'Exploit Prevention Content' :
                      type.replace('_', ' ')} Updates
                   </span>
                   <Badge variant="secondary">{updates.length}</Badge>
@@ -433,9 +457,11 @@ const AdminDAT: React.FC = () => {
                 <div className="text-sm text-muted-foreground">
                   {type === 'datv3' && 'Next-generation virus definition files with enhanced detection capabilities'}
                   {type === 'meddat' && 'Specialized threat definitions for medical device security and healthcare networks'}
+                  {type === 'tie' && 'Global threat intelligence feeds with real-time reputation data and file reputation scoring'}
+                  {type === 'exploit_prevention' && 'Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields'}
                   {type === 'dat' && 'Traditional virus definition files for comprehensive threat protection'}
-                  {type === 'tie' && 'Threat Intelligence Exchange feeds with global reputation data'}
-                  {type === 'exploit_prevention' && 'Zero-day exploit protection rules and heuristics'}
+                  {type === 'engine' && 'Security engine updates with latest detection capabilities'}
+                  {type === 'content' && 'General content updates and security improvements'}
                 </div>
               </CardHeader>
               <CardContent>

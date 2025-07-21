@@ -327,6 +327,128 @@ function getMockUpdates(): SecurityUpdate[] {
       threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats', 'HIPAA Compliance'],
       deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
     },
+    // TIE Intelligence Updates
+    {
+      name: 'TIE Intelligence Updates',
+      type: 'tie',
+      platform: 'Windows',
+      version: '3.2.5',
+      release_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      file_size: 98750000,
+      file_name: 'TIEContent_3.2.5.zip',
+      sha256: 'f6789012345678901234567890123456789012345678901234567890a1b2c3d4e5',
+      description: 'Global threat intelligence feeds with real-time reputation data and file reputation scoring',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/TIE/TIEContent_3.2.5.zip',
+      update_category: 'intelligence',
+      criticality_level: 'high',
+      target_systems: ['TIE Server', 'Gateway Security', 'Endpoint Protection'],
+      dependencies: ['TIE Server 3.0.0+'],
+      compatibility_info: {
+        minimum_version: '3.0.0',
+        supported_platforms: ['Windows', 'Linux'],
+        last_supported_version: null
+      },
+      threat_coverage: ['File Reputation', 'Certificate Reputation', 'Web Reputation', 'Malware Intelligence'],
+      deployment_notes: 'Continuous updates to global threat intelligence database. No restart required.'
+    },
+    {
+      name: 'TIE Gateway Intelligence',
+      type: 'tie',
+      platform: 'Gateway',
+      version: '3.2.5',
+      release_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      file_size: 87650000,
+      file_name: 'TIEGateway_3.2.5.exe',
+      sha256: 'g7890123456789012345678901234567890123456789012345678901234567890f',
+      description: 'TIE intelligence feeds optimized for gateway and network security appliances',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/TIE/TIEGateway_3.2.5.exe',
+      update_category: 'intelligence',
+      criticality_level: 'high',
+      target_systems: ['Gateway Security', 'Network Security', 'Web Protection'],
+      dependencies: ['Gateway Module 3.0.0+'],
+      compatibility_info: {
+        minimum_version: '3.0.0',
+        supported_platforms: ['Gateway'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Web Reputation', 'URL Filtering', 'Malicious IP Detection', 'Domain Reputation'],
+      deployment_notes: 'Gateway-specific intelligence feeds. Automatic deployment recommended.'
+    },
+    // Exploit Prevention Updates
+    {
+      name: 'Exploit Prevention Content',
+      type: 'exploit_prevention',
+      platform: 'Windows',
+      version: '2024.01.15',
+      release_date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+      file_size: 156890000,
+      file_name: 'EPContent_2024.01.15.zip',
+      sha256: 'h8901234567890123456789012345678901234567890123456789012345678901g',
+      description: 'Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/EP/EPContent_2024.01.15.zip',
+      update_category: 'protection',
+      criticality_level: 'critical',
+      target_systems: ['Exploit Prevention Module', 'Host IPS', 'Behavioral Analytics'],
+      dependencies: ['Exploit Prevention Engine 2.0.0+'],
+      compatibility_info: {
+        minimum_version: '2.0.0',
+        supported_platforms: ['Windows', 'Linux'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Zero-day Exploits', 'Memory Corruption', 'ROP/JOP Attacks', 'Heap Spray Protection'],
+      deployment_notes: 'Critical security update. Deploy immediately during maintenance window.'
+    },
+    {
+      name: 'Exploit Prevention Rules',
+      type: 'exploit_prevention',
+      platform: 'Linux',
+      version: '2024.01.15',
+      release_date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+      file_size: 134567000,
+      file_name: 'EPRules_2024.01.15.dat',
+      sha256: 'i9012345678901234567890123456789012345678901234567890123456789012h',
+      description: 'Linux-specific exploit prevention rules and system call monitoring patterns',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/EP/EPRules_2024.01.15.dat',
+      update_category: 'protection',
+      criticality_level: 'critical',
+      target_systems: ['Linux Host Protection', 'Server Security', 'Container Security'],
+      dependencies: ['Linux Security Module 2.0.0+'],
+      compatibility_info: {
+        minimum_version: '2.0.0',
+        supported_platforms: ['Linux'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Privilege Escalation', 'Kernel Exploits', 'Container Breakout', 'System Call Abuse'],
+      deployment_notes: 'Server-specific protection rules. Coordinate with system administrators.'
+    },
+    {
+      name: 'Server Exploit Prevention',
+      type: 'exploit_prevention',
+      platform: 'Server',
+      version: '2024.01.12',
+      release_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+      file_size: 189430000,
+      file_name: 'ServerEP_2024.01.12.msi',
+      sha256: 'j0123456789012345678901234567890123456789012345678901234567890123i',
+      description: 'Enterprise server exploit prevention with advanced threat detection and response',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/EP/ServerEP_2024.01.12.msi',
+      update_category: 'protection',
+      criticality_level: 'critical',
+      target_systems: ['Windows Server', 'Exchange Server', 'SQL Server', 'Web Servers'],
+      dependencies: ['Server Security Suite 2.5.0+'],
+      compatibility_info: {
+        minimum_version: '2.5.0',
+        supported_platforms: ['Windows Server'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Server-side Exploits', 'Service Vulnerabilities', 'Remote Code Execution', 'Privilege Escalation'],
+      deployment_notes: 'Enterprise server protection. Schedule deployment during planned maintenance.'
+    },
     // Standard DAT for comparison
     {
       name: 'Standard DAT Files',
