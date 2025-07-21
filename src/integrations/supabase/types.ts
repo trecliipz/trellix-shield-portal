@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      bulk_operations: {
+        Row: {
+          completed_items: number | null
+          created_at: string
+          error_log: string[] | null
+          failed_items: number | null
+          id: string
+          operation_data: Json | null
+          operation_type: string
+          status: string | null
+          total_items: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_items?: number | null
+          created_at?: string
+          error_log?: string[] | null
+          failed_items?: number | null
+          id?: string
+          operation_data?: Json | null
+          operation_type: string
+          status?: string | null
+          total_items?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_items?: number | null
+          created_at?: string
+          error_log?: string[] | null
+          failed_items?: number | null
+          id?: string
+          operation_data?: Json | null
+          operation_type?: string
+          status?: string | null
+          total_items?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cyberattacks: {
         Row: {
           affected_products: string[] | null
@@ -238,6 +280,100 @@ export type Database = {
         }
         Relationships: []
       }
+      endpoint_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          group_name: string
+          id: string
+          organization_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          group_name: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          group_name?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "user_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      endpoints: {
+        Row: {
+          agent_version: string | null
+          created_at: string
+          deployment_status: string | null
+          health_status: string | null
+          id: string
+          ip_address: string | null
+          last_check_in: string | null
+          mac_address: string | null
+          machine_name: string
+          organization_id: string
+          os_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_version?: string | null
+          created_at?: string
+          deployment_status?: string | null
+          health_status?: string | null
+          id?: string
+          ip_address?: string | null
+          last_check_in?: string | null
+          mac_address?: string | null
+          machine_name: string
+          organization_id: string
+          os_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_version?: string | null
+          created_at?: string
+          deployment_status?: string | null
+          health_status?: string | null
+          id?: string
+          ip_address?: string | null
+          last_check_in?: string | null
+          mac_address?: string | null
+          machine_name?: string
+          organization_id?: string
+          os_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoints_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "user_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ml_metrics: {
         Row: {
           id: string
@@ -425,6 +561,39 @@ export type Database = {
           type?: string
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      pricing_tiers: {
+        Row: {
+          created_at: string
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          price_per_unit: number
+          tier_name: string
+          unit_size: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          price_per_unit: number
+          tier_name: string
+          unit_size: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          price_per_unit?: number
+          tier_name?: string
+          unit_size?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -760,6 +929,42 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_type?: string | null
+        }
+        Relationships: []
+      }
+      user_organizations: {
+        Row: {
+          created_at: string
+          group_name: string
+          id: string
+          industry: string | null
+          organization_name: string
+          organization_size: string | null
+          primary_contact_phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_name: string
+          id?: string
+          industry?: string | null
+          organization_name: string
+          organization_size?: string | null
+          primary_contact_phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_name?: string
+          id?: string
+          industry?: string | null
+          organization_name?: string
+          organization_size?: string | null
+          primary_contact_phone?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

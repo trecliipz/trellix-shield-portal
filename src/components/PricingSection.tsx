@@ -16,9 +16,9 @@ export const PricingSection = () => {
       description: 'Perfect for small businesses getting started with endpoint security',
       monthlyPrice: 9.99,
       yearlyPrice: 99.99,
+      unit: 'per 5 endpoints',
       popular: false,
       features: [
-        'Up to 10 endpoints',
         'Basic malware protection',
         'Real-time scanning',
         'Email support',
@@ -35,9 +35,9 @@ export const PricingSection = () => {
       description: 'Advanced protection for growing businesses',
       monthlyPrice: 19.99,
       yearlyPrice: 199.99,
+      unit: 'per endpoint',
       popular: true,
       features: [
-        'Up to 100 endpoints',
         'Advanced threat detection',
         'TIE Intelligence integration',
         'Behavioral analysis',
@@ -55,16 +55,15 @@ export const PricingSection = () => {
       description: 'Complete security solution for large organizations',
       monthlyPrice: 39.99,
       yearlyPrice: 399.99,
+      unit: 'per endpoint',
       popular: false,
       features: [
-        'Unlimited endpoints',
         'AI-powered behavioral analysis',
         'Zero-day exploit protection',
         'Advanced persistent threat detection',
         '24/7 phone & chat support',
         'Compliance reporting (SOX, HIPAA)',
-        'Dedicated security analyst',
-        'API integrations'
+        'Dedicated security analyst'
       ],
       ctaText: 'Contact Sales',
       gradient: 'from-purple-500/10 to-pink-500/10'
@@ -146,14 +145,19 @@ export const PricingSection = () => {
                   </CardDescription>
                   
                   <div className="mt-6">
-                    <div className="flex items-baseline justify-center">
-                      <span className="text-4xl font-bold">${price}</span>
-                      <span className="text-muted-foreground ml-1">
-                        /{isYearly ? 'year' : 'month'}
-                      </span>
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="flex items-baseline">
+                        <span className="text-4xl font-bold">${price}</span>
+                        <span className="text-muted-foreground ml-1">
+                          /{isYearly ? 'year' : 'month'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {plan.unit}
+                      </div>
                     </div>
                     {isYearly && (
-                      <div className="text-sm text-green-600 font-medium mt-1">
+                      <div className="text-sm text-green-600 font-medium mt-2">
                         Save {savings}% vs monthly
                       </div>
                     )}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AuthModal } from "./AuthModal";
+import { EnhancedAuthModal } from "./EnhancedAuthModal";
 import { ContactForm } from "./ContactForm";
 import { MessageSquare, ChevronDown } from "lucide-react";
 import {
@@ -184,7 +184,7 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
         </nav>
       </header>
 
-      <AuthModal 
+      <EnhancedAuthModal 
         type={authModalType}
         onClose={() => setAuthModalType(null)}
         onLogin={onLogin}

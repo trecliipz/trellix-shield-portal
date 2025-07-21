@@ -6,13 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Users, FileText, CheckCircle, AlertTriangle, Download } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BulkUserImportProps {
-  onUsersImported: (users: any[]) => void;
+  onEndpointsImported?: (endpoints: any[]) => void;
+  organizationId?: string;
 }
 
-export const BulkUserImport = ({ onUsersImported }: BulkUserImportProps) => {
+export const BulkUserImport = ({ onEndpointsImported, organizationId }: BulkUserImportProps) => {
   const [showImport, setShowImport] = useState(false);
   const [csvData, setCsvData] = useState("");
   const [importResults, setImportResults] = useState<{
@@ -20,28 +22,25 @@ export const BulkUserImport = ({ onUsersImported }: BulkUserImportProps) => {
     failed: any[];
     total: number;
   } | null>(null);
-  const { toast } = useToast();
 
   const downloadTemplate = () => {
-    const template = `email,name,role
-john.doe@company.com,John Doe,user
-jane.smith@company.com,Jane Smith,admin
-mike.wilson@company.com,Mike Wilson,user`;
+    const template = `machine_name,os_type,description
+DESKTOP-001,windows,Marketing Department Desktop
+LAPTOP-HR-01,windows,HR Manager Laptop
+SERVER-DB-01,linux,Database Server
+WORKSTATION-DEV-01,windows,Development Workstation`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'user-import-template.csv';
+    link.download = 'endpoint-import-template.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    toast({
-      title: "Template Downloaded",
-      description: "CSV template has been downloaded to your computer.",
-    });
+    toast.success("Template downloaded successfully!");
   };
 
   const processCsvData = (csvText: string) => {
