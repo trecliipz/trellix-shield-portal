@@ -1,9 +1,11 @@
+
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { Dashboard } from "@/components/Dashboard";
 import { AnimatedArchitecture } from "@/components/AnimatedArchitecture";
 import { Features } from "@/components/Features";
+import { PricingSection } from "@/components/PricingSection";
 import { Support } from "@/components/Support";
 import { Documentation } from "@/components/Documentation";
 
@@ -77,6 +79,7 @@ const Index = () => {
             <Hero onGetStarted={handleGetStarted} />
             <AnimatedArchitecture />
             <Features />
+            <PricingSection />
             <Support />
             <Documentation />
           </>
