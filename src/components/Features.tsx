@@ -1,31 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw } from 'lucide-react';
+import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentCompatibility } from './AgentCompatibility';
+import { MLDashboard } from './MLDashboard';
 
 const features = [
   {
     icon: <Shield className="h-12 w-12" />,
     title: "Advanced Threat Detection", 
-    description: "Machine learning-powered detection of known and unknown threats with behavioral analysis."
+    description: "AI-powered detection with neural networks analyzing behavioral patterns and zero-day threats in real-time."
+  },
+  {
+    icon: <Brain className="h-12 w-12" />,
+    title: "AI Behavioral Analysis",
+    description: "Deep learning models continuously monitor user and system behavior to detect sophisticated attack patterns."
+  },
+  {
+    icon: <Bot className="h-12 w-12" />,
+    title: "Neural Network Classification",
+    description: "Advanced machine learning algorithms classify and categorize threats with 98%+ accuracy rates."
+  },
+  {
+    icon: <Zap className="h-12 w-12" />,
+    title: "Predictive Analytics",
+    description: "ML-driven forecasting identifies potential security threats before they manifest into actual attacks."
   },
   {
     icon: <Activity className="h-12 w-12" />,
-    title: "Real-time Response",
-    description: "Automated threat response and remediation to minimize impact and recovery time."
+    title: "Automated Response Intelligence",
+    description: "AI-powered incident response with automated remediation based on machine learning recommendations."
+  },
+  {
+    icon: <Target className="h-12 w-12" />,
+    title: "Real-time ML Processing",
+    description: "Sub-second threat analysis using optimized neural networks for immediate threat classification."
   },
   {
     icon: <Users className="h-12 w-12" />,
-    title: "Centralized Management",
-    description: "Single console for managing security policies across all endpoints in your organization."
+    title: "Centralized ML Management",
+    description: "Unified console for managing AI models, training data, and machine learning policies across endpoints."
   },
   {
     icon: <Lock className="h-12 w-12" />,
-    title: "Compliance Reporting", 
-    description: "Comprehensive reporting and auditing capabilities for regulatory compliance."
+    title: "Compliance & ML Auditing", 
+    description: "Comprehensive ML model auditing and compliance reporting for AI-driven security decisions."
   }
 ];
 
@@ -192,16 +213,16 @@ const Features = (): JSX.Element => {
           {features.map((feature, index) => (
             <Card 
               key={index} 
-              className="modern-card text-center group"
+              className="modern-card text-center group hover:shadow-xl hover:bg-gradient-to-br hover:from-card hover:to-muted/10 transition-all duration-500"
             >
               <CardContent className="p-6">
-                <div className="text-primary mb-4 flex justify-center transition-all duration-300 group-hover:scale-110 group-hover:text-primary">
+                <div className="text-primary mb-4 flex justify-center transition-all duration-300 group-hover:scale-110 group-hover:text-primary group-hover:drop-shadow-lg">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-card-foreground mb-3">
+                <h3 className="text-xl font-semibold text-card-foreground mb-3 group-hover:text-primary transition-colors duration-300">
                   {feature.title}
                 </h3>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
                   {feature.description}
                 </p>
               </CardContent>
@@ -209,7 +230,12 @@ const Features = (): JSX.Element => {
           ))}
         </div>
 
-        {/* New Agent Compatibility Section */}
+        {/* ML Dashboard Section */}
+        <div className="mb-16">
+          <MLDashboard />
+        </div>
+
+        {/* Agent Compatibility Section */}
         <div className="mb-16">
           <AgentCompatibility />
         </div>

@@ -169,6 +169,130 @@ export type Database = {
         }
         Relationships: []
       }
+      ml_metrics: {
+        Row: {
+          id: string
+          metadata: Json | null
+          metric_type: string
+          metric_value: number
+          model_id: string
+          timestamp: string
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          metric_type: string
+          metric_value: number
+          model_id: string
+          timestamp?: string
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          metric_type?: string
+          metric_value?: number
+          model_id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ml_metrics_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "ml_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ml_models: {
+        Row: {
+          accuracy_rate: number
+          created_at: string
+          deployment_date: string
+          false_positive_rate: number
+          id: string
+          last_updated: string
+          model_type: string
+          name: string
+          training_status: string
+          version: string
+        }
+        Insert: {
+          accuracy_rate?: number
+          created_at?: string
+          deployment_date?: string
+          false_positive_rate?: number
+          id?: string
+          last_updated?: string
+          model_type: string
+          name: string
+          training_status?: string
+          version: string
+        }
+        Update: {
+          accuracy_rate?: number
+          created_at?: string
+          deployment_date?: string
+          false_positive_rate?: number
+          id?: string
+          last_updated?: string
+          model_type?: string
+          name?: string
+          training_status?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      model_training_logs: {
+        Row: {
+          accuracy: number | null
+          completed_at: string | null
+          dataset_size: number | null
+          epoch: number | null
+          id: string
+          loss_value: number | null
+          model_id: string
+          started_at: string
+          status: string
+          training_session_id: string
+          training_time_minutes: number | null
+        }
+        Insert: {
+          accuracy?: number | null
+          completed_at?: string | null
+          dataset_size?: number | null
+          epoch?: number | null
+          id?: string
+          loss_value?: number | null
+          model_id: string
+          started_at?: string
+          status?: string
+          training_session_id: string
+          training_time_minutes?: number | null
+        }
+        Update: {
+          accuracy?: number | null
+          completed_at?: string | null
+          dataset_size?: number | null
+          epoch?: number | null
+          id?: string
+          loss_value?: number | null
+          model_id?: string
+          started_at?: string
+          status?: string
+          training_session_id?: string
+          training_time_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_training_logs_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "ml_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -462,6 +586,44 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      threat_classifications: {
+        Row: {
+          classification: string
+          classified_at: string
+          confidence_score: number
+          id: string
+          model_id: string
+          source_data: Json | null
+          threat_type: string
+        }
+        Insert: {
+          classification: string
+          classified_at?: string
+          confidence_score: number
+          id?: string
+          model_id: string
+          source_data?: Json | null
+          threat_type: string
+        }
+        Update: {
+          classification?: string
+          classified_at?: string
+          confidence_score?: number
+          id?: string
+          model_id?: string
+          source_data?: Json | null
+          threat_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threat_classifications_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "ml_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       update_logs: {
         Row: {
