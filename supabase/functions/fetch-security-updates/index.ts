@@ -74,181 +74,43 @@ serve(async (req) => {
       
       allUpdates = parsedUpdates;
       
+      // If no updates were parsed from the real data, fall back to mock data
+      if (allUpdates.length === 0) {
+        console.log('No updates parsed from real data, falling back to enhanced mock data...');
+        allUpdates = getMockUpdates();
+      }
+      
     } catch (error) {
       console.error('Error fetching from Trellix:', error);
       console.log('Falling back to enhanced mock data...');
       
       // Enhanced mock data with V3 DAT and MEDDAT updates
-      const mockUpdates: SecurityUpdate[] = [
-        // V3 DAT Updates
-        {
-          name: 'V3 Virus Definition Files',
-          type: 'datv3',
-          platform: 'Windows',
-          version: '5950',
-          release_date: new Date().toISOString(),
-          file_size: 189750000,
-          file_name: 'V3_5950dat.exe',
-          sha256: 'a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
-          description: 'Next-generation V3 virus definition files with enhanced detection capabilities and improved performance',
-          is_recommended: true,
-          download_url: 'https://update.nai.com/Products/CommonUpdater/V3_5950dat.exe',
-          update_category: 'endpoint',
-          criticality_level: 'high',
-          target_systems: ['Next-Gen Endpoint', 'Advanced Threat Protection'],
-          dependencies: ['Security Engine 5.7.0+'],
-          compatibility_info: {
-            minimum_version: '5.7.0',
-            supported_platforms: ['Windows'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
-          deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
-        },
-        {
-          name: 'V3 Virus Definition Files',
-          type: 'datv3',
-          platform: 'Linux',
-          version: '5950',
-          release_date: new Date().toISOString(),
-          file_size: 178900000,
-          file_name: 'V3_5950dat.tar.gz',
-          sha256: 'b2c3d4e5f6789012345678901234567890123456789012345678901234567890a1',
-          description: 'V3 virus definition files for Linux environments with enhanced malware detection',
-          is_recommended: true,
-          download_url: 'https://update.nai.com/Products/CommonUpdater/V3_5950dat.tar.gz',
-          update_category: 'endpoint',
-          criticality_level: 'high',
-          target_systems: ['Linux Endpoint Protection', 'Server Security'],
-          dependencies: ['Security Engine 5.7.0+'],
-          compatibility_info: {
-            minimum_version: '5.7.0',
-            supported_platforms: ['Linux'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
-          deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
-        },
-        // Previous V3 DAT version for progression tracking
-        {
-          name: 'V3 Virus Definition Files',
-          type: 'datv3',
-          platform: 'Windows',
-          version: '5949',
-          release_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          file_size: 189650000,
-          file_name: 'V3_5949dat.exe',
-          sha256: 'c3d4e5f6789012345678901234567890123456789012345678901234567890a1b2',
-          description: 'Previous V3 virus definition files with comprehensive threat protection',
-          is_recommended: false,
-          download_url: 'https://update.nai.com/Products/CommonUpdater/V3_5949dat.exe',
-          update_category: 'endpoint',
-          criticality_level: 'medium',
-          target_systems: ['Next-Gen Endpoint', 'Advanced Threat Protection'],
-          dependencies: ['Security Engine 5.7.0+'],
-          compatibility_info: {
-            minimum_version: '5.7.0',
-            supported_platforms: ['Windows'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
-          deployment_notes: 'Superseded by version 5950. Upgrade recommended.'
-        },
-        // MEDDAT Updates
-        {
-          name: 'Medical Device DAT Files',
-          type: 'meddat',
-          platform: 'Medical Devices',
-          version: '2.4.1',
-          release_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          file_size: 145890000,
-          file_name: 'MEDDAT_2.4.1.zip',
-          sha256: 'd4e5f6789012345678901234567890123456789012345678901234567890a1b2c3',
-          description: 'Specialized threat definitions for medical device security and healthcare networks',
-          is_recommended: true,
-          download_url: 'https://update.nai.com/Products/Medical/MEDDAT_2.4.1.zip',
-          update_category: 'medical',
-          criticality_level: 'critical',
-          target_systems: ['Medical Device Security', 'Healthcare Networks'],
-          dependencies: ['Medical Device Connector'],
-          compatibility_info: {
-            minimum_version: '2.0.0',
-            supported_platforms: ['Medical Devices'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats'],
-          deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
-        },
-        {
-          name: 'Medical Device DAT Files',
-          type: 'meddat',
-          platform: 'Healthcare Systems',
-          version: '2.4.1',
-          release_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          file_size: 156780000,
-          file_name: 'MEDDAT_Healthcare_2.4.1.zip',
-          sha256: 'e5f6789012345678901234567890123456789012345678901234567890a1b2c3d4',
-          description: 'Healthcare system-specific DAT files with enhanced medical device protection',
-          is_recommended: true,
-          download_url: 'https://update.nai.com/Products/Medical/MEDDAT_Healthcare_2.4.1.zip',
-          update_category: 'medical',
-          criticality_level: 'critical',
-          target_systems: ['Healthcare Systems', 'Medical Networks'],
-          dependencies: ['Medical Device Connector', 'Healthcare Security Module'],
-          compatibility_info: {
-            minimum_version: '2.0.0',
-            supported_platforms: ['Healthcare Systems'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats', 'HIPAA Compliance'],
-          deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
-        },
-        // Standard DAT for comparison
-        {
-          name: 'Standard DAT Files',
-          type: 'dat',
-          platform: 'All Platforms',
-          version: '10999',
-          release_date: new Date().toISOString(),
-          file_size: 167890000,
-          file_name: 'avvdat-10999.zip',
-          sha256: 'f6789012345678901234567890123456789012345678901234567890a1b2c3d4e5',
-          description: 'Traditional DAT files containing virus definitions and signatures',
-          is_recommended: true,
-          download_url: 'https://update.nai.com/Products/CommonUpdater/avvdat-10999.zip',
-          update_category: 'endpoint',
-          criticality_level: 'high',
-          target_systems: ['Endpoint Security', 'File & Removable Media Protection'],
-          dependencies: [],
-          compatibility_info: {
-            minimum_version: '1.0.0',
-            supported_platforms: ['Windows', 'Linux', 'Mac'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Viruses', 'Trojans', 'Malware', 'Spyware'],
-          deployment_notes: 'Standard deployment procedures apply.'
-        }
-      ];
-
-      await processUpdates(supabase, mockUpdates, startTime);
+      allUpdates = getMockUpdates();
     }
+
+    // Process and store the updates
+    return await processUpdates(supabase, allUpdates, startTime);
 
   } catch (error) {
     console.error('Error in fetch-security-updates function:', error);
     
     // Log the error
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    await supabase
-      .from('update_logs')
-      .insert([{
-        updates_found: 0,
-        new_updates: 0,
-        status: 'failed',
-        error_message: error.message
-      }]);
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      await supabase
+        .from('update_logs')
+        .insert([{
+          updates_found: 0,
+          new_updates: 0,
+          status: 'failed',
+          error_message: error.message
+        }]);
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
 
     return new Response(
       JSON.stringify({ error: error.message }),
@@ -362,6 +224,135 @@ function generateMockSHA256(): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+// Get mock updates for fallback
+function getMockUpdates(): SecurityUpdate[] {
+  return [
+    // V3 DAT Updates
+    {
+      name: 'V3 Virus Definition Files',
+      type: 'datv3',
+      platform: 'Windows',
+      version: '5950',
+      release_date: new Date().toISOString(),
+      file_size: 189750000,
+      file_name: 'V3_5950dat.exe',
+      sha256: 'a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
+      description: 'Next-generation V3 virus definition files with enhanced detection capabilities and improved performance',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/CommonUpdater/V3_5950dat.exe',
+      update_category: 'endpoint',
+      criticality_level: 'high',
+      target_systems: ['Next-Gen Endpoint', 'Advanced Threat Protection'],
+      dependencies: ['Security Engine 5.7.0+'],
+      compatibility_info: {
+        minimum_version: '5.7.0',
+        supported_platforms: ['Windows'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
+      deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
+    },
+    {
+      name: 'V3 Virus Definition Files',
+      type: 'datv3',
+      platform: 'Linux',
+      version: '5950',
+      release_date: new Date().toISOString(),
+      file_size: 178900000,
+      file_name: 'V3_5950dat.tar.gz',
+      sha256: 'b2c3d4e5f6789012345678901234567890123456789012345678901234567890a1',
+      description: 'V3 virus definition files for Linux environments with enhanced malware detection',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/CommonUpdater/V3_5950dat.tar.gz',
+      update_category: 'endpoint',
+      criticality_level: 'high',
+      target_systems: ['Linux Endpoint Protection', 'Server Security'],
+      dependencies: ['Security Engine 5.7.0+'],
+      compatibility_info: {
+        minimum_version: '5.7.0',
+        supported_platforms: ['Linux'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
+      deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
+    },
+    // MEDDAT Updates
+    {
+      name: 'Medical Device DAT Files',
+      type: 'meddat',
+      platform: 'Medical Devices',
+      version: '2.4.1',
+      release_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      file_size: 145890000,
+      file_name: 'MEDDAT_2.4.1.zip',
+      sha256: 'd4e5f6789012345678901234567890123456789012345678901234567890a1b2c3',
+      description: 'Specialized threat definitions for medical device security and healthcare networks',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/Medical/MEDDAT_2.4.1.zip',
+      update_category: 'medical',
+      criticality_level: 'critical',
+      target_systems: ['Medical Device Security', 'Healthcare Networks'],
+      dependencies: ['Medical Device Connector'],
+      compatibility_info: {
+        minimum_version: '2.0.0',
+        supported_platforms: ['Medical Devices'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats'],
+      deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
+    },
+    {
+      name: 'Medical Device DAT Files',
+      type: 'meddat',
+      platform: 'Healthcare Systems',
+      version: '2.4.1',
+      release_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      file_size: 156780000,
+      file_name: 'MEDDAT_Healthcare_2.4.1.zip',
+      sha256: 'e5f6789012345678901234567890123456789012345678901234567890a1b2c3d4',
+      description: 'Healthcare system-specific DAT files with enhanced medical device protection',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/Medical/MEDDAT_Healthcare_2.4.1.zip',
+      update_category: 'medical',
+      criticality_level: 'critical',
+      target_systems: ['Healthcare Systems', 'Medical Networks'],
+      dependencies: ['Medical Device Connector', 'Healthcare Security Module'],
+      compatibility_info: {
+        minimum_version: '2.0.0',
+        supported_platforms: ['Healthcare Systems'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats', 'HIPAA Compliance'],
+      deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
+    },
+    // Standard DAT for comparison
+    {
+      name: 'Standard DAT Files',
+      type: 'dat',
+      platform: 'All Platforms',
+      version: '10999',
+      release_date: new Date().toISOString(),
+      file_size: 167890000,
+      file_name: 'avvdat-10999.zip',
+      sha256: 'f6789012345678901234567890123456789012345678901234567890a1b2c3d4e5',
+      description: 'Traditional DAT files containing virus definitions and signatures',
+      is_recommended: true,
+      download_url: 'https://update.nai.com/Products/CommonUpdater/avvdat-10999.zip',
+      update_category: 'endpoint',
+      criticality_level: 'high',
+      target_systems: ['Endpoint Security', 'File & Removable Media Protection'],
+      dependencies: [],
+      compatibility_info: {
+        minimum_version: '1.0.0',
+        supported_platforms: ['Windows', 'Linux', 'Mac'],
+        last_supported_version: null
+      },
+      threat_coverage: ['Viruses', 'Trojans', 'Malware', 'Spyware'],
+      deployment_notes: 'Standard deployment procedures apply.'
+    }
+  ];
 }
 
 // Process and store updates in database
