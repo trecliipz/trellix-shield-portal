@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RefreshCw, Download, CheckCircle, AlertTriangle, Shield, Database, Zap, Globe, Mail, Lock, FileText } from "lucide-react";
+import { RefreshCw, Download, CheckCircle, AlertTriangle, Shield, Database, Zap, Globe, Mail, Lock, FileText, Heart, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types";
@@ -111,11 +112,12 @@ const AdminDAT: React.FC = () => {
 
   const getTypeIcon = (type: string): React.ReactNode => {
     const iconMap: Record<string, React.ReactNode> = {
-      datv3: <Database className="h-4 w-4" />,
-      meddat: <Shield className="h-4 w-4" />,
+      dat: <Database className="h-4 w-4" />,
+      datv3: <Zap className="h-4 w-4" />,
+      meddat: <Heart className="h-4 w-4" />,
       tie: <Globe className="h-4 w-4" />,
       exploit_prevention: <Lock className="h-4 w-4" />,
-      amcore_dat: <Zap className="h-4 w-4" />,
+      amcore_dat: <Activity className="h-4 w-4" />,
       gateway_dat: <Globe className="h-4 w-4" />,
       email_dat: <Mail className="h-4 w-4" />,
       security_engine: <Shield className="h-4 w-4" />,
@@ -129,8 +131,9 @@ const AdminDAT: React.FC = () => {
 
   const getTypeColor = (type: string): "default" | "secondary" | "destructive" | "outline" => {
     const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      datv3: "default",
-      meddat: "secondary", 
+      dat: "default",
+      datv3: "secondary", 
+      meddat: "destructive",
       tie: "outline",
       exploit_prevention: "destructive",
       amcore_dat: "default",
@@ -225,7 +228,7 @@ const AdminDAT: React.FC = () => {
     });
   };
 
-  // Group updates by type
+  // Group updates by type with priority for V3 DAT and MEDDAT
   const updatesByType = securityUpdates.reduce((acc, update) => {
     if (!acc[update.type]) {
       acc[update.type] = [];
@@ -326,7 +329,7 @@ const AdminDAT: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold">DAT Management</h1>
           <p className="text-muted-foreground">
-            Manage and download security updates, DAT files, and threat intelligence
+            Manage and download security updates, V3 DAT files, MEDDAT, and threat intelligence
           </p>
         </div>
         <div className="flex space-x-2">
@@ -344,13 +347,33 @@ const AdminDAT: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Updates</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{securityUpdates.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">V3 DAT Files</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">
+              {securityUpdates.filter(u => u.type === 'datv3').length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">MEDDAT Files</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {securityUpdates.filter(u => u.type === 'meddat').length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -373,25 +396,24 @@ const AdminDAT: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Update Types</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{Object.keys(updatesByType).length}</div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Updates by Type */}
-      <Tabs defaultValue={Object.keys(updatesByType)[0] || "datv3"} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          {Object.keys(updatesByType).slice(0, 4).map((type) => (
-            <TabsTrigger key={type} value={type} className="flex items-center space-x-2">
-              {getTypeIcon(type)}
-              <span className="capitalize">{type.replace('_', ' ')}</span>
-              <Badge variant="secondary">{updatesByType[type].length}</Badge>
-            </TabsTrigger>
+      {/* Updates by Type with V3 DAT and MEDDAT priority */}
+      <Tabs defaultValue="datv3" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          {/* Prioritize V3 DAT and MEDDAT */}
+          {['datv3', 'meddat', 'dat', 'tie', 'exploit_prevention'].map((type) => (
+            updatesByType[type] && (
+              <TabsTrigger key={type} value={type} className="flex items-center space-x-2">
+                {getTypeIcon(type)}
+                <span className="capitalize">
+                  {type === 'datv3' ? 'V3 DAT' : 
+                   type === 'meddat' ? 'MEDDAT' : 
+                   type.replace('_', ' ')}
+                </span>
+                <Badge variant="secondary">{updatesByType[type].length}</Badge>
+              </TabsTrigger>
+            )
           ))}
         </TabsList>
         
@@ -401,9 +423,20 @@ const AdminDAT: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   {getTypeIcon(type)}
-                  <span className="capitalize">{type.replace('_', ' ')} Updates</span>
+                  <span className="capitalize">
+                    {type === 'datv3' ? 'V3 Virus Definition Files' : 
+                     type === 'meddat' ? 'Medical Device DAT Files' : 
+                     type.replace('_', ' ')} Updates
+                  </span>
                   <Badge variant="secondary">{updates.length}</Badge>
                 </CardTitle>
+                <div className="text-sm text-muted-foreground">
+                  {type === 'datv3' && 'Next-generation virus definition files with enhanced detection capabilities'}
+                  {type === 'meddat' && 'Specialized threat definitions for medical device security and healthcare networks'}
+                  {type === 'dat' && 'Traditional virus definition files for comprehensive threat protection'}
+                  {type === 'tie' && 'Threat Intelligence Exchange feeds with global reputation data'}
+                  {type === 'exploit_prevention' && 'Zero-day exploit protection rules and heuristics'}
+                </div>
               </CardHeader>
               <CardContent>
                 {renderUpdatesTable(updates)}

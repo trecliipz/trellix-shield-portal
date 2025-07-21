@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot } from 'lucide-react';
+import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot, Heart } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,7 +71,6 @@ interface SecurityUpdateData {
 const Features = (): JSX.Element => {
   const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdateData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [platformVersions, setPlatformVersions] = useState<Record<string, Record<string, string>>>({});
 
   // Helper functions
   const formatFileSize = (bytes: number): string => {
@@ -80,11 +80,12 @@ const Features = (): JSX.Element => {
     return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const getPlatformIcon = (platform: string): string => {
+  const getPlatformIcon = (platform: string): React.ReactNode => {
     if (platform.toLowerCase().includes('windows')) return '🪟';
     if (platform.toLowerCase().includes('linux')) return '🐧';
     if (platform.toLowerCase().includes('mac')) return '🍎';
     if (platform.toLowerCase().includes('medical')) return '🏥';
+    if (platform.toLowerCase().includes('healthcare')) return '⚕️';
     if (platform.toLowerCase().includes('gateway')) return '🌐';
     if (platform.toLowerCase().includes('email')) return '📧';
     return '💻';
@@ -93,7 +94,7 @@ const Features = (): JSX.Element => {
   const getUpdateFrequency = (type: string): string => {
     const frequencies: Record<string, string> = {
       'dat': 'Updated multiple times daily',
-      'datv3': 'Updated daily',
+      'datv3': 'Updated multiple times daily',
       'meddat': 'Updated weekly',
       'amcore_dat': 'Updated daily',
       'tie': 'Updated continuously',
@@ -118,14 +119,13 @@ const Features = (): JSX.Element => {
         return;
       }
 
-      // Group updates by type and platform for better display
+      // Group updates by type with priority for V3 DAT and MEDDAT
       const groupedUpdates: { [key: string]: any } = {};
-      const platformVersions: { [key: string]: { [key: string]: any } } = {};
       
       data?.forEach(update => {
-        const typeKey = update.type === 'dat' ? 'DAT Files' :
-                       update.type === 'datv3' ? 'DAT V3' :
-                       update.type === 'meddat' ? 'MEDDAT' :
+        const typeKey = update.type === 'dat' ? 'Standard DAT Files' :
+                       update.type === 'datv3' ? 'V3 Virus Definition Files' :
+                       update.type === 'meddat' ? 'Medical Device DAT Files' :
                        update.type === 'amcore_dat' ? 'AMCore Content' :
                        update.type === 'tie' ? 'TIE Intelligence' :
                        update.type === 'exploit_prevention' ? 'Exploit Prevention' :
@@ -138,61 +138,61 @@ const Features = (): JSX.Element => {
             type: typeKey,
             urgency: update.is_recommended ? 'critical' : 'important',
             platforms: [],
-            description: update.description || `${typeKey} for comprehensive threat protection`,
+            description: update.description || getUpdateDescription(update.type),
             frequency: getUpdateFrequency(update.type)
           };
         }
 
-        // Track platform-specific versions
-        if (!platformVersions[typeKey]) {
-          platformVersions[typeKey] = {};
-        }
-        
         const platformKey = update.platform || 'All Platforms';
-        if (!platformVersions[typeKey][platformKey] || 
-            new Date(update.release_date) > new Date(platformVersions[typeKey][platformKey].date)) {
-          platformVersions[typeKey][platformKey] = {
-            version: update.version,
-            date: update.release_date,
-            size: update.file_size,
-            isNew: new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-            criticality: update.criticality_level,
-            isRecommended: update.is_recommended
-          };
-        }
-      });
-
-      // Convert platform versions to display format
-      Object.keys(groupedUpdates).forEach(typeKey => {
-        const platforms = platformVersions[typeKey];
-        Object.keys(platforms).forEach(platformName => {
-          const platform = platforms[platformName];
-          const platformIcon = getPlatformIcon(platformName);
-          
-          groupedUpdates[typeKey].platforms.push({
-            name: platformName,
-            version: platform.version,
-            date: new Date(platform.date).toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric' 
-            }),
-            size: formatFileSize(platform.size),
-            icon: platformIcon,
-            status: platform.isNew ? 'new' : 
-                   platform.isRecommended ? 'updated' : 
-                   'stable',
-            criticality: platform.criticality
-          });
+        const isNew = new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        
+        groupedUpdates[typeKey].platforms.push({
+          name: platformKey,
+          version: update.version,
+          date: new Date(update.release_date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          }),
+          size: formatFileSize(update.file_size),
+          icon: getPlatformIcon(platformKey),
+          status: isNew ? 'new' : 
+                 update.is_recommended ? 'updated' : 
+                 'stable',
+          criticality: update.criticality_level
         });
       });
 
-      setSecurityUpdates(Object.values(groupedUpdates));
+      // Sort to prioritize V3 DAT and MEDDAT
+      const sortedUpdates = Object.values(groupedUpdates).sort((a: any, b: any) => {
+        const priority = { 
+          'V3 Virus Definition Files': 1, 
+          'Medical Device DAT Files': 2, 
+          'Standard DAT Files': 3 
+        };
+        return (priority[a.type as keyof typeof priority] || 99) - (priority[b.type as keyof typeof priority] || 99);
+      });
+
+      setSecurityUpdates(sortedUpdates);
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getUpdateDescription = (type: string): string => {
+    const descriptions: Record<string, string> = {
+      'dat': 'Traditional virus definition files for comprehensive threat protection',
+      'datv3': 'Next-generation V3 virus definition files with enhanced detection capabilities and improved performance',
+      'meddat': 'Specialized threat definitions for medical device security and healthcare networks',
+      'amcore_dat': 'Advanced malware core content with behavioral analysis patterns',
+      'tie': 'Threat Intelligence Exchange feeds with global reputation data',
+      'exploit_prevention': 'Zero-day exploit protection rules and heuristics',
+      'engine': 'Core scanning engine with latest detection capabilities',
+      'content': 'General content updates and improvements'
+    };
+    return descriptions[type] || 'Security update package';
   };
 
   useEffect(() => {
@@ -269,9 +269,17 @@ const Features = (): JSX.Element => {
               <Card key={index} className="modern-card group">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xl font-semibold text-card-foreground">
-                      {update.type}
-                    </h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-xl font-semibold text-card-foreground">
+                        {update.type}
+                      </h3>
+                      {update.type === 'V3 Virus Definition Files' && (
+                        <Zap className="h-5 w-5 text-primary" />
+                      )}
+                      {update.type === 'Medical Device DAT Files' && (
+                        <Heart className="h-5 w-5 text-destructive" />
+                      )}
+                    </div>
                     <div className="flex items-center space-x-2">
                       {update.urgency === 'critical' && (
                         <Badge variant="destructive" className="flex items-center space-x-1">
@@ -326,7 +334,15 @@ const Features = (): JSX.Element => {
                           </div>
                         </div>
                         <div className="flex flex-col text-right">
-                          <span className="text-xs text-muted-foreground font-mono">{platform.version}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-muted-foreground font-mono">{platform.version}</span>
+                            {update.type === 'V3 Virus Definition Files' && (
+                              <Badge variant="outline" className="text-xs">V3</Badge>
+                            )}
+                            {update.type === 'Medical Device DAT Files' && (
+                              <Badge variant="destructive" className="text-xs">MED</Badge>
+                            )}
+                          </div>
                           <span className="text-xs text-muted-foreground">{platform.date}</span>
                           <span className="text-xs text-muted-foreground font-medium">{platform.size}</span>
                         </div>
