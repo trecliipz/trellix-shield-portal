@@ -14,6 +14,161 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_agent_packages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deployment_target: string | null
+          description: string | null
+          features: Json | null
+          file_name: string
+          file_size: number | null
+          id: string
+          is_active: boolean | null
+          is_recommended: boolean | null
+          name: string
+          platform: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deployment_target?: string | null
+          description?: string | null
+          features?: Json | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_recommended?: boolean | null
+          name: string
+          platform: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deployment_target?: string | null
+          description?: string | null
+          features?: Json | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_recommended?: boolean | null
+          name?: string
+          platform?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      agent_configurations: {
+        Row: {
+          agent_version: string
+          auto_update_enabled: boolean | null
+          created_at: string
+          deployment_policies: Json | null
+          epo_server_url: string | null
+          group_name: string | null
+          id: string
+          last_sync_at: string | null
+          organization_id: string | null
+          ou_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_version: string
+          auto_update_enabled?: boolean | null
+          created_at?: string
+          deployment_policies?: Json | null
+          epo_server_url?: string | null
+          group_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          organization_id?: string | null
+          ou_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_version?: string
+          auto_update_enabled?: boolean | null
+          created_at?: string
+          deployment_policies?: Json | null
+          epo_server_url?: string | null
+          group_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          organization_id?: string | null
+          ou_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_configurations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "user_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_downloads: {
+        Row: {
+          agent_name: string
+          agent_version: string
+          assigned_by_admin: string | null
+          created_at: string
+          download_url: string | null
+          downloaded_at: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          installed_at: string | null
+          platform: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_name: string
+          agent_version: string
+          assigned_by_admin?: string | null
+          created_at?: string
+          download_url?: string | null
+          downloaded_at?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          installed_at?: string | null
+          platform: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_name?: string
+          agent_version?: string
+          assigned_by_admin?: string | null
+          created_at?: string
+          download_url?: string | null
+          downloaded_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          installed_at?: string | null
+          platform?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bulk_operations: {
         Row: {
           completed_items: number | null
@@ -1000,6 +1155,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_agent_to_users: {
+        Args: {
+          p_agent_id: string
+          p_user_ids: string[]
+          p_assigned_by: string
+        }
+        Returns: number
+      }
       calculate_driver_earnings: {
         Args: { p_ride_id: string; p_platform_fee_rate?: number }
         Returns: string
@@ -1037,6 +1200,14 @@ export type Database = {
           p_driver_id: string
           p_payout_period_start: string
           p_payout_period_end: string
+        }
+        Returns: string
+      }
+      sync_user_agent_config: {
+        Args: {
+          p_user_id: string
+          p_agent_version: string
+          p_epo_config?: Json
         }
         Returns: string
       }

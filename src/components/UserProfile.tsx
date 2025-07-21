@@ -26,7 +26,9 @@ import {
   Clock,
   Edit,
   Settings,
-  Activity
+  Activity,
+  RefreshCw,
+  Bell
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,10 +61,13 @@ export const UserProfile = () => {
   const [user, setUser] = useState<any>(null);
   const [organization, setOrganization] = useState<any>(null);
   const [endpoints, setEndpoints] = useState<any[]>([]);
+  const [assignedAgents, setAssignedAgents] = useState<any[]>([]);
+  const [agentConfiguration, setAgentConfiguration] = useState<any>(null);
   const [showAddEndpoint, setShowAddEndpoint] = useState(false);
   const [showEpoConfig, setShowEpoConfig] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userPlan, setUserPlan] = useState<UserPlan>(PLAN_CONFIG.professional);
+  const [hasNewAgents, setHasNewAgents] = useState(false);
 
   const endpointForm = useForm<z.infer<typeof endpointSchema>>({
     resolver: zodResolver(endpointSchema),
@@ -76,7 +81,39 @@ export const UserProfile = () => {
 
   useEffect(() => {
     loadUserData();
+    setupRealtimeSubscription();
   }, []);
+
+  const setupRealtimeSubscription = () => {
+    const channel = supabase
+      .channel('user-agent-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'agent_downloads'
+      }, (payload) => {
+        if (payload.new && (payload.new as any).user_id === user?.id) {
+          loadAssignedAgents();
+          setHasNewAgents(true);
+          toast.success("New agent assigned by administrator");
+        }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'agent_configurations'
+      }, (payload) => {
+        if (payload.new && (payload.new as any).user_id === user?.id) {
+          loadAgentConfiguration();
+          toast.success("Agent configuration updated");
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   const loadUserData = async () => {
     try {
@@ -111,11 +148,53 @@ export const UserProfile = () => {
 
       if (endpointsData) setEndpoints(endpointsData);
 
+      // Load assigned agents and configuration
+      await Promise.all([
+        loadAssignedAgents(),
+        loadAgentConfiguration()
+      ]);
+
     } catch (error) {
       toast.error("Error loading profile data");
       console.error('Error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAssignedAgents = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('agent_downloads')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAssignedAgents(data || []);
+    } catch (error) {
+      console.error('Error loading assigned agents:', error);
+    }
+  };
+
+  const loadAgentConfiguration = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('agent_configurations')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setAgentConfiguration(data);
+    } catch (error) {
+      console.error('Error loading agent configuration:', error);
     }
   };
 
@@ -193,8 +272,54 @@ export const UserProfile = () => {
     }
   };
 
-  const handleDownloadAgent = () => {
-    toast.success("Security agent download initiated. Check your downloads folder.");
+  const handleDownloadAgent = async (agentId?: string) => {
+    try {
+      if (agentId) {
+        // Update specific agent download status
+        const { error } = await supabase
+          .from('agent_downloads')
+          .update({ 
+            status: 'downloaded',
+            downloaded_at: new Date().toISOString()
+          })
+          .eq('id', agentId);
+
+        if (error) throw error;
+        loadAssignedAgents();
+      }
+      
+      toast.success("Security agent download initiated. Check your downloads folder.");
+      setHasNewAgents(false);
+    } catch (error) {
+      console.error('Error updating download status:', error);
+    }
+  };
+
+  const handleSyncConfiguration = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const epoConfig = {
+        server_url: 'https://epo.company.com',
+        group_name: organization?.group_name,
+        ou_name: organization?.organization_name
+      };
+
+      const { data, error } = await supabase.rpc('sync_user_agent_config', {
+        p_user_id: user.id,
+        p_agent_version: assignedAgents[0]?.agent_version || '2.1.5',
+        p_epo_config: epoConfig
+      });
+
+      if (error) throw error;
+
+      toast.success("Configuration synced with admin system");
+      loadAgentConfiguration();
+    } catch (error) {
+      console.error('Error syncing configuration:', error);
+      toast.error("Failed to sync configuration");
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -281,34 +406,85 @@ export const UserProfile = () => {
               <CardTitle className="flex items-center space-x-3">
                 <Download className="w-6 h-6 text-primary" />
                 <span>Security Agent & Configuration</span>
+                {hasNewAgents && (
+                  <Badge variant="destructive" className="animate-pulse">
+                    <Bell className="w-3 h-3 mr-1" />
+                    New
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                  <h3 className="font-semibold text-foreground mb-2 flex items-center">
-                    <Shield className="w-5 h-5 mr-2 text-primary" />
-                    Latest Security Agent v2.1.5
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Enhanced threat detection with real-time monitoring capabilities
-                  </p>
-                  <Button 
-                    onClick={handleDownloadAgent}
-                    className="w-full glow-button"
-                  >
-                    <Download className="w-5 h-5 mr-2" />
-                    Download Security Agent
-                  </Button>
-                </div>
+                {assignedAgents.length > 0 ? (
+                  <div className="space-y-3">
+                    {assignedAgents.map((agent) => (
+                      <div key={agent.id} className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-foreground flex items-center">
+                            <Shield className="w-5 h-5 mr-2 text-primary" />
+                            {agent.agent_name} v{agent.agent_version}
+                          </h3>
+                          <Badge variant={
+                            agent.status === 'downloaded' ? 'default' :
+                            agent.status === 'installed' ? 'default' :
+                            agent.status === 'available' ? 'secondary' : 'destructive'
+                          }>
+                            {agent.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Platform: {agent.platform} • Assigned by admin
+                        </p>
+                        {agent.status === 'available' && (
+                          <Button 
+                            onClick={() => handleDownloadAgent(agent.id)}
+                            className="w-full glow-button"
+                          >
+                            <Download className="w-5 h-5 mr-2" />
+                            Download {agent.agent_name}
+                          </Button>
+                        )}
+                        {agent.status === 'downloaded' && (
+                          <Button variant="outline" className="w-full" disabled>
+                            <CheckCircle className="w-5 h-5 mr-2" />
+                            Downloaded - Install manually
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                    <h3 className="font-semibold text-foreground mb-2 flex items-center">
+                      <Shield className="w-5 h-5 mr-2 text-primary" />
+                      Latest Security Agent v2.1.5
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Enhanced threat detection with real-time monitoring capabilities
+                    </p>
+                    <Button 
+                      onClick={() => handleDownloadAgent()}
+                      className="w-full glow-button"
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      Download Security Agent
+                    </Button>
+                  </div>
+                )}
 
                 <div className="border-t border-border pt-4">
-                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-medium text-foreground flex items-center">
                       <Building2 className="w-5 h-5 mr-2 text-trellix-orange" />
                       Trellix EPO Configuration
                     </h3>
-                    <Dialog open={showEpoConfig} onOpenChange={setShowEpoConfig}>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={handleSyncConfiguration}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Sync
+                      </Button>
+                      <Dialog open={showEpoConfig} onOpenChange={setShowEpoConfig}>
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm">
                           <Settings className="w-4 h-4 mr-2" />
@@ -352,19 +528,32 @@ export const UserProfile = () => {
                         </Form>
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </div>
                   
                   <div className="bg-muted/30 p-4 rounded-lg space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Group:</span>
                       <span className="text-sm font-medium text-foreground">
-                        {organization?.group_name || 'Not configured'}
+                        {agentConfiguration?.group_name || organization?.group_name || 'Not configured'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">OU:</span>
                       <span className="text-sm font-medium text-foreground">
-                        {organization?.organization_name || 'Not configured'}
+                        {agentConfiguration?.ou_name || organization?.organization_name || 'Not configured'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Agent Version:</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {agentConfiguration?.agent_version || 'Not synced'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Last Sync:</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {agentConfiguration ? new Date(agentConfiguration.last_sync_at).toLocaleString() : 'Never'}
                       </span>
                     </div>
                   </div>
