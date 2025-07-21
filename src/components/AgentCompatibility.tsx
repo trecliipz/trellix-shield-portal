@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -125,7 +126,7 @@ const getStatusBadge = (status: string) => {
 };
 
 export const AgentCompatibility = () => {
-  const [selectedPlatform, setSelectedPlatform] = useState('Windows');
+  const [selectedPlatform, setSelectedPlatform] = useState('');
 
   const currentPlatform = platformSupport.find(p => p.platform === selectedPlatform);
 
@@ -170,6 +171,20 @@ export const AgentCompatibility = () => {
               </Card>
             ))}
           </div>
+
+          {!selectedPlatform && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Info className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h4 className="text-lg font-semibold text-card-foreground mb-2">
+                  Select a Platform
+                </h4>
+                <p className="text-muted-foreground">
+                  Click on a platform above to view detailed compatibility information and supported versions.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {currentPlatform && (
             <Card>
