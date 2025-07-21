@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,6 +62,7 @@ export const UserProfile = () => {
   const [endpoints, setEndpoints] = useState<any[]>([]);
   const [assignedAgents, setAssignedAgents] = useState<any[]>([]);
   const [agentConfiguration, setAgentConfiguration] = useState<any>(null);
+  const [availableAgentPackages, setAvailableAgentPackages] = useState<any[]>([]);
   const [showAddEndpoint, setShowAddEndpoint] = useState(false);
   const [showEpoConfig, setShowEpoConfig] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,10 +148,11 @@ export const UserProfile = () => {
 
       if (endpointsData) setEndpoints(endpointsData);
 
-      // Load assigned agents and configuration
+      // Load assigned agents, configuration, and available packages
       await Promise.all([
         loadAssignedAgents(),
-        loadAgentConfiguration()
+        loadAgentConfiguration(),
+        loadAvailableAgentPackages()
       ]);
 
     } catch (error) {
@@ -195,6 +196,136 @@ export const UserProfile = () => {
       setAgentConfiguration(data);
     } catch (error) {
       console.error('Error loading agent configuration:', error);
+    }
+  };
+
+  const loadAvailableAgentPackages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_agent_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('is_recommended', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAvailableAgentPackages(data || []);
+    } catch (error) {
+      console.error('Error loading available agent packages:', error);
+    }
+  };
+
+  const initiateFileDownload = async (packageData: any) => {
+    try {
+      // Create a mock download URL for demonstration
+      // In a real implementation, this would be the actual file URL from admin packages
+      const downloadUrl = packageData.download_url || `https://releases.company.com/agents/${packageData.file_name}`;
+      
+      // Create hidden anchor element for download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = packageData.file_name;
+      link.style.display = 'none';
+      
+      // Add to DOM, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Downloading ${packageData.name} v${packageData.version}`);
+      return true;
+    } catch (error) {
+      console.error('Error initiating file download:', error);
+      toast.error("Download failed. Please try again.");
+      return false;
+    }
+  };
+
+  const handleDownloadAgent = async (agentId?: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let packageToDownload = null;
+
+      if (agentId) {
+        // User is downloading a specific assigned agent
+        const assignedAgent = assignedAgents.find(agent => agent.id === agentId);
+        if (!assignedAgent) {
+          toast.error("Agent not found");
+          return;
+        }
+
+        // Find the corresponding package info
+        packageToDownload = availableAgentPackages.find(pkg => 
+          pkg.name === assignedAgent.agent_name && 
+          pkg.version === assignedAgent.agent_version
+        );
+
+        if (!packageToDownload) {
+          // Create a mock package object from assigned agent data
+          packageToDownload = {
+            name: assignedAgent.agent_name,
+            version: assignedAgent.agent_version,
+            file_name: assignedAgent.file_name,
+            platform: assignedAgent.platform
+          };
+        }
+
+        // Initiate download
+        const downloadSuccess = await initiateFileDownload(packageToDownload);
+        
+        if (downloadSuccess) {
+          // Update agent download status
+          const { error } = await supabase
+            .from('agent_downloads')
+            .update({ 
+              status: 'downloaded',
+              downloaded_at: new Date().toISOString()
+            })
+            .eq('id', agentId);
+
+          if (error) throw error;
+          loadAssignedAgents();
+        }
+      } else {
+        // User is downloading latest available agent (self-service)
+        const recommendedPackage = availableAgentPackages.find(pkg => pkg.is_recommended) || 
+                                  availableAgentPackages[0];
+
+        if (!recommendedPackage) {
+          toast.error("No security agents available for download");
+          return;
+        }
+
+        packageToDownload = recommendedPackage;
+
+        // Initiate download
+        const downloadSuccess = await initiateFileDownload(packageToDownload);
+        
+        if (downloadSuccess) {
+          // Create a new agent download record for self-service download
+          const { error } = await supabase
+            .from('agent_downloads')
+            .insert([{
+              user_id: user.id,
+              agent_name: packageToDownload.name,
+              agent_version: packageToDownload.version,
+              file_name: packageToDownload.file_name,
+              platform: packageToDownload.platform,
+              status: 'downloaded',
+              downloaded_at: new Date().toISOString()
+            }]);
+
+          if (error) throw error;
+          loadAssignedAgents();
+        }
+      }
+      
+      setHasNewAgents(false);
+    } catch (error) {
+      console.error('Error downloading agent:', error);
+      toast.error("Error downloading agent");
     }
   };
 
@@ -269,29 +400,6 @@ export const UserProfile = () => {
     } catch (error) {
       toast.error("Error saving EPO configuration");
       console.error('Error:', error);
-    }
-  };
-
-  const handleDownloadAgent = async (agentId?: string) => {
-    try {
-      if (agentId) {
-        // Update specific agent download status
-        const { error } = await supabase
-          .from('agent_downloads')
-          .update({ 
-            status: 'downloaded',
-            downloaded_at: new Date().toISOString()
-          })
-          .eq('id', agentId);
-
-        if (error) throw error;
-        loadAssignedAgents();
-      }
-      
-      toast.success("Security agent download initiated. Check your downloads folder.");
-      setHasNewAgents(false);
-    } catch (error) {
-      console.error('Error updating download status:', error);
     }
   };
 
@@ -434,7 +542,7 @@ export const UserProfile = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Platform: {agent.platform} • Assigned by admin
+                          Platform: {agent.platform} • {agent.assigned_by_admin ? 'Assigned by admin' : 'Self-downloaded'}
                         </p>
                         {agent.status === 'available' && (
                           <Button 
@@ -454,14 +562,20 @@ export const UserProfile = () => {
                       </div>
                     ))}
                   </div>
-                ) : (
+                ) : availableAgentPackages.length > 0 ? (
                   <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
                     <h3 className="font-semibold text-foreground mb-2 flex items-center">
                       <Shield className="w-5 h-5 mr-2 text-primary" />
-                      Latest Security Agent v2.1.5
+                      {availableAgentPackages[0].name} v{availableAgentPackages[0].version}
+                      {availableAgentPackages[0].is_recommended && (
+                        <Badge variant="default" className="ml-2">Recommended</Badge>
+                      )}
                     </h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Platform: {availableAgentPackages[0].platform}
+                    </p>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Enhanced threat detection with real-time monitoring capabilities
+                      {availableAgentPackages[0].description || "Enhanced threat detection with real-time monitoring capabilities"}
                     </p>
                     <Button 
                       onClick={() => handleDownloadAgent()}
@@ -470,6 +584,16 @@ export const UserProfile = () => {
                       <Download className="w-5 h-5 mr-2" />
                       Download Security Agent
                     </Button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                    <h3 className="font-semibold text-foreground mb-2 flex items-center">
+                      <AlertCircle className="w-5 h-5 mr-2 text-muted-foreground" />
+                      No Agents Available
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      No security agents are currently available for download. Contact your administrator.
+                    </p>
                   </div>
                 )}
 
