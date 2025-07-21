@@ -13,18 +13,63 @@ interface CyberAttack {
   severity: string
   date_detected: string
   source: string
-  target_sector?: string
-  impact?: string
-  mitigation_steps?: string
-  external_id?: string
-  source_url?: string
-  source_credibility_score?: number
-  threat_indicators?: string[]
+  external_url?: string
+  indicators?: any
   affected_products?: string[]
-  geographic_impact?: string[]
-  industry_sectors?: string[]
+  industries?: string[]
   attack_vectors?: string[]
   business_impact?: string
+  mitigation_steps?: string[]
+  source_credibility_score?: number
+  cvss_score?: number
+  cwe_id?: string
+  vendor_info?: any
+}
+
+// Simple XML parser for Deno environment
+function parseXmlToJson(xmlString: string) {
+  try {
+    const items: any[] = [];
+    const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+    let match;
+    
+    while ((match = itemRegex.exec(xmlString)) !== null) {
+      const itemContent = match[1];
+      const item: any = {};
+      
+      // Extract title
+      const titleMatch = itemContent.match(/<title[^>]*><!\[CDATA\[(.*?)\]\]><\/title>|<title[^>]*>(.*?)<\/title>/i);
+      if (titleMatch) {
+        item.title = titleMatch[1] || titleMatch[2] || '';
+      }
+      
+      // Extract description
+      const descMatch = itemContent.match(/<description[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/description>|<description[^>]*>([\s\S]*?)<\/description>/i);
+      if (descMatch) {
+        item.description = descMatch[1] || descMatch[2] || '';
+        item.description = item.description.replace(/<[^>]*>/g, '').trim();
+      }
+      
+      // Extract link
+      const linkMatch = itemContent.match(/<link[^>]*>(.*?)<\/link>/i);
+      if (linkMatch) {
+        item.link = linkMatch[1];
+      }
+      
+      // Extract publication date
+      const pubDateMatch = itemContent.match(/<pubDate[^>]*>(.*?)<\/pubDate>/i);
+      if (pubDateMatch) {
+        item.pubDate = pubDateMatch[1];
+      }
+      
+      items.push(item);
+    }
+    
+    return items;
+  } catch (error) {
+    console.error('XML parsing error:', error);
+    return [];
+  }
 }
 
 Deno.serve(async (req) => {
@@ -70,25 +115,23 @@ Deno.serve(async (req) => {
       }
     ]
 
-    // Process RSS Feeds
+    // Process RSS Feeds with custom XML parser
     for (const source of rssSources) {
       try {
         console.log(`Fetching RSS from ${source.name}...`)
         const rssResponse = await fetch(source.url)
         const rssText = await rssResponse.text()
         
-        // Parse RSS XML
-        const parser = new DOMParser()
-        const xmlDoc = parser.parseFromString(rssText, 'text/xml')
-        const items = xmlDoc.getElementsByTagName('item')
+        // Parse RSS XML using custom parser
+        const items = parseXmlToJson(rssText)
         
         // Process first 3 items from each source
         for (let i = 0; i < Math.min(3, items.length); i++) {
           const item = items[i]
-          const title = item.getElementsByTagName('title')[0]?.textContent || ''
-          const description = item.getElementsByTagName('description')[0]?.textContent || ''
-          const link = item.getElementsByTagName('link')[0]?.textContent || ''
-          const pubDate = item.getElementsByTagName('pubDate')[0]?.textContent || new Date().toISOString()
+          const title = item.title || ''
+          const description = item.description || ''
+          const link = item.link || ''
+          const pubDate = item.pubDate || new Date().toISOString()
           
           // Enhanced threat classification
           const threatInfo = classifyThreat(title, description)
@@ -100,21 +143,98 @@ Deno.serve(async (req) => {
             severity: threatInfo.severity,
             date_detected: new Date(pubDate).toISOString(),
             source: source.name,
-            target_sector: threatInfo.sector,
-            impact: threatInfo.impact,
-            mitigation_steps: threatInfo.mitigation,
-            source_url: link,
-            source_credibility_score: source.credibility,
-            threat_indicators: threatInfo.indicators,
+            external_url: link,
+            indicators: threatInfo.indicators,
             affected_products: threatInfo.products,
-            industry_sectors: threatInfo.industries,
+            industries: threatInfo.industries,
             attack_vectors: threatInfo.vectors,
-            business_impact: threatInfo.businessImpact
+            business_impact: threatInfo.businessImpact,
+            mitigation_steps: [threatInfo.mitigation],
+            source_credibility_score: source.credibility
           })
         }
       } catch (error) {
         console.error(`Error fetching RSS from ${source.name}:`, error)
       }
+    }
+
+    // NVD API Integration with API Key
+    try {
+      console.log('Fetching from NVD API...')
+      const nvdApiKey = Deno.env.get('NVD_API_KEY') || '8c3d9f3c-5e91-4f45-a75d-6401126bfcf2'
+      
+      // Get recent vulnerabilities from last 7 days
+      const lastWeek = new Date()
+      lastWeek.setDate(lastWeek.getDate() - 7)
+      const dateParam = lastWeek.toISOString().split('T')[0]
+      
+      const nvdResponse = await fetch(
+        `https://services.nvd.nist.gov/rest/json/cves/2.0/?startIndex=0&resultsPerPage=10&lastModStartDate=${dateParam}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-KEY': nvdApiKey
+          }
+        }
+      )
+      
+      if (nvdResponse.ok) {
+        const nvdData = await nvdResponse.json()
+        
+        if (nvdData.vulnerabilities) {
+          for (const vuln of nvdData.vulnerabilities) {
+            const cve = vuln.cve
+            const descriptions = cve.descriptions?.find((d: any) => d.lang === 'en')?.value || 'No description available'
+            const cvssData = cve.metrics?.cvssMetricV31?.[0] || cve.metrics?.cvssMetricV30?.[0] || cve.metrics?.cvssMetricV2?.[0]
+            const cvssScore = cvssData?.cvssData?.baseScore || 0
+            const severity = cvssData?.cvssData?.baseSeverity?.toLowerCase() || 'medium'
+            
+            // Extract affected products
+            const affectedProducts: string[] = []
+            if (cve.configurations) {
+              for (const config of cve.configurations) {
+                for (const node of config.nodes || []) {
+                  for (const cpeMatch of node.cpeMatch || []) {
+                    if (cpeMatch.criteria) {
+                      const product = cpeMatch.criteria.split(':')[4] || 'unknown'
+                      if (product !== 'unknown') affectedProducts.push(product)
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Get CWE information
+            const cweIds = cve.weaknesses?.map((w: any) => w.description?.[0]?.value).filter(Boolean) || []
+            const cweId = cweIds[0] || ''
+            
+            cyberattacks.push({
+              title: `${cve.id}: ${descriptions.substring(0, 100)}...`,
+              description: descriptions.substring(0, 500),
+              attack_type: 'vulnerability',
+              severity: severity,
+              date_detected: cve.published || new Date().toISOString(),
+              source: 'NVD',
+              external_url: `https://nvd.nist.gov/vuln/detail/${cve.id}`,
+              indicators: [cve.id],
+              affected_products: [...new Set(affectedProducts)].slice(0, 5),
+              industries: ['technology'],
+              attack_vectors: ['network', 'application'],
+              business_impact: cvssScore >= 7 ? 'High - immediate patching required' : 'Medium - patch when possible',
+              mitigation_steps: ['Apply vendor security patches', 'Update affected systems', 'Monitor for exploitation'],
+              source_credibility_score: 10,
+              cvss_score: cvssScore,
+              cwe_id: cweId,
+              vendor_info: {
+                cvss_vector: cvssData?.cvssData?.vectorString,
+                references: cve.references?.slice(0, 3).map((r: any) => r.url) || []
+              }
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching NVD data:', error)
     }
 
     // Enhanced CISA KEV API with better error handling
@@ -135,17 +255,14 @@ Deno.serve(async (req) => {
               severity: 'critical',
               date_detected: vuln.dateAdded || new Date().toISOString(),
               source: 'CISA KEV',
-              target_sector: determineSector(vuln.product),
-              impact: 'Active exploitation in the wild - immediate action required',
-              mitigation_steps: vuln.requiredAction || 'Apply security patches immediately',
-              external_id: vuln.cveID,
-              source_url: 'https://cisa.gov/known-exploited-vulnerabilities',
-              source_credibility_score: 10,
-              threat_indicators: [vuln.cveID],
+              external_url: 'https://cisa.gov/known-exploited-vulnerabilities',
+              indicators: [vuln.cveID],
               affected_products: [vuln.product],
-              industry_sectors: [determineSector(vuln.product)],
+              industries: [determineSector(vuln.product)],
               attack_vectors: ['exploitation'],
-              business_impact: 'Critical - system compromise possible'
+              business_impact: 'Critical - system compromise possible',
+              mitigation_steps: [vuln.requiredAction || 'Apply security patches immediately'],
+              source_credibility_score: 10
             })
           }
         }
@@ -154,23 +271,21 @@ Deno.serve(async (req) => {
       console.error('Error fetching CISA KEV data:', error)
     }
 
-    // US-CERT Alerts RSS
+    // US-CERT Alerts RSS with custom parser
     try {
       console.log('Fetching US-CERT alerts...')
       const certResponse = await fetch('https://www.cisa.gov/uscert/ncas/alerts.xml')
       
       if (certResponse.ok) {
         const certText = await certResponse.text()
-        const parser = new DOMParser()
-        const xmlDoc = parser.parseFromString(certText, 'text/xml')
-        const items = xmlDoc.getElementsByTagName('item')
+        const items = parseXmlToJson(certText)
         
         for (let i = 0; i < Math.min(2, items.length); i++) {
           const item = items[i]
-          const title = item.getElementsByTagName('title')[0]?.textContent || ''
-          const description = item.getElementsByTagName('description')[0]?.textContent || ''
-          const link = item.getElementsByTagName('link')[0]?.textContent || ''
-          const pubDate = item.getElementsByTagName('pubDate')[0]?.textContent || new Date().toISOString()
+          const title = item.title || ''
+          const description = item.description || ''
+          const link = item.link || ''
+          const pubDate = item.pubDate || new Date().toISOString()
           
           const threatInfo = classifyThreat(title, description)
           
@@ -181,15 +296,14 @@ Deno.serve(async (req) => {
             severity: 'high',
             date_detected: new Date(pubDate).toISOString(),
             source: 'US-CERT',
-            target_sector: threatInfo.sector,
-            impact: threatInfo.impact,
-            mitigation_steps: 'Follow US-CERT recommendations',
-            source_url: link,
-            source_credibility_score: 10,
-            threat_indicators: threatInfo.indicators,
-            industry_sectors: threatInfo.industries,
+            external_url: link,
+            indicators: threatInfo.indicators,
+            affected_products: threatInfo.products,
+            industries: threatInfo.industries,
             attack_vectors: threatInfo.vectors,
-            business_impact: 'High - follow government guidance'
+            business_impact: 'High - follow government guidance',
+            mitigation_steps: ['Follow US-CERT recommendations'],
+            source_credibility_score: 10
           })
         }
       }

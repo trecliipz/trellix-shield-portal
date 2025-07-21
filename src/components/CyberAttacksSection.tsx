@@ -15,18 +15,17 @@ interface CyberAttack {
   severity: string;
   date_detected: string;
   source: string;
-  target_sector?: string;
-  impact?: string;
-  mitigation_steps?: string;
-  external_id?: string;
-  source_url?: string;
-  source_credibility_score?: number;
-  threat_indicators?: string[];
+  external_url?: string;
+  indicators?: any;
   affected_products?: string[];
-  geographic_impact?: string[];
-  industry_sectors?: string[];
+  industries?: string[];
   attack_vectors?: string[];
   business_impact?: string;
+  mitigation_steps?: string[];
+  source_credibility_score?: number;
+  cvss_score?: number;
+  cwe_id?: string;
+  vendor_info?: any;
   created_at: string;
 }
 
@@ -235,13 +234,23 @@ export const CyberAttacksSection = () => {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />
                   <span>{formatDate(attack.date_detected)}</span>
-                  {attack.target_sector && (
-                    <>
-                      <span>•</span>
-                      <span className="capitalize">{attack.target_sector}</span>
-                    </>
-                  )}
                 </div>
+
+                {/* CVSS Score for vulnerabilities */}
+                {attack.cvss_score && (
+                  <div className="text-xs">
+                    <span className="font-medium text-foreground">CVSS Score: </span>
+                    <Badge 
+                      variant={attack.cvss_score >= 7 ? 'destructive' : attack.cvss_score >= 4 ? 'secondary' : 'outline'} 
+                      className="text-xs"
+                    >
+                      {attack.cvss_score.toFixed(1)}
+                    </Badge>
+                    {attack.cwe_id && (
+                      <span className="ml-2 text-muted-foreground">• CWE: {attack.cwe_id}</span>
+                    )}
+                  </div>
+                )}
 
                 {/* Enhanced Business Impact */}
                 {attack.business_impact && (
@@ -276,20 +285,21 @@ export const CyberAttacksSection = () => {
                   </div>
                 )}
 
-                {attack.mitigation_steps && (
+                {/* Mitigation Steps */}
+                {attack.mitigation_steps && Array.isArray(attack.mitigation_steps) && attack.mitigation_steps.length > 0 && (
                   <div className="text-xs">
                     <span className="font-medium text-foreground">Mitigation: </span>
-                    <span className="text-muted-foreground">{attack.mitigation_steps}</span>
+                    <span className="text-muted-foreground">{attack.mitigation_steps[0]}</span>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between pt-2">
-                  {attack.external_id && (
+                  {attack.indicators && Array.isArray(attack.indicators) && attack.indicators.length > 0 && (
                     <Badge variant="outline" className="text-xs font-mono">
-                      {attack.external_id}
+                      {attack.indicators[0]}
                     </Badge>
                   )}
-                  {attack.source_url && (
+                  {attack.external_url && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -297,7 +307,7 @@ export const CyberAttacksSection = () => {
                       className="h-auto p-1 text-xs"
                     >
                       <a
-                        href={attack.source_url}
+                        href={attack.external_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1"
@@ -323,7 +333,7 @@ export const CyberAttacksSection = () => {
 
         <div className="text-center mt-12">
           <p className="text-sm text-muted-foreground">
-            Enhanced intelligence from: Krebs on Security, BleepingComputer, The Hacker News, Security Week, CISA KEV, US-CERT
+            Enhanced intelligence from: Krebs on Security, BleepingComputer, The Hacker News, Security Week, CISA KEV, NVD, US-CERT
             <span className="mx-2">•</span>
             Last updated: {filteredAttacks.length > 0 ? formatDate(filteredAttacks[0]?.created_at || new Date().toISOString()) : 'Never'}
             <span className="mx-2">•</span>

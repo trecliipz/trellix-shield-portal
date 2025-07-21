@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      cyberattacks: {
+        Row: {
+          affected_products: string[] | null
+          attack_type: string | null
+          attack_vectors: string[] | null
+          business_impact: string | null
+          created_at: string
+          cvss_score: number | null
+          cwe_id: string | null
+          date_detected: string
+          description: string | null
+          external_url: string | null
+          id: string
+          indicators: Json | null
+          industries: string[] | null
+          mitigation_steps: string[] | null
+          severity: string
+          source: string
+          source_credibility_score: number | null
+          title: string
+          updated_at: string
+          vendor_info: Json | null
+        }
+        Insert: {
+          affected_products?: string[] | null
+          attack_type?: string | null
+          attack_vectors?: string[] | null
+          business_impact?: string | null
+          created_at?: string
+          cvss_score?: number | null
+          cwe_id?: string | null
+          date_detected?: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          indicators?: Json | null
+          industries?: string[] | null
+          mitigation_steps?: string[] | null
+          severity?: string
+          source: string
+          source_credibility_score?: number | null
+          title: string
+          updated_at?: string
+          vendor_info?: Json | null
+        }
+        Update: {
+          affected_products?: string[] | null
+          attack_type?: string | null
+          attack_vectors?: string[] | null
+          business_impact?: string | null
+          created_at?: string
+          cvss_score?: number | null
+          cwe_id?: string | null
+          date_detected?: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          indicators?: Json | null
+          industries?: string[] | null
+          mitigation_steps?: string[] | null
+          severity?: string
+          source?: string
+          source_credibility_score?: number | null
+          title?: string
+          updated_at?: string
+          vendor_info?: Json | null
+        }
+        Relationships: []
+      }
       driver_earnings: {
         Row: {
           bonus_amount: number | null
