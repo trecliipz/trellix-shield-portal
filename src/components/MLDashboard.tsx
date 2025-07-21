@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Brain, Zap, Target, TrendingUp, AlertCircle, CheckCircle, Clock, Database } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -162,47 +163,6 @@ const MLDashboard = (): JSX.Element => {
           </Card>
         ))}
       </div>
-
-      {/* Removed Model Accuracy Comparison and Threat Classification Distribution charts */}
-
-      {/* Recent Threat Classifications */}
-      <Card className="modern-card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5" />
-            <span>Recent Threat Classifications</span>
-          </CardTitle>
-          <CardDescription>
-            Latest threats processed by our ML models
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {threatClassifications.slice(0, 10).map((threat) => (
-              <div key={threat.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Badge variant={
-                    threat.classification === 'malware' ? 'destructive' :
-                    threat.classification === 'phishing' ? 'secondary' :
-                    threat.classification === 'anomaly' ? 'outline' : 'default'
-                  }>
-                    {threat.classification}
-                  </Badge>
-                  <span className="text-sm font-medium">{threat.threat_type}</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold">
-                    {Math.round(threat.confidence_score * 100)}% confidence
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(threat.classified_at).toLocaleTimeString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

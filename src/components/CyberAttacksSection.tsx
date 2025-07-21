@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +42,7 @@ export const CyberAttacksSection = () => {
         .from('cyberattacks' as any)
         .select('*')
         .order('date_detected', { ascending: false })
-        .limit(20);
+        .limit(6);
 
       if (error) throw error;
       setAttacks((data as any) || []);
