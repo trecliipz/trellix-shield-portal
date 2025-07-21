@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { EPOManagement } from "@/components/EPOManagement";
 import { AdminMessages } from "@/components/AdminMessages";
 import { SecurityCompliance } from "@/components/SecurityCompliance";
 import { AuditLog } from "@/components/AuditLog";
+import { UserProfile } from "@/components/UserProfile";
 
 interface DashboardProps {
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
@@ -143,58 +145,9 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
     }
   };
 
-  // Filter agents based on user role
-  const availableAgents = currentUser?.role === 'admin' 
-    ? dynamicAgents
-    : dynamicAgents.slice(0, 1); // Regular users see only first agent
-
-  // Regular user view - only agent downloads
+  // Regular user view - show the new Trellix agent portal
   if (currentUser?.role !== 'admin') {
-    return (
-      <section className="py-12 min-h-screen">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-primary">
-              Welcome to Trellix Agent Portal
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {availableAgents.map((agent, index) => (
-              <Card key={index} className="modern-card group">
-                <CardHeader>
-                  <div className="flex items-center space-x-3 mb-2">
-                    {agent.icon}
-                    <CardTitle className="text-xl text-card-foreground">
-                      {agent.name}
-                    </CardTitle>
-                  </div>
-                  <p className="text-muted-foreground">{agent.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 mb-6 text-sm">
-                    {agent.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center space-x-2">
-                        <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
-                        <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                    <Button 
-                      onClick={() => handleDownload(index)}
-                      className="glow-button w-full group-hover:scale-105 transition-all duration-300"
-                      size="lg"
-                    >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download {agent.name.split(' ')[0]}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
+    return <UserProfile />;
   }
 
   // Admin user view - tabbed interface with all features
