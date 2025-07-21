@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,14 +8,25 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Users, FileText, CheckCircle, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'user';
+  status: 'active' | 'suspended';
+  registrationDate: string;
+  lastLogin: string;
+  tempPassword?: string;
+  passwordResetDate?: string;
+}
 
 interface BulkUserImportProps {
-  onEndpointsImported?: (endpoints: any[]) => void;
+  onUsersImported?: (users: User[]) => void;
   organizationId?: string;
 }
 
-export const BulkUserImport = ({ onEndpointsImported, organizationId }: BulkUserImportProps) => {
+export const BulkUserImport = ({ onUsersImported, organizationId }: BulkUserImportProps) => {
   const [showImport, setShowImport] = useState(false);
   const [csvData, setCsvData] = useState("");
   const [importResults, setImportResults] = useState<{
@@ -24,17 +36,16 @@ export const BulkUserImport = ({ onEndpointsImported, organizationId }: BulkUser
   } | null>(null);
 
   const downloadTemplate = () => {
-    const template = `machine_name,os_type,description
-DESKTOP-001,windows,Marketing Department Desktop
-LAPTOP-HR-01,windows,HR Manager Laptop
-SERVER-DB-01,linux,Database Server
-WORKSTATION-DEV-01,windows,Development Workstation`;
+    const template = `email,name,role
+john.doe@company.com,John Doe,user
+jane.smith@company.com,Jane Smith,admin
+mike.johnson@company.com,Mike Johnson,user`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'endpoint-import-template.csv';
+    link.download = 'user-import-template.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -103,11 +114,7 @@ WORKSTATION-DEV-01,windows,Development Workstation`;
 
   const handleImport = () => {
     if (!csvData.trim()) {
-      toast({
-        title: "No Data",
-        description: "Please paste CSV data or upload a file",
-        variant: "destructive",
-      });
+      toast.error("Please paste CSV data or upload a file");
       return;
     }
 
@@ -135,26 +142,15 @@ WORKSTATION-DEV-01,windows,Development Workstation`;
         total: users.length + errors.length
       });
 
-      if (successful.length > 0) {
+      if (successful.length > 0 && onUsersImported) {
         onUsersImported(successful);
-        toast({
-          title: "Import Completed",
-          description: `${successful.length} users imported successfully${failed.length > 0 ? `, ${failed.length} failed` : ''}`,
-        });
+        toast.success(`${successful.length} users imported successfully${failed.length > 0 ? `, ${failed.length} failed` : ''}`);
       } else {
-        toast({
-          title: "Import Failed",
-          description: "No users could be imported. Please check your data.",
-          variant: "destructive",
-        });
+        toast.error("No users could be imported. Please check your data.");
       }
 
     } catch (error) {
-      toast({
-        title: "Import Error",
-        description: error instanceof Error ? error.message : "Failed to process CSV data",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to process CSV data");
     }
   };
 
@@ -163,11 +159,7 @@ WORKSTATION-DEV-01,windows,Development Workstation`;
     if (!file) return;
 
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please upload a CSV file",
-        variant: "destructive",
-      });
+      toast.error("Please upload a CSV file");
       return;
     }
 

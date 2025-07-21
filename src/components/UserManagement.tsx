@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Users, Search, UserCheck, UserX, Shield, UserPlus, Settings, Activity, Key } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { BulkUserImport } from "@/components/BulkUserImport";
 
 interface User {
@@ -30,7 +30,6 @@ export const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "user" as 'admin' | 'user' });
-  const { toast } = useToast();
 
   useEffect(() => {
     loadUsers();
@@ -86,10 +85,7 @@ export const UserManagement = () => {
       user.id === userId ? { ...user, role: newRole } : user
     );
     saveUsers(updatedUsers);
-    toast({
-      title: "Role Updated",
-      description: `User role changed to ${newRole}`,
-    });
+    toast.success(`User role changed to ${newRole}`);
   };
 
   const handleStatusChange = (userId: string, newStatus: 'active' | 'suspended') => {
@@ -97,10 +93,7 @@ export const UserManagement = () => {
       user.id === userId ? { ...user, status: newStatus } : user
     );
     saveUsers(updatedUsers);
-    toast({
-      title: "Status Updated",
-      description: `User ${newStatus === 'active' ? 'activated' : 'suspended'}`,
-    });
+    toast.success(`User ${newStatus === 'active' ? 'activated' : 'suspended'}`);
   };
 
   const handlePasswordReset = (userId: string) => {
@@ -117,30 +110,20 @@ export const UserManagement = () => {
     // Copy to clipboard
     navigator.clipboard.writeText(tempPassword);
     
-    toast({
-      title: "Password Reset",
-      description: `Temporary password: ${tempPassword} (copied to clipboard)`,
+    toast.success(`Temporary password: ${tempPassword} (copied to clipboard)`, {
       duration: 10000,
     });
   };
 
   const handleAddUser = () => {
     if (!newUser.email || !newUser.name) {
-      toast({
-        title: "Validation Error",
-        description: "Email and name are required fields",
-        variant: "destructive",
-      });
+      toast.error("Email and name are required fields");
       return;
     }
 
     // Check if email already exists
     if (users.some(user => user.email.toLowerCase() === newUser.email.toLowerCase())) {
-      toast({
-        title: "Email Already Exists",
-        description: "A user with this email address already exists",
-        variant: "destructive",
-      });
+      toast.error("A user with this email address already exists");
       return;
     }
 
@@ -163,9 +146,7 @@ export const UserManagement = () => {
     // Copy to clipboard
     navigator.clipboard.writeText(tempPassword);
 
-    toast({
-      title: "User Created Successfully",
-      description: `Welcome email sent to ${newUser.email}. Temporary password: ${tempPassword} (copied to clipboard)`,
+    toast.success(`Welcome email sent to ${newUser.email}. Temporary password: ${tempPassword} (copied to clipboard)`, {
       duration: 10000,
     });
 
@@ -179,10 +160,7 @@ export const UserManagement = () => {
     const newUsers = [...existingUsers, ...importedUsers];
     saveUsers(newUsers);
     
-    toast({
-      title: "Bulk Import Completed",
-      description: `${importedUsers.length} users have been imported successfully`,
-    });
+    toast.success(`${importedUsers.length} users have been imported successfully`);
   };
 
   const filteredUsers = users.filter(user =>

@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,7 +30,13 @@ import {
   CheckCircle,
   Clock,
   Edit,
-  Plus
+  Plus,
+  Crown,
+  Zap,
+  TrendingUp,
+  Activity,
+  Globe,
+  Lock
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +55,43 @@ const profileUpdateSchema = z.object({
   organizationSize: z.string().min(1, "Organization size is required"),
 });
 
+interface UserPlan {
+  name: 'starter' | 'professional' | 'enterprise';
+  displayName: string;
+  endpointLimit: number;
+  features: string[];
+  price: number;
+  color: string;
+}
+
+const PLAN_FEATURES = {
+  starter: [
+    'Basic endpoint management',
+    'Standard reporting',
+    'Email support',
+    'Up to 5 endpoints'
+  ],
+  professional: [
+    'Advanced endpoint management',
+    'Custom policies',
+    'Bulk operations',
+    'Advanced reporting',
+    'Priority support',
+    'API access',
+    'Unlimited endpoints'
+  ],
+  enterprise: [
+    'Full analytics dashboard',
+    'Advanced threat detection',
+    'Compliance reporting',
+    'Dedicated support',
+    'Custom integrations',
+    'SSO integration',
+    'Advanced API access',
+    'Unlimited endpoints'
+  ]
+};
+
 export const UserProfile = () => {
   const [user, setUser] = useState<any>(null);
   const [organization, setOrganization] = useState<any>(null);
@@ -57,6 +101,14 @@ export const UserProfile = () => {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [bulkData, setBulkData] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [userPlan, setUserPlan] = useState<UserPlan>({
+    name: 'professional',
+    displayName: 'Professional',
+    endpointLimit: -1,
+    features: PLAN_FEATURES.professional,
+    price: 19.99,
+    color: 'text-blue-600'
+  });
 
   const endpointForm = useForm<z.infer<typeof endpointSchema>>({
     resolver: zodResolver(endpointSchema),
@@ -262,9 +314,12 @@ export const UserProfile = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { variant: "secondary" as const, icon: Clock },
-      deployed: { variant: "default" as const, icon: CheckCircle },
-      failed: { variant: "destructive" as const, icon: AlertCircle },
+      pending: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600" },
+      deployed: { variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
+      failed: { variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
+      healthy: { variant: "default" as const, icon: Shield, color: "text-green-600" },
+      warning: { variant: "destructive" as const, icon: AlertCircle, color: "text-yellow-600" },
+      offline: { variant: "secondary" as const, icon: Clock, color: "text-gray-600" },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -276,6 +331,28 @@ export const UserProfile = () => {
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
+  };
+
+  const getPlanBadge = () => {
+    const planConfig = {
+      starter: { icon: Shield, color: "text-green-600", bg: "bg-green-100" },
+      professional: { icon: Crown, color: "text-blue-600", bg: "bg-blue-100" },
+      enterprise: { icon: Zap, color: "text-purple-600", bg: "bg-purple-100" },
+    };
+
+    const config = planConfig[userPlan.name];
+    const Icon = config.icon;
+
+    return (
+      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${config.bg}`}>
+        <Icon className={`h-4 w-4 ${config.color}`} />
+        <span className={`font-medium ${config.color}`}>{userPlan.displayName} Plan</span>
+      </div>
+    );
+  };
+
+  const canAccessFeature = (feature: string) => {
+    return userPlan.features.some(f => f.toLowerCase().includes(feature.toLowerCase()));
   };
 
   if (isLoading) {
@@ -290,26 +367,30 @@ export const UserProfile = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Profile & Dashboard</h1>
-          <p className="text-muted-foreground">Manage your account and endpoints</p>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Manage your endpoints and security infrastructure</p>
         </div>
-        <Badge variant="outline" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          {endpoints.length} Endpoint{endpoints.length !== 1 ? 's' : ''}
-        </Badge>
+        <div className="flex items-center gap-4">
+          {getPlanBadge()}
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            {endpoints.length} Endpoint{endpoints.length !== 1 ? 's' : ''}
+          </Badge>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="organization">Organization</TabsTrigger>
-          <TabsTrigger value="operations">Operations</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Endpoints</CardTitle>
@@ -317,167 +398,388 @@ export const UserProfile = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{endpoints.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Deployments</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {endpoints.filter(e => e.deployment_status === 'deployed').length}
+                <div className="text-xs text-muted-foreground mt-1">
+                  {userPlan.endpointLimit > 0 ? `${endpoints.length}/${userPlan.endpointLimit} used` : 'Unlimited'}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Bulk Operations</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Healthy</CardTitle>
+                <Shield className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{bulkOperations.length}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {endpoints.filter(e => e.health_status === 'healthy' || e.deployment_status === 'deployed').length}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Threats Blocked</CardTitle>
+                <AlertCircle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">247</div>
+                <div className="text-xs text-muted-foreground">Last 30 days</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Uptime</CardTitle>
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">99.8%</div>
+                <div className="text-xs text-muted-foreground">This month</div>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {endpoints.slice(0, 5).map((endpoint) => (
-                  <div key={endpoint.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Monitor className="h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-medium">{endpoint.machine_name}</p>
-                        <p className="text-sm text-muted-foreground">{endpoint.os_type}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {endpoints.slice(0, 5).map((endpoint) => (
+                    <div key={endpoint.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <Monitor className="h-4 w-4" />
+                        <div>
+                          <p className="text-sm font-medium">{endpoint.machine_name}</p>
+                          <p className="text-sm text-muted-foreground">{endpoint.os_type}</p>
+                        </div>
                       </div>
+                      {getStatusBadge(endpoint.deployment_status)}
                     </div>
-                    {getStatusBadge(endpoint.deployment_status)}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Plan Features</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {userPlan.features.map((feature, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="endpoints" className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Endpoint Management</h3>
             <div className="space-x-2">
-              <Dialog open={showAddEndpoint} onOpenChange={setShowAddEndpoint}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Endpoint
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Endpoint</DialogTitle>
-                  </DialogHeader>
-                  <Form {...endpointForm}>
-                    <form onSubmit={endpointForm.handleSubmit(handleAddEndpoint)} className="space-y-4">
-                      <FormField
-                        control={endpointForm.control}
-                        name="machineName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Machine Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Enter machine name" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={endpointForm.control}
-                        name="osType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Operating System</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select OS type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="windows">Windows</SelectItem>
-                                <SelectItem value="macos">macOS</SelectItem>
-                                <SelectItem value="linux">Linux</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full">Add Endpoint</Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
+              {canAccessFeature('endpoint') && (
+                <>
+                  <Dialog open={showAddEndpoint} onOpenChange={setShowAddEndpoint}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Endpoint
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add New Endpoint</DialogTitle>
+                      </DialogHeader>
+                      <Form {...endpointForm}>
+                        <form onSubmit={endpointForm.handleSubmit(handleAddEndpoint)} className="space-y-4">
+                          <FormField
+                            control={endpointForm.control}
+                            name="machineName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Machine Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Enter machine name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={endpointForm.control}
+                            name="osType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Operating System</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select OS type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="windows">Windows</SelectItem>
+                                    <SelectItem value="macos">macOS</SelectItem>
+                                    <SelectItem value="linux">Linux</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="submit" className="w-full">Add Endpoint</Button>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
 
-              <Dialog open={showBulkImport} onOpenChange={setShowBulkImport}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Bulk Import
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Bulk Import Endpoints</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Machine Names (one per line)</label>
-                      <Textarea
-                        placeholder={`DESKTOP-001\nLAPTOP-HR-01\nSERVER-DB-01`}
-                        value={bulkData}
-                        onChange={(e) => setBulkData(e.target.value)}
-                        rows={10}
-                        className="mt-1"
-                      />
-                    </div>
-                    <Button onClick={handleBulkImport} className="w-full">
-                      Import Endpoints
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  {canAccessFeature('bulk') && (
+                    <Dialog open={showBulkImport} onOpenChange={setShowBulkImport}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Bulk Import
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Bulk Import Endpoints</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-sm font-medium">Machine Names (one per line)</label>
+                            <Textarea
+                              placeholder={`DESKTOP-001\nLAPTOP-HR-01\nSERVER-DB-01`}
+                              value={bulkData}
+                              onChange={(e) => setBulkData(e.target.value)}
+                              rows={10}
+                              className="mt-1"
+                            />
+                          </div>
+                          <Button onClick={handleBulkImport} className="w-full">
+                            Import Endpoints
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
           <Card>
             <CardContent className="p-0">
-              <div className="divide-y">
-                {endpoints.map((endpoint) => (
-                  <div key={endpoint.id} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Monitor className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{endpoint.machine_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {endpoint.os_type} • Added {new Date(endpoint.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(endpoint.deployment_status)}
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Machine Name</TableHead>
+                    <TableHead>OS</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Health</TableHead>
+                    <TableHead>Last Seen</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {endpoints.map((endpoint) => (
+                    <TableRow key={endpoint.id}>
+                      <TableCell className="font-medium">{endpoint.machine_name}</TableCell>
+                      <TableCell className="capitalize">{endpoint.os_type}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={userPlan.color}>
+                          {userPlan.displayName}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(endpoint.deployment_status)}</TableCell>
+                      <TableCell>{getStatusBadge(endpoint.health_status || 'healthy')}</TableCell>
+                      <TableCell>
+                        {endpoint.last_check_in 
+                          ? new Date(endpoint.last_check_in).toLocaleDateString()
+                          : 'Never'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {canAccessFeature('advanced') && (
+                            <Button variant="ghost" size="sm">
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="security" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  Threat Protection
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Real-time Scanning</span>
+                    <Badge variant="default">Active</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Behavioral Analysis</span>
+                    <Badge variant="default">Active</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Machine Learning</span>
+                    <Badge variant={canAccessFeature('advanced') ? "default" : "secondary"}>
+                      {canAccessFeature('advanced') ? "Active" : "Upgrade Required"}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-blue-600" />
+                  Recent Threats
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Malware</span>
+                    <span className="text-red-600">12 blocked</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Phishing</span>
+                    <span className="text-red-600">5 blocked</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Suspicious Activity</span>
+                    <span className="text-yellow-600">3 detected</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-purple-600" />
+                  Network Security
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Firewall</span>
+                    <Badge variant="default">Protected</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">VPN Detection</span>
+                    <Badge variant={canAccessFeature('enterprise') ? "default" : "secondary"}>
+                      {canAccessFeature('enterprise') ? "Active" : "Pro Feature"}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          {canAccessFeature('analytics') || canAccessFeature('advanced') ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Security Metrics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Endpoint Health Score</span>
+                        <span>94%</span>
+                      </div>
+                      <Progress value={94} />
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Threat Detection Rate</span>
+                        <span>98.7%</span>
+                      </div>
+                      <Progress value={98.7} />
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Policy Compliance</span>
+                        <span>91%</span>
+                      </div>
+                      <Progress value={91} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Usage Statistics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                      <div>
+                        <div className="text-2xl font-bold text-blue-600">15.2GB</div>
+                        <div className="text-xs text-muted-foreground">Data Scanned</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-green-600">247</div>
+                        <div className="text-xs text-muted-foreground">Threats Blocked</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-purple-600">1.2M</div>
+                        <div className="text-xs text-muted-foreground">Files Analyzed</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-orange-600">99.8%</div>
+                        <div className="text-xs text-muted-foreground">Uptime</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Advanced Analytics</h3>
+                <p className="text-muted-foreground mb-4">
+                  Upgrade to Professional or Enterprise plan to access detailed analytics and reporting.
+                </p>
+                <Button>
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade Plan
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="organization" className="space-y-6">
@@ -588,32 +890,6 @@ export const UserProfile = () => {
                   </form>
                 </Form>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="operations" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bulk Operations History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {bulkOperations.map((operation) => (
-                  <div key={operation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{operation.operation_type.toUpperCase()}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {operation.completed_items}/{operation.total_items} items • {new Date(operation.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {getStatusBadge(operation.status)}
-                  </div>
-                ))}
-                {bulkOperations.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">No bulk operations yet</p>
-                )}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
