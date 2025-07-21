@@ -369,16 +369,22 @@ export const DATManagement = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
-                    <Badge variant={getTypeColor(update.type)} className="flex items-center gap-1">
-                      {getTypeIcon(update.type)}
-                      {update.type.toUpperCase().replace('_', ' ')}
-                    </Badge>
-                    {update.criticality_level && (
-                      <Badge variant={getCriticalityColor(update.criticality_level)}>
-                        {update.criticality_level.toUpperCase()}
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex gap-2">
+                      <Badge variant={getTypeColor(update.type)} className="flex items-center gap-1">
+                        {getTypeIcon(update.type)}
+                        {update.type.toUpperCase().replace('_', ' ')}
                       </Badge>
-                    )}
+                      {update.criticality_level && (
+                        <Badge variant={getCriticalityColor(update.criticality_level)}>
+                          {update.criticality_level.toUpperCase()}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium text-foreground">{update.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {update.file_name}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell>
