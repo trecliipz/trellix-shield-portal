@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Download, Shield, Lock, BarChart } from "lucide-react";
-import { UserManagement } from "@/components/UserManagement";
+import UserManagement from "@/components/UserManagement";
 import { AgentManagement } from "@/components/AgentManagement";
 import { AdminAnalytics } from "@/components/AdminAnalytics";
 import { DATManagement } from "@/components/DATManagement";
@@ -13,7 +13,7 @@ import { EPOManagement } from "@/components/EPOManagement";
 import { AdminMessages } from "@/components/AdminMessages";
 import { SecurityCompliance } from "@/components/SecurityCompliance";
 import { AuditLog } from "@/components/AuditLog";
-import { UserProfile } from "@/components/UserProfile";
+import UserProfile from "@/components/UserProfile";
 
 interface DashboardProps {
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;

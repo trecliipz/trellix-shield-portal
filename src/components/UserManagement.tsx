@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Users, Search, UserCheck, UserX, Shield, UserPlus, Settings, Activity, Key } from "lucide-react";
 import { toast } from "sonner";
 import { BulkUserImport } from "@/components/BulkUserImport";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
@@ -24,7 +25,7 @@ interface User {
   passwordResetDate?: string;
 }
 
-export const UserManagement = () => {
+export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -35,49 +36,99 @@ export const UserManagement = () => {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    const savedUsers = localStorage.getItem('admin_users');
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      // Initialize with mock data
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          email: 'admin@trellix.com',
-          name: 'Admin',
-          role: 'admin',
-          status: 'active',
-          registrationDate: '2024-01-15',
-          lastLogin: '2024-07-11'
-        },
-        {
-          id: '2',
-          email: 'john.doe@company.com',
-          name: 'John Doe',
-          role: 'user',
-          status: 'active',
-          registrationDate: '2024-02-20',
-          lastLogin: '2024-07-10'
-        },
-        {
-          id: '3',
-          email: 'jane.smith@company.com',
-          name: 'Jane Smith',
-          role: 'user',
-          status: 'active',
-          registrationDate: '2024-03-10',
-          lastLogin: '2024-07-09'
+  const loadUsers = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Try to load from database first
+      const { data: dbUsers, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (dbUsers && dbUsers.length > 0) {
+        const formattedUsers = dbUsers.map(dbUser => ({
+          id: dbUser.id,
+          email: dbUser.email,
+          name: dbUser.name,
+          role: dbUser.role as 'admin' | 'user',
+          status: 'active' as const,
+          registrationDate: new Date(dbUser.created_at).toISOString().split('T')[0],
+          lastLogin: 'Unknown',
+          tempPassword: dbUser.temp_password
+        }));
+        setUsers(formattedUsers);
+      } else {
+        // Migrate localStorage data to database if no DB users exist
+        const savedUsers = localStorage.getItem('admin_users');
+        if (savedUsers) {
+          const localUsers = JSON.parse(savedUsers);
+          await migrateLocalUsersToDatabase(localUsers);
+          setUsers(localUsers);
+        } else {
+          // Initialize with mock data
+          const mockUsers: User[] = [
+            {
+              id: '1',
+              email: 'admin@trellix.com',
+              name: 'Admin',
+              role: 'admin',
+              status: 'active',
+              registrationDate: '2024-01-15',
+              lastLogin: '2024-07-11'
+            }
+          ];
+          await migrateLocalUsersToDatabase(mockUsers);
+          setUsers(mockUsers);
         }
-      ];
-      setUsers(mockUsers);
-      localStorage.setItem('admin_users', JSON.stringify(mockUsers));
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      // Fallback to localStorage
+      const savedUsers = localStorage.getItem('admin_users');
+      if (savedUsers) {
+        setUsers(JSON.parse(savedUsers));
+      }
     }
   };
 
-  const saveUsers = (updatedUsers: User[]) => {
+  const migrateLocalUsersToDatabase = async (localUsers: User[]) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const usersToInsert = localUsers.map(localUser => ({
+        email: localUser.email,
+        name: localUser.name,
+        role: localUser.role,
+        temp_password: localUser.tempPassword,
+        created_by: user.id
+      }));
+
+      const { error } = await supabase
+        .from('admin_users')
+        .insert(usersToInsert);
+
+      if (error) throw error;
+      
+      // Clear localStorage after successful migration
+      localStorage.removeItem('admin_users');
+    } catch (error) {
+      console.error('Error migrating users to database:', error);
+    }
+  };
+
+  const saveUsers = async (updatedUsers: User[]) => {
     setUsers(updatedUsers);
-    localStorage.setItem('admin_users', JSON.stringify(updatedUsers));
+    // Also update in database
+    try {
+      await loadUsers(); // Refresh from database
+    } catch (error) {
+      console.error('Error refreshing users:', error);
+    }
   };
 
   const handleRoleChange = (userId: string, newRole: 'admin' | 'user') => {
@@ -115,7 +166,7 @@ export const UserManagement = () => {
     });
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newUser.email || !newUser.name) {
       toast.error("Email and name are required fields");
       return;
@@ -127,32 +178,39 @@ export const UserManagement = () => {
       return;
     }
 
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const newUserData: User = {
-      id: Date.now().toString(),
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role,
-      status: 'active',
-      registrationDate: new Date().toISOString().split('T')[0],
-      lastLogin: 'Never',
-      tempPassword,
-      passwordResetDate: new Date().toISOString().split('T')[0]
-    };
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const updatedUsers = [...users, newUserData];
-    saveUsers(updatedUsers);
+      const tempPassword = Math.random().toString(36).slice(-8);
+      
+      const { error } = await supabase
+        .from('admin_users')
+        .insert([{
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          temp_password: tempPassword,
+          created_by: user.id
+        }]);
 
-    // Copy to clipboard
-    navigator.clipboard.writeText(tempPassword);
+      if (error) throw error;
 
-    toast.success(`Welcome email sent to ${newUser.email}. Temporary password: ${tempPassword} (copied to clipboard)`, {
-      duration: 10000,
-    });
+      // Copy to clipboard
+      navigator.clipboard.writeText(tempPassword);
 
-    // Reset form
-    setNewUser({ email: "", name: "", role: "user" });
-    setShowAddUser(false);
+      toast.success(`User created successfully. Temporary password: ${tempPassword} (copied to clipboard)`, {
+        duration: 10000,
+      });
+
+      // Reset form and reload users
+      setNewUser({ email: "", name: "", role: "user" });
+      setShowAddUser(false);
+      await loadUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error("Error creating user");
+    }
   };
 
   const handleBulkImport = (importedUsers: User[]) => {

@@ -58,18 +58,17 @@ const PLAN_CONFIG: Record<string, UserPlan> = {
   enterprise: { name: 'enterprise', displayName: 'Enterprise', endpointLimit: -1, pricePerEndpoint: 35 },
 };
 
-export const UserProfile = () => {
+export default function UserProfile() {
   const [user, setUser] = useState<any>(null);
   const [organization, setOrganization] = useState<any>(null);
   const [endpoints, setEndpoints] = useState<any[]>([]);
-  const [assignedAgents, setAssignedAgents] = useState<any[]>([]);
   const [agentConfiguration, setAgentConfiguration] = useState<any>(null);
   const [availableAgentPackages, setAvailableAgentPackages] = useState<any[]>([]);
   const [showAddEndpoint, setShowAddEndpoint] = useState(false);
   const [showEpoConfig, setShowEpoConfig] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userPlan, setUserPlan] = useState<UserPlan>(PLAN_CONFIG.professional);
-  const [hasNewAgents, setHasNewAgents] = useState(false);
+  const [userSubscription, setUserSubscription] = useState<any>(null);
 
   const endpointForm = useForm<z.infer<typeof endpointSchema>>({
     resolver: zodResolver(endpointSchema),
@@ -89,17 +88,6 @@ export const UserProfile = () => {
   const setupRealtimeSubscription = () => {
     const channel = supabase
       .channel('user-agent-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'agent_downloads'
-      }, (payload) => {
-        if (payload.new && (payload.new as any).user_id === user?.id) {
-          loadAssignedAgents();
-          setHasNewAgents(true);
-          toast.success("New agent assigned by administrator");
-        }
-      })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -159,9 +147,9 @@ export const UserProfile = () => {
 
       if (endpointsData) setEndpoints(endpointsData);
 
-      // Load assigned agents, configuration, and available packages
+      // Load user subscription, configuration, and available packages
       await Promise.all([
-        loadAssignedAgents(),
+        loadUserSubscription(),
         loadAgentConfiguration(),
         loadAvailableAgentPackages()
       ]);
@@ -174,21 +162,21 @@ export const UserProfile = () => {
     }
   };
 
-  const loadAssignedAgents = async () => {
+  const loadUserSubscription = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('agent_downloads')
+        .from('user_subscriptions')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .single();
 
-      if (error) throw error;
-      setAssignedAgents(data || []);
+      if (error && error.code !== 'PGRST116') throw error;
+      setUserSubscription(data);
     } catch (error) {
-      console.error('Error loading assigned agents:', error);
+      console.error('Error loading user subscription:', error);
     }
   };
 
@@ -260,90 +248,44 @@ export const UserProfile = () => {
     }
   };
 
-  const handleDownloadAgent = async (agentId?: string) => {
+  const handleDownloadAgent = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      let packageToDownload = null;
+      // Check if user can download based on subscription
+      const { data: canDownload, error: checkError } = await supabase
+        .rpc('can_user_download', { p_user_id: user.id });
 
-      if (agentId) {
-        // User is downloading a specific assigned agent
-        const assignedAgent = assignedAgents.find(agent => agent.id === agentId);
-        if (!assignedAgent) {
-          toast.error("Agent not found");
-          return;
-        }
+      if (checkError) throw checkError;
 
-        // Find the corresponding package info
-        packageToDownload = availableAgentPackages.find(pkg => 
-          pkg.name === assignedAgent.agent_name && 
-          pkg.version === assignedAgent.agent_version
-        );
-
-        if (!packageToDownload) {
-          // Create a mock package object from assigned agent data
-          packageToDownload = {
-            name: assignedAgent.agent_name,
-            version: assignedAgent.agent_version,
-            file_name: assignedAgent.file_name,
-            platform: assignedAgent.platform,
-            file_size: assignedAgent.file_size || 0
-          };
-        }
-
-        // Initiate download
-        const downloadSuccess = await initiateFileDownload(packageToDownload);
-        
-        if (downloadSuccess) {
-          // Update agent download status
-          const { error } = await supabase
-            .from('agent_downloads')
-            .update({ 
-              status: 'downloaded',
-              downloaded_at: new Date().toISOString()
-            })
-            .eq('id', agentId);
-
-          if (error) throw error;
-          loadAssignedAgents();
-        }
-      } else {
-        // User is downloading latest available agent (self-service)
-        const recommendedPackage = availableAgentPackages.find(pkg => pkg.is_recommended) || 
-                                  availableAgentPackages[0];
-
-        if (!recommendedPackage) {
-          toast.error("No agent packages available for download");
-          return;
-        }
-
-        packageToDownload = recommendedPackage;
-
-        // Initiate download
-        const downloadSuccess = await initiateFileDownload(packageToDownload);
-        
-        if (downloadSuccess) {
-          // Create a new agent download record for self-service download
-          const { error } = await supabase
-            .from('agent_downloads')
-            .insert([{
-              user_id: user.id,
-              agent_name: packageToDownload.name,
-              agent_version: packageToDownload.version,
-              file_name: packageToDownload.file_name,
-              platform: packageToDownload.platform,
-              file_size: packageToDownload.file_size || 0,
-              status: 'downloaded',
-              downloaded_at: new Date().toISOString()
-            }]);
-
-          if (error) throw error;
-          loadAssignedAgents();
-        }
+      if (!canDownload) {
+        toast.error("Download limit reached. Please upgrade your subscription.");
+        return;
       }
+
+      // User is downloading latest available agent
+      const recommendedPackage = availableAgentPackages.find(pkg => pkg.is_recommended) || 
+                                availableAgentPackages[0];
+
+      if (!recommendedPackage) {
+        toast.error("No agent packages available for download");
+        return;
+      }
+
+      // Initiate download
+      const downloadSuccess = await initiateFileDownload(recommendedPackage);
       
-      setHasNewAgents(false);
+      if (downloadSuccess) {
+        // Increment download count
+        const { error } = await supabase
+          .rpc('increment_download_count', { p_user_id: user.id });
+
+        if (error) throw error;
+        
+        // Reload subscription to update UI
+        await loadUserSubscription();
+      }
     } catch (error) {
       console.error('Error downloading agent:', error);
       toast.error("Error downloading agent");
@@ -437,7 +379,7 @@ export const UserProfile = () => {
 
       const { data, error } = await supabase.rpc('sync_user_agent_config', {
         p_user_id: user.id,
-        p_agent_version: assignedAgents[0]?.agent_version || '2.1.5',
+        p_agent_version: availableAgentPackages[0]?.version || '2.1.5',
         p_epo_config: epoConfig
       });
 
@@ -475,6 +417,10 @@ export const UserProfile = () => {
   const activeEndpoints = endpoints.filter(e => e.deployment_status === 'deployed' || e.health_status === 'healthy').length;
   const pendingEndpoints = endpoints.filter(e => e.deployment_status === 'pending').length;
   const monthlyBilling = endpoints.length * userPlan.pricePerEndpoint;
+  
+  const downloadsRemaining = userSubscription?.max_downloads === -1 
+    ? 'Unlimited' 
+    : Math.max(0, (userSubscription?.max_downloads || 0) - (userSubscription?.downloads_used || 0));
 
   if (isLoading) {
     return (
@@ -498,454 +444,173 @@ export const UserProfile = () => {
                   <User className="w-10 h-10 text-primary-foreground" />
                 </div>
                 <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-4 border-background">
-                  <Shield className="w-4 h-4 text-white" />
+                  <Activity className="w-4 h-4 text-white" />
                 </div>
               </div>
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-foreground">
-                  {user?.user_metadata?.name || 'Security Administrator'}
+                <h1 className="text-2xl font-bold text-foreground mb-1">
+                  {user?.user_metadata?.name || 'Welcome'}
                 </h1>
-                <p className="text-muted-foreground text-lg">{user?.email}</p>
-                <div className="flex items-center space-x-4 mt-2">
-                  <Badge variant="outline" className="border-green-500/50 text-green-400">
-                    <Building2 className="w-4 h-4 mr-1" />
-                    {organization?.industry || 'IT Security'}
-                  </Badge>
-                  <Badge variant="outline" className="border-blue-500/50 text-blue-400">
-                    <Activity className="w-4 h-4 mr-1" />
-                    Security Clearance: Active
-                  </Badge>
+                <p className="text-muted-foreground mb-3">{user?.email}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <Monitor className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Endpoints:</span>
+                      <span className="text-sm text-muted-foreground">{endpoints.length} / {userPlan.endpointLimit === -1 ? '∞' : userPlan.endpointLimit}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Star className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Plan:</span>
+                      <Badge variant="secondary">{userSubscription?.plan_type || 'Professional'}</Badge>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Download className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Downloads:</span>
+                      <span className="text-sm text-muted-foreground">{downloadsRemaining}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+                    <div className="flex items-center space-x-1">
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <span>{activeEndpoints} Active</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-3 w-3 text-yellow-500" />
+                      <span>{pendingEndpoints} Pending</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-primary font-medium">${monthlyBilling}/month</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">Current Plan</div>
-                <div className="text-2xl font-bold text-primary">{userPlan.displayName}</div>
-                <div className="text-sm text-muted-foreground">
-                  ${userPlan.pricePerEndpoint}/endpoint/month
-                </div>
+              <div className="flex space-x-2">
+                <Dialog open={showEpoConfig} onOpenChange={setShowEpoConfig}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4 mr-2" />
+                      EPO Config
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>EPO Configuration</DialogTitle>
+                    </DialogHeader>
+                    <Form {...epoForm}>
+                      <form onSubmit={epoForm.handleSubmit(handleSaveEpoConfig)} className="space-y-4">
+                        <FormField
+                          control={epoForm.control}
+                          name="groupName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Group Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Corporate-Security" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={epoForm.control}
+                          name="ouName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Organizational Unit (OU)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="IT-Security" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex space-x-2 pt-4">
+                          <Button type="submit" className="flex-1">Save Config</Button>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => setShowEpoConfig(false)}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+                <Button 
+                  onClick={handleSyncConfiguration}
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync Config
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Agent Download */}
-          <Card className="modern-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-3">
-                <Download className="w-6 h-6 text-primary" />
-                <span>Agent Download</span>
-                {hasNewAgents && (
-                  <Badge variant="destructive" className="animate-pulse">
-                    <Bell className="w-3 h-3 mr-1" />
-                    New
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Prominent Download Section */}
-              {availableAgentPackages.length > 0 && (
-                <div className="border-2 border-primary/20 rounded-lg p-6 bg-gradient-to-br from-primary/5 to-trellix-orange/5">
-                  <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center mb-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-primary to-trellix-orange rounded-full flex items-center justify-center shadow-lg">
-                        <Shield className="w-8 h-8 text-primary-foreground" />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-xl font-bold text-foreground mb-2 flex items-center justify-center">
-                        {availableAgentPackages[0].name} v{availableAgentPackages[0].version}
-                        {availableAgentPackages[0].is_recommended && (
-                          <Badge variant="default" className="ml-2 bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
-                            <Star className="w-3 h-3 mr-1" />
-                            Recommended
-                          </Badge>
-                        )}
-                      </h3>
-                      <p className="text-muted-foreground mb-2">
-                        {availableAgentPackages[0].description || "Latest security agent with enhanced threat detection capabilities"}
-                      </p>
-                      <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground mb-4">
-                        <span className="flex items-center">
-                          <HardDrive className="w-4 h-4 mr-1" />
-                          {formatFileSize(availableAgentPackages[0].file_size || 0)}
-                        </span>
-                        <span>•</span>
-                        <span>Platform: {availableAgentPackages[0].platform}</span>
-                        <span>•</span>
-                        <span className="text-green-600 font-medium">Latest from Admin</span>
-                      </div>
-                    </div>
-
-                    <Button 
-                      onClick={() => handleDownloadAgent()}
-                      size="lg"
-                      className="w-full bg-gradient-to-r from-primary to-trellix-orange hover:from-primary/90 hover:to-trellix-orange/90 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                      <Download className="w-5 h-5 mr-2" />
-                      Download {availableAgentPackages[0].name}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Assigned Agents Section */}
-              <div className="space-y-4">
-                <div className="border-t border-border pt-4">
-                  <h4 className="text-lg font-medium text-foreground mb-4 flex items-center">
-                    <Shield className="w-5 h-5 mr-2 text-primary" />
-                    Your Agent Downloads
-                  </h4>
-                  
-                  {assignedAgents.length > 0 ? (
-                    <div className="space-y-3">
-                      {assignedAgents.map((agent) => {
-                        const correspondingPackage = availableAgentPackages.find(pkg => 
-                          pkg.name === agent.agent_name && pkg.version === agent.agent_version
-                        );
-                        
-                        return (
-                          <div key={agent.id} className="p-4 bg-muted/30 rounded-lg border border-border">
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="font-semibold text-foreground flex items-center">
-                                <Shield className="w-4 h-4 mr-2 text-primary" />
-                                {agent.agent_name} v{agent.agent_version}
-                              </h5>
-                              <Badge variant={
-                                agent.status === 'downloaded' ? 'default' :
-                                agent.status === 'installed' ? 'default' :
-                                agent.status === 'available' ? 'secondary' : 'destructive'
-                              }>
-                                {agent.status}
-                              </Badge>
-                            </div>
-                            <div className="space-y-1 mb-3">
-                              <p className="text-sm text-muted-foreground">
-                                Platform: {agent.platform} • {agent.assigned_by_admin ? 'Assigned by admin' : 'Self-downloaded'}
-                              </p>
-                              {correspondingPackage?.description && (
-                                <p className="text-sm text-muted-foreground">
-                                  {correspondingPackage.description}
-                                </p>
-                              )}
-                              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                                <HardDrive className="w-3 h-3" />
-                                <span>Size: {formatFileSize(agent.file_size || correspondingPackage?.file_size || 0)}</span>
-                                {correspondingPackage?.is_recommended && (
-                                  <Badge variant="outline" className="text-xs">Recommended</Badge>
-                                )}
-                              </div>
-                            </div>
-                            {agent.status === 'available' && (
-                              <Button 
-                                onClick={() => handleDownloadAgent(agent.id)}
-                                className="w-full"
-                                variant="outline"
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                Download {agent.agent_name}
-                              </Button>
-                            )}
-                            {agent.status === 'downloaded' && (
-                              <Button variant="outline" className="w-full" disabled>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Downloaded - Install manually
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : availableAgentPackages.length === 0 ? (
-                    <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                      <h5 className="font-semibold text-foreground mb-2 flex items-center">
-                        <AlertCircle className="w-5 h-5 mr-2 text-muted-foreground" />
-                        No Agents Available
-                      </h5>
-                      <p className="text-sm text-muted-foreground">
-                        No security agents are currently available for download. Contact your administrator.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                      <p className="text-sm text-muted-foreground text-center">
-                        No assigned agents yet. Download the latest agent above to get started.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* EPO Configuration Section */}
-                <div className="border-t border-border pt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-medium text-foreground flex items-center">
-                      <Building2 className="w-5 h-5 mr-2 text-trellix-orange" />
-                      Trellix EPO Configuration
-                    </h4>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={handleSyncConfiguration}>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Sync
-                      </Button>
-                      <Dialog open={showEpoConfig} onOpenChange={setShowEpoConfig}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Settings className="w-4 h-4 mr-2" />
-                            Configure
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-card border-border">
-                          <DialogHeader>
-                            <DialogTitle className="text-foreground">EPO Configuration</DialogTitle>
-                          </DialogHeader>
-                          <Form {...epoForm}>
-                            <form onSubmit={epoForm.handleSubmit(handleSaveEpoConfig)} className="space-y-4">
-                              <FormField
-                                control={epoForm.control}
-                                name="groupName"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel className="text-foreground">Group Name</FormLabel>
-                                    <FormControl>
-                                      <Input {...field} placeholder="e.g., Finance_Workstations" className="bg-background border-input" />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={epoForm.control}
-                                name="ouName"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel className="text-foreground">Organizational Unit (OU)</FormLabel>
-                                    <FormControl>
-                                      <Input {...field} placeholder="e.g., Finance_Department" className="bg-background border-input" />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <Button type="submit" className="w-full">Save Configuration</Button>
-                            </form>
-                          </Form>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/30 p-4 rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Group:</span>
-                      <span className="text-sm font-medium text-foreground">
-                        {agentConfiguration?.group_name || organization?.group_name || 'Not configured'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">OU:</span>
-                      <span className="text-sm font-medium text-foreground">
-                        {agentConfiguration?.ou_name || organization?.organization_name || 'Not configured'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Agent Version:</span>
-                      <span className="text-sm font-medium text-foreground">
-                        {agentConfiguration?.agent_version || 'Not synced'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Last Sync:</span>
-                      <span className="text-sm font-medium text-foreground">
-                        {agentConfiguration ? new Date(agentConfiguration.last_sync_at).toLocaleString() : 'Never'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Machine Management */}
-          <Card className="modern-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-3">
-                <Monitor className="w-6 h-6 text-green-500" />
-                <span>Machine Management</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Dialog open={showAddEndpoint} onOpenChange={setShowAddEndpoint}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full bg-green-600 hover:bg-green-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add New Machine
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-card border-border">
-                    <DialogHeader>
-                      <DialogTitle className="text-foreground">Add New Machine</DialogTitle>
-                    </DialogHeader>
-                    <Form {...endpointForm}>
-                      <form onSubmit={endpointForm.handleSubmit(handleAddEndpoint)} className="space-y-4">
-                        <FormField
-                          control={endpointForm.control}
-                          name="machineName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-foreground">Machine Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="e.g., WS-IT-01" className="bg-background border-input" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={endpointForm.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-foreground">Description (Optional)</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="Brief description" className="bg-background border-input" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={endpointForm.control}
-                          name="osType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-foreground">Operating System</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="bg-background border-input">
-                                    <SelectValue placeholder="Select OS type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-popover border-border">
-                                  <SelectItem value="windows">Windows</SelectItem>
-                                  <SelectItem value="macos">macOS</SelectItem>
-                                  <SelectItem value="linux">Linux</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="submit" className="w-full">Add Machine</Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-
-                {userPlan.endpointLimit > 0 && (
-                  <div className="bg-muted/30 p-3 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Endpoint Usage:</span>
-                      <span className="text-sm font-medium text-foreground">
-                        {endpoints.length}/{userPlan.endpointLimit}
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-primary h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${Math.min((endpoints.length / userPlan.endpointLimit) * 100, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Stats Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="modern-card border-blue-500/20">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <CheckCircle className="w-8 h-8 text-blue-500 mr-2" />
-                <div className="text-3xl font-bold text-blue-500">{activeEndpoints}</div>
-              </div>
-              <div className="text-sm text-muted-foreground">Active Machines</div>
-            </CardContent>
-          </Card>
-          <Card className="modern-card border-yellow-500/20">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <Clock className="w-8 h-8 text-yellow-500 mr-2" />
-                <div className="text-3xl font-bold text-yellow-500">{pendingEndpoints}</div>
-              </div>
-              <div className="text-sm text-muted-foreground">Pending Installs</div>
-            </CardContent>
-          </Card>
-          <Card className="modern-card border-green-500/20">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <FileText className="w-8 h-8 text-green-500 mr-2" />
-                <div className="text-3xl font-bold text-green-500">${monthlyBilling}</div>
-              </div>
-              <div className="text-sm text-muted-foreground">Monthly Billing</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Machine Inventory & Billing */}
+        {/* Agent Downloads Section */}
         <Card className="modern-card">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center space-x-3">
-                <Server className="w-6 h-6 text-purple-600" />
-                <span>Machine Inventory & Billing</span>
-              </CardTitle>
-              <div className="flex items-center space-x-4">
-                <Badge variant="outline" className="text-muted-foreground">
-                  Total: {endpoints.length} machines
-                </Badge>
-                <Button variant="outline" size="sm">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Export Report
-                </Button>
+              <div className="flex items-center space-x-2">
+                <Download className="h-5 w-5 text-primary" />
+                <CardTitle>Agent Downloads</CardTitle>
               </div>
+              <Button 
+                onClick={handleDownloadAgent} 
+                className="bg-primary hover:bg-primary/90"
+                disabled={downloadsRemaining === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Latest Agent
+              </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            {endpoints.length > 0 ? (
-              <div className="rounded-lg border border-border overflow-hidden">
+          <CardContent className="space-y-4">
+            {userSubscription && (
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Subscription Plan</p>
+                  <p className="text-xs text-muted-foreground">
+                    {userSubscription.plan_type} - {userSubscription.downloads_used} of {userSubscription.max_downloads === -1 ? 'unlimited' : userSubscription.max_downloads} downloads used
+                  </p>
+                </div>
+                <Badge variant={downloadsRemaining === 0 ? 'destructive' : 'secondary'}>
+                  {downloadsRemaining} Remaining
+                </Badge>
+              </div>
+            )}
+            {availableAgentPackages.length > 0 ? (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">Available Agents</h4>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="text-foreground">Machine Name</TableHead>
-                      <TableHead className="text-foreground">OS Type</TableHead>
-                      <TableHead className="text-foreground">Date Added</TableHead>
-                      <TableHead className="text-foreground">Status</TableHead>
-                      <TableHead className="text-foreground">Actions</TableHead>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Platform</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {endpoints.map((endpoint) => (
-                      <TableRow key={endpoint.id} className="hover:bg-muted/30">
-                        <TableCell className="font-medium text-foreground">{endpoint.machine_name}</TableCell>
-                        <TableCell className="capitalize text-muted-foreground">{endpoint.os_type}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(endpoint.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(endpoint.deployment_status)}</TableCell>
+                    {availableAgentPackages.map((agent) => (
+                      <TableRow key={agent.id}>
+                        <TableCell className="font-medium">{agent.name}</TableCell>
+                        <TableCell>{agent.version}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteEndpoint(endpoint.id)}
-                            className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <Badge variant="outline">{agent.platform}</Badge>
+                        </TableCell>
+                        <TableCell>{formatFileSize(agent.file_size || 0)}</TableCell>
+                        <TableCell>
+                          {agent.is_recommended && (
+                            <Badge variant="default">Recommended</Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -953,19 +618,195 @@ export const UserProfile = () => {
                 </Table>
               </div>
             ) : (
+              <div className="text-center py-6">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground">No agent packages available.</p>
+                <p className="text-sm text-muted-foreground">Contact your administrator for available downloads.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Endpoints Section */}
+        <Card className="modern-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Monitor className="h-5 w-5 text-primary" />
+                <CardTitle>Endpoint Management</CardTitle>
+              </div>
+              <Dialog open={showAddEndpoint} onOpenChange={setShowAddEndpoint}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Machine
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Machine</DialogTitle>
+                  </DialogHeader>
+                  <Form {...endpointForm}>
+                    <form onSubmit={endpointForm.handleSubmit(handleAddEndpoint)} className="space-y-4">
+                      <FormField
+                        control={endpointForm.control}
+                        name="machineName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Machine Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="DESKTOP-001" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={endpointForm.control}
+                        name="osType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Operating System</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select OS" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="windows">Windows</SelectItem>
+                                <SelectItem value="macos">macOS</SelectItem>
+                                <SelectItem value="linux">Linux</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex space-x-2 pt-4">
+                        <Button type="submit" className="flex-1">Add Machine</Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setShowAddEndpoint(false)}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {endpoints.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Machine Name</TableHead>
+                    <TableHead>OS Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Agent Version</TableHead>
+                    <TableHead>Last Check-in</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {endpoints.map((endpoint) => (
+                    <TableRow key={endpoint.id}>
+                      <TableCell className="font-medium">{endpoint.machine_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{endpoint.os_type}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(endpoint.health_status)}
+                      </TableCell>
+                      <TableCell>{endpoint.agent_version || 'Not installed'}</TableCell>
+                      <TableCell>
+                        {endpoint.last_check_in 
+                          ? new Date(endpoint.last_check_in).toLocaleDateString()
+                          : 'Never'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleDeleteEndpoint(endpoint.id)}
+                          className="hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
               <div className="text-center py-12">
-                <Monitor className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No machines added yet</h3>
-                <p className="text-muted-foreground mb-4">Get started by adding your first machine above</p>
-                <Button onClick={() => setShowAddEndpoint(true)} variant="outline">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Machine
+                <Monitor className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Machines Added</h3>
+                <p className="text-muted-foreground mb-4">Add your first machine to start monitoring endpoint security.</p>
+                <Button onClick={() => setShowAddEndpoint(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Machine
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Configuration Status */}
+        {agentConfiguration && (
+          <Card className="modern-card">
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Server className="h-5 w-5 text-primary" />
+                <CardTitle>Agent Configuration</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Agent Version:</span>
+                    <Badge variant="secondary">{agentConfiguration.agent_version}</Badge>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Server className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">EPO Server:</span>
+                    <span className="text-sm text-muted-foreground">{agentConfiguration.epo_server_url || 'Not configured'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Group:</span>
+                    <span className="text-sm text-muted-foreground">{agentConfiguration.group_name || 'Default'}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Activity className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Auto Update:</span>
+                    <Badge variant={agentConfiguration.auto_update_enabled ? "default" : "secondary"}>
+                      {agentConfiguration.auto_update_enabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Last Sync:</span>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(agentConfiguration.last_sync_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
-};
+}
