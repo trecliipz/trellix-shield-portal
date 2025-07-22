@@ -28,7 +28,8 @@ import {
   Activity,
   RefreshCw,
   Bell,
-  HardDrive
+  HardDrive,
+  Star
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -528,7 +529,7 @@ export const UserProfile = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Agent Download & EPO Configuration */}
+          {/* Agent Download */}
           <Card className="modern-card">
             <CardHeader>
               <CardTitle className="flex items-center space-x-3">
@@ -543,163 +544,195 @@ export const UserProfile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                {assignedAgents.length > 0 ? (
-                  <div className="space-y-3">
-                    {assignedAgents.map((agent) => {
-                      const correspondingPackage = availableAgentPackages.find(pkg => 
-                        pkg.name === agent.agent_name && pkg.version === agent.agent_version
-                      );
-                      
-                      return (
-                        <div key={agent.id} className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold text-foreground flex items-center">
-                              <Shield className="w-5 h-5 mr-2 text-primary" />
-                              {agent.agent_name} v{agent.agent_version}
-                            </h3>
-                            <Badge variant={
-                              agent.status === 'downloaded' ? 'default' :
-                              agent.status === 'installed' ? 'default' :
-                              agent.status === 'available' ? 'secondary' : 'destructive'
-                            }>
-                              {agent.status}
-                            </Badge>
-                          </div>
-                          <div className="space-y-1 mb-4">
-                            <p className="text-sm text-muted-foreground">
-                              Platform: {agent.platform} • {agent.assigned_by_admin ? 'Assigned by admin' : 'Self-downloaded'}
-                            </p>
-                            {correspondingPackage?.description && (
-                              <p className="text-sm text-muted-foreground">
-                                {correspondingPackage.description}
-                              </p>
-                            )}
-                            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                              <HardDrive className="w-3 h-3" />
-                              <span>Size: {formatFileSize(agent.file_size || correspondingPackage?.file_size || 0)}</span>
-                              {correspondingPackage?.is_recommended && (
-                                <Badge variant="outline" className="text-xs">Recommended</Badge>
-                              )}
-                            </div>
-                          </div>
-                          {agent.status === 'available' && (
-                            <Button 
-                              onClick={() => handleDownloadAgent(agent.id)}
-                              className="w-full glow-button"
-                            >
-                              <Download className="w-5 h-5 mr-2" />
-                              Download {agent.agent_name}
-                            </Button>
-                          )}
-                          {agent.status === 'downloaded' && (
-                            <Button variant="outline" className="w-full" disabled>
-                              <CheckCircle className="w-5 h-5 mr-2" />
-                              Downloaded - Install manually
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : availableAgentPackages.length > 0 ? (
-                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                    <h3 className="font-semibold text-foreground mb-2 flex items-center">
-                      <Shield className="w-5 h-5 mr-2 text-primary" />
-                      {availableAgentPackages[0].name} v{availableAgentPackages[0].version}
-                      {availableAgentPackages[0].is_recommended && (
-                        <Badge variant="default" className="ml-2">Recommended</Badge>
-                      )}
-                    </h3>
-                    <div className="space-y-2 mb-4">
-                      <p className="text-sm text-muted-foreground">
-                        Platform: {availableAgentPackages[0].platform}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {availableAgentPackages[0].description || "Enhanced threat detection with real-time monitoring capabilities"}
-                      </p>
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                        <HardDrive className="w-3 h-3" />
-                        <span>Size: {formatFileSize(availableAgentPackages[0].file_size || 0)}</span>
-                        <span>•</span>
-                        <span>Latest from admin</span>
+              {/* Prominent Download Section */}
+              {availableAgentPackages.length > 0 && (
+                <div className="border-2 border-primary/20 rounded-lg p-6 bg-gradient-to-br from-primary/5 to-trellix-orange/5">
+                  <div className="text-center space-y-4">
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-primary to-trellix-orange rounded-full flex items-center justify-center shadow-lg">
+                        <Shield className="w-8 h-8 text-primary-foreground" />
                       </div>
                     </div>
+                    
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground mb-2 flex items-center justify-center">
+                        {availableAgentPackages[0].name} v{availableAgentPackages[0].version}
+                        {availableAgentPackages[0].is_recommended && (
+                          <Badge variant="default" className="ml-2 bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
+                            <Star className="w-3 h-3 mr-1" />
+                            Recommended
+                          </Badge>
+                        )}
+                      </h3>
+                      <p className="text-muted-foreground mb-2">
+                        {availableAgentPackages[0].description || "Latest security agent with enhanced threat detection capabilities"}
+                      </p>
+                      <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground mb-4">
+                        <span className="flex items-center">
+                          <HardDrive className="w-4 h-4 mr-1" />
+                          {formatFileSize(availableAgentPackages[0].file_size || 0)}
+                        </span>
+                        <span>•</span>
+                        <span>Platform: {availableAgentPackages[0].platform}</span>
+                        <span>•</span>
+                        <span className="text-green-600 font-medium">Latest from Admin</span>
+                      </div>
+                    </div>
+
                     <Button 
                       onClick={() => handleDownloadAgent()}
-                      className="w-full glow-button"
+                      size="lg"
+                      className="w-full bg-gradient-to-r from-primary to-trellix-orange hover:from-primary/90 hover:to-trellix-orange/90 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <Download className="w-5 h-5 mr-2" />
-                      Download Latest Agent
+                      Download {availableAgentPackages[0].name}
                     </Button>
                   </div>
-                ) : (
-                  <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                    <h3 className="font-semibold text-foreground mb-2 flex items-center">
-                      <AlertCircle className="w-5 h-5 mr-2 text-muted-foreground" />
-                      No Agents Available
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      No security agents are currently available for download. Contact your administrator.
-                    </p>
-                  </div>
-                )}
+                </div>
+              )}
 
+              {/* Assigned Agents Section */}
+              <div className="space-y-4">
                 <div className="border-t border-border pt-4">
-                    <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-foreground flex items-center">
+                  <h4 className="text-lg font-medium text-foreground mb-4 flex items-center">
+                    <Shield className="w-5 h-5 mr-2 text-primary" />
+                    Your Agent Downloads
+                  </h4>
+                  
+                  {assignedAgents.length > 0 ? (
+                    <div className="space-y-3">
+                      {assignedAgents.map((agent) => {
+                        const correspondingPackage = availableAgentPackages.find(pkg => 
+                          pkg.name === agent.agent_name && pkg.version === agent.agent_version
+                        );
+                        
+                        return (
+                          <div key={agent.id} className="p-4 bg-muted/30 rounded-lg border border-border">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="font-semibold text-foreground flex items-center">
+                                <Shield className="w-4 h-4 mr-2 text-primary" />
+                                {agent.agent_name} v{agent.agent_version}
+                              </h5>
+                              <Badge variant={
+                                agent.status === 'downloaded' ? 'default' :
+                                agent.status === 'installed' ? 'default' :
+                                agent.status === 'available' ? 'secondary' : 'destructive'
+                              }>
+                                {agent.status}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1 mb-3">
+                              <p className="text-sm text-muted-foreground">
+                                Platform: {agent.platform} • {agent.assigned_by_admin ? 'Assigned by admin' : 'Self-downloaded'}
+                              </p>
+                              {correspondingPackage?.description && (
+                                <p className="text-sm text-muted-foreground">
+                                  {correspondingPackage.description}
+                                </p>
+                              )}
+                              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                                <HardDrive className="w-3 h-3" />
+                                <span>Size: {formatFileSize(agent.file_size || correspondingPackage?.file_size || 0)}</span>
+                                {correspondingPackage?.is_recommended && (
+                                  <Badge variant="outline" className="text-xs">Recommended</Badge>
+                                )}
+                              </div>
+                            </div>
+                            {agent.status === 'available' && (
+                              <Button 
+                                onClick={() => handleDownloadAgent(agent.id)}
+                                className="w-full"
+                                variant="outline"
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                Download {agent.agent_name}
+                              </Button>
+                            )}
+                            {agent.status === 'downloaded' && (
+                              <Button variant="outline" className="w-full" disabled>
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Downloaded - Install manually
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : availableAgentPackages.length === 0 ? (
+                    <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                      <h5 className="font-semibold text-foreground mb-2 flex items-center">
+                        <AlertCircle className="w-5 h-5 mr-2 text-muted-foreground" />
+                        No Agents Available
+                      </h5>
+                      <p className="text-sm text-muted-foreground">
+                        No security agents are currently available for download. Contact your administrator.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                      <p className="text-sm text-muted-foreground text-center">
+                        No assigned agents yet. Download the latest agent above to get started.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* EPO Configuration Section */}
+                <div className="border-t border-border pt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-medium text-foreground flex items-center">
                       <Building2 className="w-5 h-5 mr-2 text-trellix-orange" />
                       Trellix EPO Configuration
-                    </h3>
+                    </h4>
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" onClick={handleSyncConfiguration}>
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Sync
                       </Button>
                       <Dialog open={showEpoConfig} onOpenChange={setShowEpoConfig}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Configure
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-card border-border">
-                        <DialogHeader>
-                          <DialogTitle className="text-foreground">EPO Configuration</DialogTitle>
-                        </DialogHeader>
-                        <Form {...epoForm}>
-                          <form onSubmit={epoForm.handleSubmit(handleSaveEpoConfig)} className="space-y-4">
-                            <FormField
-                              control={epoForm.control}
-                              name="groupName"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-foreground">Group Name</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="e.g., Finance_Workstations" className="bg-background border-input" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={epoForm.control}
-                              name="ouName"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-foreground">Organizational Unit (OU)</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="e.g., Finance_Department" className="bg-background border-input" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <Button type="submit" className="w-full">Save Configuration</Button>
-                          </form>
-                        </Form>
-                      </DialogContent>
-                    </Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Configure
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-card border-border">
+                          <DialogHeader>
+                            <DialogTitle className="text-foreground">EPO Configuration</DialogTitle>
+                          </DialogHeader>
+                          <Form {...epoForm}>
+                            <form onSubmit={epoForm.handleSubmit(handleSaveEpoConfig)} className="space-y-4">
+                              <FormField
+                                control={epoForm.control}
+                                name="groupName"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-foreground">Group Name</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} placeholder="e.g., Finance_Workstations" className="bg-background border-input" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={epoForm.control}
+                                name="ouName"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-foreground">Organizational Unit (OU)</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} placeholder="e.g., Finance_Department" className="bg-background border-input" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <Button type="submit" className="w-full">Save Configuration</Button>
+                            </form>
+                          </Form>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
                   
