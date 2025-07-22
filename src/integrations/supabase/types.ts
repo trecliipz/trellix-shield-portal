@@ -65,39 +65,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_users: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          email: string
-          id: string
-          name: string
-          role: string
-          temp_password: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          email: string
-          id?: string
-          name: string
-          role?: string
-          temp_password?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          email?: string
-          id?: string
-          name?: string
-          role?: string
-          temp_password?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       agent_configurations: {
         Row: {
           agent_version: string
@@ -1156,39 +1123,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_subscriptions: {
-        Row: {
-          created_at: string | null
-          downloads_used: number | null
-          id: string
-          max_downloads: number | null
-          plan_type: string
-          status: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          downloads_used?: number | null
-          id?: string
-          max_downloads?: number | null
-          plan_type: string
-          status?: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          downloads_used?: number | null
-          id?: string
-          max_downloads?: number | null
-          plan_type?: string
-          status?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       wallet_transactions: {
         Row: {
           amount: number
@@ -1233,10 +1167,6 @@ export type Database = {
         Args: { p_ride_id: string; p_platform_fee_rate?: number }
         Returns: string
       }
-      can_user_download: {
-        Args: { p_user_id: string }
-        Returns: boolean
-      }
       find_nearby_drivers: {
         Args: {
           p_pickup_lat: number
@@ -1264,10 +1194,6 @@ export type Database = {
       get_wallet_balance: {
         Args: { user_uuid: string }
         Returns: number
-      }
-      increment_download_count: {
-        Args: { p_user_id: string }
-        Returns: undefined
       }
       process_weekly_payout: {
         Args: {
