@@ -27,7 +27,8 @@ import {
   Settings,
   Activity,
   RefreshCw,
-  Bell
+  Bell,
+  HardDrive
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +108,15 @@ export const UserProfile = () => {
           loadAgentConfiguration();
           toast.success("Agent configuration updated");
         }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'admin_agent_packages'
+      }, () => {
+        // Refresh available packages when admin updates them
+        loadAvailableAgentPackages();
+        toast.success("New agent packages available");
       })
       .subscribe();
 
@@ -215,6 +225,14 @@ export const UserProfile = () => {
     }
   };
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const initiateFileDownload = async (packageData: any) => {
     try {
       // Create a mock download URL for demonstration
@@ -232,7 +250,7 @@ export const UserProfile = () => {
       link.click();
       document.body.removeChild(link);
       
-      toast.success(`Downloading ${packageData.name} v${packageData.version}`);
+      toast.success(`Downloading ${packageData.name} v${packageData.version} (${formatFileSize(packageData.file_size || 0)})`);
       return true;
     } catch (error) {
       console.error('Error initiating file download:', error);
@@ -268,7 +286,8 @@ export const UserProfile = () => {
             name: assignedAgent.agent_name,
             version: assignedAgent.agent_version,
             file_name: assignedAgent.file_name,
-            platform: assignedAgent.platform
+            platform: assignedAgent.platform,
+            file_size: assignedAgent.file_size || 0
           };
         }
 
@@ -294,7 +313,7 @@ export const UserProfile = () => {
                                   availableAgentPackages[0];
 
         if (!recommendedPackage) {
-          toast.error("No security agents available for download");
+          toast.error("No agent packages available for download");
           return;
         }
 
@@ -313,6 +332,7 @@ export const UserProfile = () => {
               agent_version: packageToDownload.version,
               file_name: packageToDownload.file_name,
               platform: packageToDownload.platform,
+              file_size: packageToDownload.file_size || 0,
               status: 'downloaded',
               downloaded_at: new Date().toISOString()
             }]);
@@ -508,12 +528,12 @@ export const UserProfile = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Security Agent & EPO Configuration */}
+          {/* Agent Download & EPO Configuration */}
           <Card className="modern-card">
             <CardHeader>
               <CardTitle className="flex items-center space-x-3">
                 <Download className="w-6 h-6 text-primary" />
-                <span>Security Agent & Configuration</span>
+                <span>Agent Download</span>
                 {hasNewAgents && (
                   <Badge variant="destructive" className="animate-pulse">
                     <Bell className="w-3 h-3 mr-1" />
@@ -526,41 +546,61 @@ export const UserProfile = () => {
               <div className="space-y-4">
                 {assignedAgents.length > 0 ? (
                   <div className="space-y-3">
-                    {assignedAgents.map((agent) => (
-                      <div key={agent.id} className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-foreground flex items-center">
-                            <Shield className="w-5 h-5 mr-2 text-primary" />
-                            {agent.agent_name} v{agent.agent_version}
-                          </h3>
-                          <Badge variant={
-                            agent.status === 'downloaded' ? 'default' :
-                            agent.status === 'installed' ? 'default' :
-                            agent.status === 'available' ? 'secondary' : 'destructive'
-                          }>
-                            {agent.status}
-                          </Badge>
+                    {assignedAgents.map((agent) => {
+                      const correspondingPackage = availableAgentPackages.find(pkg => 
+                        pkg.name === agent.agent_name && pkg.version === agent.agent_version
+                      );
+                      
+                      return (
+                        <div key={agent.id} className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-foreground flex items-center">
+                              <Shield className="w-5 h-5 mr-2 text-primary" />
+                              {agent.agent_name} v{agent.agent_version}
+                            </h3>
+                            <Badge variant={
+                              agent.status === 'downloaded' ? 'default' :
+                              agent.status === 'installed' ? 'default' :
+                              agent.status === 'available' ? 'secondary' : 'destructive'
+                            }>
+                              {agent.status}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1 mb-4">
+                            <p className="text-sm text-muted-foreground">
+                              Platform: {agent.platform} • {agent.assigned_by_admin ? 'Assigned by admin' : 'Self-downloaded'}
+                            </p>
+                            {correspondingPackage?.description && (
+                              <p className="text-sm text-muted-foreground">
+                                {correspondingPackage.description}
+                              </p>
+                            )}
+                            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                              <HardDrive className="w-3 h-3" />
+                              <span>Size: {formatFileSize(agent.file_size || correspondingPackage?.file_size || 0)}</span>
+                              {correspondingPackage?.is_recommended && (
+                                <Badge variant="outline" className="text-xs">Recommended</Badge>
+                              )}
+                            </div>
+                          </div>
+                          {agent.status === 'available' && (
+                            <Button 
+                              onClick={() => handleDownloadAgent(agent.id)}
+                              className="w-full glow-button"
+                            >
+                              <Download className="w-5 h-5 mr-2" />
+                              Download {agent.agent_name}
+                            </Button>
+                          )}
+                          {agent.status === 'downloaded' && (
+                            <Button variant="outline" className="w-full" disabled>
+                              <CheckCircle className="w-5 h-5 mr-2" />
+                              Downloaded - Install manually
+                            </Button>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Platform: {agent.platform} • {agent.assigned_by_admin ? 'Assigned by admin' : 'Self-downloaded'}
-                        </p>
-                        {agent.status === 'available' && (
-                          <Button 
-                            onClick={() => handleDownloadAgent(agent.id)}
-                            className="w-full glow-button"
-                          >
-                            <Download className="w-5 h-5 mr-2" />
-                            Download {agent.agent_name}
-                          </Button>
-                        )}
-                        {agent.status === 'downloaded' && (
-                          <Button variant="outline" className="w-full" disabled>
-                            <CheckCircle className="w-5 h-5 mr-2" />
-                            Downloaded - Install manually
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : availableAgentPackages.length > 0 ? (
                   <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
@@ -571,18 +611,26 @@ export const UserProfile = () => {
                         <Badge variant="default" className="ml-2">Recommended</Badge>
                       )}
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Platform: {availableAgentPackages[0].platform}
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {availableAgentPackages[0].description || "Enhanced threat detection with real-time monitoring capabilities"}
-                    </p>
+                    <div className="space-y-2 mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        Platform: {availableAgentPackages[0].platform}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {availableAgentPackages[0].description || "Enhanced threat detection with real-time monitoring capabilities"}
+                      </p>
+                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                        <HardDrive className="w-3 h-3" />
+                        <span>Size: {formatFileSize(availableAgentPackages[0].file_size || 0)}</span>
+                        <span>•</span>
+                        <span>Latest from admin</span>
+                      </div>
+                    </div>
                     <Button 
                       onClick={() => handleDownloadAgent()}
                       className="w-full glow-button"
                     >
                       <Download className="w-5 h-5 mr-2" />
-                      Download Security Agent
+                      Download Latest Agent
                     </Button>
                   </div>
                 ) : (
