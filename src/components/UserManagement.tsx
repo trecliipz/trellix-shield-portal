@@ -1,411 +1,456 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Users, Search, UserCheck, UserX, Shield, UserPlus, Settings, Activity, Key } from "lucide-react";
-import { toast } from "sonner";
-import { BulkUserImport } from "@/components/BulkUserImport";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Users, UserPlus, Edit, Trash2, Shield } from "lucide-react";
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'user';
-  status: 'active' | 'suspended';
-  registrationDate: string;
-  lastLogin: string;
-  hashedPassword?: string;
-  tempPassword?: string;
-  passwordResetDate?: string;
-}
-
-export const UserManagement = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({ email: "", name: "", role: "user" as 'admin' | 'user' });
+const UserManagement = () => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    name: '',
+    role: 'user',
+    temp_password: '',
+    plan_type: 'starter',
+  });
+  const { toast } = useToast();
 
   useEffect(() => {
-    loadUsers();
+    fetchUsers();
+    fetchSubscriptions();
   }, []);
 
-  const loadUsers = () => {
-    const savedUsers = localStorage.getItem('admin_users');
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      // Initialize with mock data
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          email: 'admin@trellix.com',
-          name: 'Admin',
-          role: 'admin',
-          status: 'active',
-          registrationDate: '2024-01-15',
-          lastLogin: '2024-07-11'
-        },
-        {
-          id: '2',
-          email: 'john.doe@company.com',
-          name: 'John Doe',
-          role: 'user',
-          status: 'active',
-          registrationDate: '2024-02-20',
-          lastLogin: '2024-07-10'
-        },
-        {
-          id: '3',
-          email: 'jane.smith@company.com',
-          name: 'Jane Smith',
-          role: 'user',
-          status: 'active',
-          registrationDate: '2024-03-10',
-          lastLogin: '2024-07-09'
-        }
-      ];
-      setUsers(mockUsers);
-      localStorage.setItem('admin_users', JSON.stringify(mockUsers));
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const saveUsers = (updatedUsers: User[]) => {
-    setUsers(updatedUsers);
-    localStorage.setItem('admin_users', JSON.stringify(updatedUsers));
-  };
+  const fetchSubscriptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('*');
 
-  const handleRoleChange = (userId: string, newRole: 'admin' | 'user') => {
-    const updatedUsers = users.map(user =>
-      user.id === userId ? { ...user, role: newRole } : user
-    );
-    saveUsers(updatedUsers);
-    toast.success(`User role changed to ${newRole}`);
-  };
-
-  const handleStatusChange = (userId: string, newStatus: 'active' | 'suspended') => {
-    const updatedUsers = users.map(user =>
-      user.id === userId ? { ...user, status: newStatus } : user
-    );
-    saveUsers(updatedUsers);
-    toast.success(`User ${newStatus === 'active' ? 'activated' : 'suspended'}`);
-  };
-
-  const handlePasswordReset = (userId: string) => {
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const updatedUsers = users.map(user =>
-      user.id === userId ? { 
-        ...user, 
-        tempPassword,
-        passwordResetDate: new Date().toISOString().split('T')[0]
-      } : user
-    );
-    saveUsers(updatedUsers);
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(tempPassword);
-    
-    toast.success(`Temporary password: ${tempPassword} (copied to clipboard)`, {
-      duration: 10000,
-    });
-  };
-
-  const handleAddUser = () => {
-    if (!newUser.email || !newUser.name) {
-      toast.error("Email and name are required fields");
-      return;
+      if (error) throw error;
+      setSubscriptions(data || []);
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
     }
+  };
 
-    // Check if email already exists
-    if (users.some(user => user.email.toLowerCase() === newUser.email.toLowerCase())) {
-      toast.error("A user with this email address already exists");
-      return;
+  const getUserSubscription = (userId: string) => {
+    return subscriptions.find(sub => sub.user_id === userId);
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      // Insert user into admin_users table
+      const { data: userData, error: userError } = await supabase
+        .from('admin_users')
+        .insert({
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          temp_password: newUser.temp_password,
+          created_by: currentUser.id,
+        })
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      // Create subscription for the user
+      const { error: subError } = await supabase
+        .from('user_subscriptions')
+        .insert({
+          user_id: userData.id,
+          plan_type: newUser.plan_type,
+          max_downloads: newUser.plan_type === 'starter' ? 10 : -1,
+        });
+
+      if (subError) {
+        console.error('Error creating subscription:', subError);
+      }
+
+      await fetchUsers();
+      await fetchSubscriptions();
+      setIsCreateDialogOpen(false);
+      setNewUser({
+        email: '',
+        name: '',
+        role: 'user',
+        temp_password: '',
+        plan_type: 'starter',
+      });
+
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create user",
+        variant: "destructive",
+      });
     }
-
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const newUserData: User = {
-      id: Date.now().toString(),
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role,
-      status: 'active',
-      registrationDate: new Date().toISOString().split('T')[0],
-      lastLogin: 'Never',
-      tempPassword,
-      passwordResetDate: new Date().toISOString().split('T')[0]
-    };
-
-    const updatedUsers = [...users, newUserData];
-    saveUsers(updatedUsers);
-
-    // Copy to clipboard
-    navigator.clipboard.writeText(tempPassword);
-
-    toast.success(`Welcome email sent to ${newUser.email}. Temporary password: ${tempPassword} (copied to clipboard)`, {
-      duration: 10000,
-    });
-
-    // Reset form
-    setNewUser({ email: "", name: "", role: "user" });
-    setShowAddUser(false);
   };
 
-  const handleBulkImport = (importedUsers: User[]) => {
-    const existingUsers = [...users];
-    const newUsers = [...existingUsers, ...importedUsers];
-    saveUsers(newUsers);
-    
-    toast.success(`${importedUsers.length} users have been imported successfully`);
+  const handleUpdateUser = async () => {
+    try {
+      if (!selectedUser) return;
+
+      const { error } = await supabase
+        .from('admin_users')
+        .update({
+          name: selectedUser.name,
+          role: selectedUser.role,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      await fetchUsers();
+      setIsEditDialogOpen(false);
+      setSelectedUser(null);
+
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user",
+        variant: "destructive",
+      });
+    }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .delete()
+        .eq('id', userId);
 
-  const stats = {
-    total: users.length,
-    active: users.filter(u => u.status === 'active').length,
-    admins: users.filter(u => u.role === 'admin').length,
-    suspended: users.filter(u => u.status === 'suspended').length
+      if (error) throw error;
+
+      await fetchUsers();
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleUpdateUserPlan = async (userId: string, planType: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .upsert({
+          user_id: userId,
+          plan_type: planType,
+          max_downloads: planType === 'starter' ? 10 : -1,
+          status: 'active',
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      await fetchSubscriptions();
+      toast({
+        title: "Success",
+        description: "User plan updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating user plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user plan",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.active}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.admins}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suspended</CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.suspended}</div>
-          </CardContent>
-        </Card>
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="h-6 w-6" />
+          <h1 className="text-3xl font-bold">User Management</h1>
+        </div>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Create User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New User</DialogTitle>
+              <DialogDescription>
+                Add a new user to the system with role and plan assignments.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  placeholder="user@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  placeholder="John Doe"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plan">Plan Type</Label>
+                <Select value={newUser.plan_type} onValueChange={(value) => setNewUser({ ...newUser, plan_type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="starter">Starter</SelectItem>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="temp_password">Temporary Password</Label>
+                <Input
+                  id="temp_password"
+                  type="password"
+                  value={newUser.temp_password}
+                  onChange={(e) => setNewUser({ ...newUser, temp_password: e.target.value })}
+                  placeholder="Temporary password"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateUser}>Create User</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>User Management</CardTitle>
-            <div className="flex items-center space-x-2">
-              <BulkUserImport onUsersImported={handleBulkImport} />
-              <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New User</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="user@company.com"
-                        value={newUser.email}
-                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        placeholder="John Doe"
-                        value={newUser.name}
-                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="role">Role</Label>
-                      <Select
-                        value={newUser.role}
-                        onValueChange={(value: 'admin' | 'user') => setNewUser({ ...newUser, role: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex space-x-2 pt-4">
-                      <Button onClick={handleAddUser} className="flex-1">
-                        Create User
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setShowAddUser(false);
-                          setNewUser({ email: "", name: "", role: "user" });
-                        }}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
+          <CardTitle>Users</CardTitle>
+          <CardDescription>
+            Manage user accounts, roles, and subscription plans
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Email</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Registration</TableHead>
-                <TableHead>Last Login</TableHead>
+                <TableHead>Created</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.email}</TableCell>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {user.role === 'admin' ? <Shield className="h-3 w-3" /> : <Settings className="h-3 w-3" />}
+              {users.map((user) => {
+                const subscription = getUserSubscription(user.id);
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
                       <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                        {user.role === 'admin' && <Shield className="h-3 w-3 mr-1" />}
                         {user.role}
                       </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {user.status === 'active' ? <Activity className="h-3 w-3 text-green-500" /> : <UserX className="h-3 w-3 text-red-500" />}
-                      <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
-                        {user.status}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={subscription?.plan_type || 'starter'}
+                        onValueChange={(value) => handleUpdateUserPlan(user.id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="starter">Starter</SelectItem>
+                          <SelectItem value="professional">Professional</SelectItem>
+                          <SelectItem value="enterprise">Enterprise</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={subscription?.status === 'active' ? 'default' : 'secondary'}>
+                        {subscription?.status || 'inactive'}
                       </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.registrationDate}</TableCell>
-                  <TableCell>{user.lastLogin}</TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedUser(user)}>
-                          Edit
+                    </TableCell>
+                    <TableCell>
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Edit User: {selectedUser?.email}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium">Role</label>
-                            <Select
-                              value={selectedUser?.role}
-                              onValueChange={(value: 'admin' | 'user') => {
-                                if (selectedUser) {
-                                  handleRoleChange(selectedUser.id, value);
-                                  setSelectedUser({ ...selectedUser, role: value });
-                                }
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium">Status</label>
-                            <Select
-                              value={selectedUser?.status}
-                              onValueChange={(value: 'active' | 'suspended') => {
-                                if (selectedUser) {
-                                  handleStatusChange(selectedUser.id, value);
-                                  setSelectedUser({ ...selectedUser, status: value });
-                                }
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="suspended">Suspended</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex space-x-2 mt-4">
-                            <Button 
-                              variant="outline" 
-                              onClick={() => selectedUser && handlePasswordReset(selectedUser.id)}
-                              className="flex-1"
-                            >
-                              <Key className="h-4 w-4 mr-2" />
-                              Reset Password
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
+
+          {users.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No users found. Create your first user to get started.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information and permissions.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit_name">Full Name</Label>
+                <Input
+                  id="edit_name"
+                  value={selectedUser.name}
+                  onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_role">Role</Label>
+                <Select
+                  value={selectedUser.role}
+                  onValueChange={(value) => setSelectedUser({ ...selectedUser, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateUser}>Update User</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+export default UserManagement;
