@@ -634,76 +634,146 @@ export const AdminAgentManagement = () => {
         </TabsContent>
 
         <TabsContent value="user-configs" className="space-y-6">
-          <Card>
+          {/* Agent Assignment Section - Made Prominent */}
+          <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>User Agent Configurations</CardTitle>
-                <div className="flex space-x-2">
-                  <Button variant="outline" onClick={loadUserConfigurations}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                  <Dialog open={showBulkAssignDialog} onOpenChange={setShowBulkAssignDialog}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Users className="h-4 w-4 mr-2" />
-                        Bulk Assign Agent
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Bulk Assign Agent to Users</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Select Agent Package</Label>
-                          <Select onValueChange={(value) => setSelectedPackage(packages.find(p => p.id === value) || null)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose an agent package" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {packages.filter(p => p.isActive).map(pkg => (
-                                <SelectItem key={pkg.id} value={pkg.id}>
-                                  {pkg.name} v{pkg.version} ({pkg.platform})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Select Users</Label>
-                          <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
-                            {userConfigurations.map(config => (
-                              <div key={config.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  checked={selectedUsers.includes(config.userId)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedUsers([...selectedUsers, config.userId]);
-                                    } else {
-                                      setSelectedUsers(selectedUsers.filter(id => id !== config.userId));
-                                    }
-                                  }}
-                                />
-                                <div className="flex-1">
-                                  <div className="font-medium">{config.userName}</div>
-                                  <div className="text-sm text-muted-foreground">{config.userEmail}</div>
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    <span>Agent Assignment Center</span>
+                  </CardTitle>
+                  <p className="text-muted-foreground mt-1">Assign agent packages directly to users for secure deployment</p>
+                </div>
+                <Dialog open={showBulkAssignDialog} onOpenChange={setShowBulkAssignDialog}>
+                  <DialogTrigger asChild>
+                    <Button size="lg" className="bg-primary hover:bg-primary/90">
+                      <Users className="h-4 w-4 mr-2" />
+                      Assign Agents to Users
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Assign Agent Package to Users</DialogTitle>
+                      <p className="text-muted-foreground text-sm">
+                        Select an agent package and assign it to specific users. Users will receive notifications and can download from their profile.
+                      </p>
+                    </DialogHeader>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="agent-select">Select Agent Package</Label>
+                        <Select onValueChange={(value) => setSelectedPackage(packages.find(p => p.id === value) || null)}>
+                          <SelectTrigger id="agent-select">
+                            <SelectValue placeholder="Choose an agent package to assign..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {packages.filter(p => p.isActive).map(pkg => (
+                              <SelectItem key={pkg.id} value={pkg.id}>
+                                <div className="flex items-center space-x-2">
+                                  <div>
+                                    <div className="font-medium">{pkg.name} v{pkg.version}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {pkg.platform} • {formatFileSize(pkg.fileSize)}
+                                      {pkg.isRecommended && " • Recommended"}
+                                    </div>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedPackage && (
+                          <div className="p-3 bg-muted rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium">{selectedPackage.name} v{selectedPackage.version}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {selectedPackage.platform} • {formatFileSize(selectedPackage.fileSize)}
                                 </div>
                               </div>
-                            ))}
+                              {selectedPackage.isRecommended && (
+                                <Badge variant="default">Recommended</Badge>
+                              )}
+                            </div>
                           </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Select Users ({selectedUsers.length} selected)</Label>
+                        <div className="max-h-64 overflow-y-auto border rounded-md p-3 space-y-3">
+                          <div className="flex items-center space-x-2 pb-2 border-b">
+                            <Checkbox
+                              checked={selectedUsers.length === userConfigurations.length}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedUsers(userConfigurations.map(config => config.userId));
+                                } else {
+                                  setSelectedUsers([]);
+                                }
+                              }}
+                            />
+                            <span className="text-sm font-medium">Select All Users</span>
+                          </div>
+                          {userConfigurations.map(config => (
+                            <div key={config.id} className="flex items-center space-x-3 p-2 rounded hover:bg-muted/50">
+                              <Checkbox
+                                checked={selectedUsers.includes(config.userId)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedUsers([...selectedUsers, config.userId]);
+                                  } else {
+                                    setSelectedUsers(selectedUsers.filter(id => id !== config.userId));
+                                  }
+                                }}
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{config.userName}</div>
+                                <div className="text-sm text-muted-foreground">{config.userEmail}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  Current Agent: {config.agentVersion} • Org: {config.organizationName || 'Not configured'}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
+                      </div>
+                      
+                      <div className="flex space-x-2">
                         <Button 
                           onClick={() => handleBulkAssignAgent()}
                           disabled={!selectedPackage || selectedUsers.length === 0}
-                          className="w-full"
+                          className="flex-1"
                         >
-                          Assign Agent to {selectedUsers.length} Users
+                          Assign to {selectedUsers.length} User{selectedUsers.length !== 1 ? 's' : ''}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setShowBulkAssignDialog(false);
+                            setSelectedUsers([]);
+                            setSelectedPackage(null);
+                          }}
+                        >
+                          Cancel
                         </Button>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* User Configurations Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>User Agent Status</CardTitle>
+                <Button variant="outline" onClick={loadUserConfigurations}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -735,11 +805,19 @@ export const AdminAgentManagement = () => {
                       <TableCell className="text-sm text-muted-foreground">{config.lastSyncAt}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Settings className="h-4 w-4" />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUsers([config.userId]);
+                              setShowBulkAssignDialog(true);
+                            }}
+                          >
+                            <Package className="h-4 w-4 mr-1" />
+                            Assign Agent
                           </Button>
                           <Button variant="ghost" size="sm">
-                            <RefreshCw className="h-4 w-4" />
+                            <Settings className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>

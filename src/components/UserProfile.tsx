@@ -63,7 +63,7 @@ export default function UserProfile() {
   const [organization, setOrganization] = useState<any>(null);
   const [endpoints, setEndpoints] = useState<any[]>([]);
   const [agentConfiguration, setAgentConfiguration] = useState<any>(null);
-  const [availableAgentPackages, setAvailableAgentPackages] = useState<any[]>([]);
+  const [assignedAgentDownloads, setAssignedAgentDownloads] = useState<any[]>([]);
   const [showAddEndpoint, setShowAddEndpoint] = useState(false);
   const [showEpoConfig, setShowEpoConfig] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,11 +101,12 @@ export default function UserProfile() {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'admin_agent_packages'
-      }, () => {
-        // Refresh available packages when admin updates them
-        loadAvailableAgentPackages();
-        toast.success("New agent packages available");
+        table: 'agent_downloads'
+      }, (payload) => {
+        if (payload.new && (payload.new as any).user_id === user?.id) {
+          loadAssignedAgentDownloads();
+          toast.success("New agent assigned by administrator");
+        }
       })
       .subscribe();
 
@@ -147,11 +148,11 @@ export default function UserProfile() {
 
       if (endpointsData) setEndpoints(endpointsData);
 
-      // Load user subscription, configuration, and available packages
+      // Load user subscription, configuration, and assigned downloads
       await Promise.all([
         loadUserSubscription(),
         loadAgentConfiguration(),
-        loadAvailableAgentPackages()
+        loadAssignedAgentDownloads()
       ]);
 
     } catch (error) {
@@ -198,19 +199,21 @@ export default function UserProfile() {
     }
   };
 
-  const loadAvailableAgentPackages = async () => {
+  const loadAssignedAgentDownloads = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const { data, error } = await supabase
-        .from('admin_agent_packages')
+        .from('agent_downloads')
         .select('*')
-        .eq('is_active', true)
-        .order('is_recommended', { ascending: false })
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAvailableAgentPackages(data || []);
+      setAssignedAgentDownloads(data || []);
     } catch (error) {
-      console.error('Error loading available agent packages:', error);
+      console.error('Error loading assigned agent downloads:', error);
     }
   };
 
@@ -222,16 +225,16 @@ export default function UserProfile() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const initiateFileDownload = async (packageData: any) => {
+  const initiateFileDownload = async (downloadData: any) => {
     try {
       // Create a mock download URL for demonstration
-      // In a real implementation, this would be the actual file URL from admin packages
-      const downloadUrl = packageData.download_url || `https://releases.company.com/agents/${packageData.file_name}`;
+      // In a real implementation, this would be the actual file URL from the assigned download
+      const downloadUrl = downloadData.download_url || `https://releases.company.com/agents/${downloadData.file_name}`;
       
       // Create hidden anchor element for download
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = packageData.file_name;
+      link.download = downloadData.file_name;
       link.style.display = 'none';
       
       // Add to DOM, click, and remove
@@ -239,7 +242,7 @@ export default function UserProfile() {
       link.click();
       document.body.removeChild(link);
       
-      toast.success(`Downloading ${packageData.name} v${packageData.version} (${formatFileSize(packageData.file_size || 0)})`);
+      toast.success(`Downloading ${downloadData.agent_name} v${downloadData.agent_version} (${formatFileSize(downloadData.file_size || 0)})`);
       return true;
     } catch (error) {
       console.error('Error initiating file download:', error);
@@ -248,7 +251,7 @@ export default function UserProfile() {
     }
   };
 
-  const handleDownloadAgent = async () => {
+  const handleDownloadAssignedAgent = async (downloadId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -264,27 +267,36 @@ export default function UserProfile() {
         return;
       }
 
-      // User is downloading latest available agent
-      const recommendedPackage = availableAgentPackages.find(pkg => pkg.is_recommended) || 
-                                availableAgentPackages[0];
-
-      if (!recommendedPackage) {
-        toast.error("No agent packages available for download");
+      // Find the specific assigned download
+      const assignedDownload = assignedAgentDownloads.find(download => download.id === downloadId);
+      if (!assignedDownload || assignedDownload.status !== 'available') {
+        toast.error("This agent is not available for download");
         return;
       }
 
       // Initiate download
-      const downloadSuccess = await initiateFileDownload(recommendedPackage);
+      const downloadSuccess = await initiateFileDownload(assignedDownload);
       
       if (downloadSuccess) {
+        // Update download status and increment count
+        const { error: updateError } = await supabase
+          .from('agent_downloads')
+          .update({ 
+            status: 'downloaded',
+            downloaded_at: new Date().toISOString()
+          })
+          .eq('id', downloadId);
+
+        if (updateError) throw updateError;
+
         // Increment download count
         const { error } = await supabase
           .rpc('increment_download_count', { p_user_id: user.id });
 
         if (error) throw error;
         
-        // Reload subscription to update UI
-        await loadUserSubscription();
+        // Reload data to update UI
+        await Promise.all([loadUserSubscription(), loadAssignedAgentDownloads()]);
       }
     } catch (error) {
       console.error('Error downloading agent:', error);
@@ -379,7 +391,7 @@ export default function UserProfile() {
 
       const { data, error } = await supabase.rpc('sync_user_agent_config', {
         p_user_id: user.id,
-        p_agent_version: availableAgentPackages[0]?.version || '2.1.5',
+        p_agent_version: assignedAgentDownloads[0]?.agent_version || '2.1.5',
         p_epo_config: epoConfig
       });
 
@@ -553,41 +565,31 @@ export default function UserProfile() {
           </CardContent>
         </Card>
 
-        {/* Agent Downloads Section */}
+        {/* My Agent Downloads Section */}
         <Card className="modern-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Download className="h-5 w-5 text-primary" />
-                <CardTitle>Agent Downloads</CardTitle>
+                <CardTitle>My Agent Downloads</CardTitle>
               </div>
-              <Button 
-                onClick={handleDownloadAgent} 
-                className="bg-primary hover:bg-primary/90"
-                disabled={downloadsRemaining === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download Latest Agent
-              </Button>
+              {userSubscription && (
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <span>{userSubscription.downloads_used} of {userSubscription.max_downloads === -1 ? 'unlimited' : userSubscription.max_downloads} downloads used</span>
+                  <Badge variant={downloadsRemaining === 0 ? 'destructive' : 'secondary'}>
+                    {downloadsRemaining} Remaining
+                  </Badge>
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {userSubscription && (
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Subscription Plan</p>
-                  <p className="text-xs text-muted-foreground">
-                    {userSubscription.plan_type} - {userSubscription.downloads_used} of {userSubscription.max_downloads === -1 ? 'unlimited' : userSubscription.max_downloads} downloads used
-                  </p>
-                </div>
-                <Badge variant={downloadsRemaining === 0 ? 'destructive' : 'secondary'}>
-                  {downloadsRemaining} Remaining
-                </Badge>
-              </div>
-            )}
-            {availableAgentPackages.length > 0 ? (
+            {assignedAgentDownloads.length > 0 ? (
               <div className="space-y-3">
-                <h4 className="text-sm font-medium">Available Agents</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">Agents Assigned by Administrator</h4>
+                  <Badge variant="outline">{assignedAgentDownloads.length} Available</Badge>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -596,20 +598,51 @@ export default function UserProfile() {
                       <TableHead>Platform</TableHead>
                       <TableHead>Size</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Assigned Date</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {availableAgentPackages.map((agent) => (
-                      <TableRow key={agent.id}>
-                        <TableCell className="font-medium">{agent.name}</TableCell>
-                        <TableCell>{agent.version}</TableCell>
+                    {assignedAgentDownloads.map((download) => (
+                      <TableRow key={download.id}>
+                        <TableCell className="font-medium">{download.agent_name}</TableCell>
+                        <TableCell>{download.agent_version}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{agent.platform}</Badge>
+                          <Badge variant="outline">{download.platform}</Badge>
                         </TableCell>
-                        <TableCell>{formatFileSize(agent.file_size || 0)}</TableCell>
+                        <TableCell>{formatFileSize(download.file_size || 0)}</TableCell>
                         <TableCell>
-                          {agent.is_recommended && (
-                            <Badge variant="default">Recommended</Badge>
+                          {download.status === 'available' && (
+                            <Badge variant="default">Ready to Download</Badge>
+                          )}
+                          {download.status === 'downloaded' && (
+                            <Badge variant="secondary">Downloaded</Badge>
+                          )}
+                          {download.status === 'installed' && (
+                            <Badge variant="outline">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Installed
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(download.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {download.status === 'available' ? (
+                            <Button 
+                              size="sm"
+                              onClick={() => handleDownloadAssignedAgent(download.id)}
+                              disabled={downloadsRemaining === 0}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Download
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost" disabled>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {download.status === 'downloaded' ? 'Downloaded' : 'Installed'}
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -618,10 +651,11 @@ export default function UserProfile() {
                 </Table>
               </div>
             ) : (
-              <div className="text-center py-6">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground">No agent packages available.</p>
-                <p className="text-sm text-muted-foreground">Contact your administrator for available downloads.</p>
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Agent Downloads Assigned</h3>
+                <p className="text-muted-foreground mb-1">Your administrator hasn't assigned any agent packages yet.</p>
+                <p className="text-sm text-muted-foreground">Contact your administrator to request agent access.</p>
               </div>
             )}
           </CardContent>
