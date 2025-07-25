@@ -29,8 +29,10 @@ import {
   RefreshCw,
   Bell,
   HardDrive,
-  Star
+  Star,
+  HelpCircle
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -359,7 +361,8 @@ export default function UserProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !organization) return;
 
-      const { error } = await supabase
+      // Update organization with EPO settings
+      const { error: orgError } = await supabase
         .from('user_organizations')
         .update({
           group_name: values.groupName,
@@ -367,9 +370,24 @@ export default function UserProfile() {
         })
         .eq('id', organization.id);
 
-      if (error) throw error;
+      if (orgError) throw orgError;
 
-      toast.success("EPO configuration saved successfully!");
+      // Also sync with agent configuration
+      const epoConfig = {
+        server_url: 'https://epo.company.com',
+        group_name: values.groupName,
+        ou_name: values.ouName
+      };
+
+      const { error: syncError } = await supabase.rpc('sync_user_agent_config', {
+        p_user_id: user.id,
+        p_agent_version: assignedAgentDownloads[0]?.agent_version || '2.1.5',
+        p_epo_config: epoConfig
+      });
+
+      if (syncError) throw syncError;
+
+      toast.success("EPO configuration saved and synced successfully!");
       setShowEpoConfig(false);
       loadUserData();
     } catch (error) {
@@ -515,26 +533,50 @@ export default function UserProfile() {
                           control={epoForm.control}
                           name="groupName"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Group Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Corporate-Security" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
+                           <FormItem>
+                             <FormLabel className="flex items-center gap-2">
+                               Group Name
+                               <TooltipProvider>
+                                 <Tooltip>
+                                   <TooltipTrigger>
+                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                   </TooltipTrigger>
+                                   <TooltipContent>
+                                     <p>The EPO group name where this organization's endpoints will be managed</p>
+                                   </TooltipContent>
+                                 </Tooltip>
+                               </TooltipProvider>
+                             </FormLabel>
+                             <FormControl>
+                               <Input placeholder="Corporate-Security" {...field} />
+                             </FormControl>
+                             <FormMessage />
+                           </FormItem>
                           )}
                         />
                         <FormField
                           control={epoForm.control}
                           name="ouName"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Organizational Unit (OU)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="IT-Security" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
+                           <FormItem>
+                             <FormLabel className="flex items-center gap-2">
+                               Organizational Unit (OU)
+                               <TooltipProvider>
+                                 <Tooltip>
+                                   <TooltipTrigger>
+                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                   </TooltipTrigger>
+                                   <TooltipContent>
+                                     <p>The organizational unit structure for agent deployment and policy management</p>
+                                   </TooltipContent>
+                                 </Tooltip>
+                               </TooltipProvider>
+                             </FormLabel>
+                             <FormControl>
+                               <Input placeholder="IT-Security" {...field} />
+                             </FormControl>
+                             <FormMessage />
+                           </FormItem>
                           )}
                         />
                         <div className="flex space-x-2 pt-4">

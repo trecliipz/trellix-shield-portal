@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Building, Users, Monitor } from "lucide-react";
+import { ChevronLeft, ChevronRight, Building, Users, Monitor, CheckCircle } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -45,6 +45,11 @@ const organizationSchema = z.object({
   primaryContactPhone: z.string().optional(),
 });
 
+const planSelectionSchema = z.object({
+  selectedPlan: z.string().min(1, "Please select a plan"),
+  billingCycle: z.enum(['monthly', 'yearly']).default('monthly'),
+});
+
 const endpointPlanningSchema = z.object({
   expectedEndpoints: z.string().min(1, "Please specify expected endpoint count"),
   enableBulkImport: z.boolean().optional(),
@@ -57,7 +62,7 @@ interface EnhancedAuthModalProps {
   onLogin: (email: string, password: string) => boolean;
 }
 
-type RegistrationStep = 'basic' | 'organization' | 'endpoints' | 'bulk';
+type RegistrationStep = 'basic' | 'organization' | 'plan' | 'endpoints' | 'bulk';
 
 export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,6 +70,7 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
   const [resetEmail, setResetEmail] = useState("");
   const [registrationStep, setRegistrationStep] = useState<RegistrationStep>('basic');
   const [registrationData, setRegistrationData] = useState<any>({});
+  const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -84,6 +90,14 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
       industry: "",
       organizationSize: "",
       primaryContactPhone: "",
+    },
+  });
+
+  const planSelectionForm = useForm({
+    resolver: zodResolver(planSelectionSchema),
+    defaultValues: {
+      selectedPlan: "",
+      billingCycle: "monthly" as const,
     },
   });
 
@@ -119,6 +133,11 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
   };
 
   const handleOrganization = async (values: z.infer<typeof organizationSchema>) => {
+    setRegistrationData({ ...registrationData, ...values });
+    setRegistrationStep('plan');
+  };
+
+  const handlePlanSelection = async (values: z.infer<typeof planSelectionSchema>) => {
     setRegistrationData({ ...registrationData, ...values });
     setRegistrationStep('endpoints');
   };
@@ -169,6 +188,23 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
 
         if (orgError) {
           console.error('Error creating organization:', orgError);
+        }
+
+        // Assign subscription plan
+        if (data.selectedPlan) {
+          try {
+            if (data.selectedPlan === 'free') {
+              await supabase.rpc('assign_free_trial', { p_user_id: authData.user.id });
+            } else {
+              await supabase.rpc('upgrade_user_subscription', {
+                p_user_id: authData.user.id,
+                p_plan_name: data.selectedPlan,
+                p_billing_cycle: data.billingCycle || 'monthly'
+              });
+            }
+          } catch (subscriptionError) {
+            console.error('Error creating subscription:', subscriptionError);
+          }
         }
 
         // If machine names provided, create endpoint records
@@ -229,7 +265,30 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
     setRegistrationData({});
     basicInfoForm.reset();
     organizationForm.reset();
+    planSelectionForm.reset();
     endpointPlanningForm.reset();
+  };
+
+  // Load subscription plans when modal opens
+  useEffect(() => {
+    if (type === 'register') {
+      loadSubscriptionPlans();
+    }
+  }, [type]);
+
+  const loadSubscriptionPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('price_monthly', { ascending: true });
+
+      if (error) throw error;
+      setSubscriptionPlans(data || []);
+    } catch (error) {
+      console.error('Error loading subscription plans:', error);
+    }
   };
 
   const handleForgotPassword = async () => {
@@ -431,6 +490,125 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
                       <ChevronLeft className="h-4 w-4 mr-2" />
                       Back
                     </Button>
+                     <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                       Next: Plan Selection
+                       <ChevronRight className="h-4 w-4 ml-2" />
+                     </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+
+      case 'plan':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Badge variant="outline">3/4</Badge>
+                Choose Your Plan
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...planSelectionForm}>
+                <form onSubmit={planSelectionForm.handleSubmit(handlePlanSelection)} className="space-y-6">
+                  <div className="grid gap-4">
+                    {subscriptionPlans.map((plan) => (
+                      <FormField
+                        key={plan.id}
+                        control={planSelectionForm.control}
+                        name="selectedPlan"
+                        render={({ field }) => (
+                          <div
+                            className={`relative cursor-pointer rounded-lg border p-4 transition-all ${
+                              field.value === plan.plan_name
+                                ? 'border-primary bg-primary/5 ring-2 ring-primary'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => field.onChange(plan.plan_name)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold">{plan.display_name}</h3>
+                                  {plan.is_free_trial && (
+                                    <Badge variant="secondary">Free Trial</Badge>
+                                  )}
+                                </div>
+                                <div className="mt-2">
+                                  {plan.is_free_trial ? (
+                                    <div className="text-2xl font-bold">Free</div>
+                                  ) : (
+                                    <div className="flex items-baseline gap-1">
+                                      <span className="text-2xl font-bold">
+                                        ${planSelectionForm.watch('billingCycle') === 'yearly' 
+                                          ? plan.price_yearly 
+                                          : plan.price_monthly}
+                                      </span>
+                                      <span className="text-sm text-muted-foreground">
+                                        /{planSelectionForm.watch('billingCycle') === 'yearly' ? 'year' : 'month'}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+                                  {plan.features.map((feature: string, index: number) => (
+                                    <li key={index} className="flex items-center gap-2">
+                                      <CheckCircle className="h-3 w-3 text-green-500" />
+                                      {feature}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <input
+                                type="radio"
+                                value={plan.plan_name}
+                                checked={field.value === plan.plan_name}
+                                onChange={() => field.onChange(plan.plan_name)}
+                                className="h-4 w-4"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  {!subscriptionPlans.find(p => p.plan_name === planSelectionForm.watch('selectedPlan'))?.is_free_trial && (
+                    <FormField
+                      control={planSelectionForm.control}
+                      name="billingCycle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Billing Cycle</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select billing cycle" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="yearly">Yearly (Save 20%)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setRegistrationStep('organization')}
+                      className="flex-1"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Back
+                    </Button>
                     <Button type="submit" className="flex-1" disabled={isSubmitting}>
                       Next: Endpoint Planning
                       <ChevronRight className="h-4 w-4 ml-2" />
@@ -447,7 +625,7 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Badge variant="outline">3/3</Badge>
+                <Badge variant="outline">4/4</Badge>
                 <Monitor className="h-5 w-5" />
                 Endpoint Planning
               </CardTitle>
@@ -518,7 +696,7 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={() => setRegistrationStep('organization')}
+                      onClick={() => setRegistrationStep('plan')}
                       className="flex-1"
                     >
                       <ChevronLeft className="h-4 w-4 mr-2" />

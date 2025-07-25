@@ -23,6 +23,12 @@ interface User {
   hashedPassword?: string;
   tempPassword?: string;
   passwordResetDate?: string;
+  source?: 'admin_created' | 'registered';
+  planType?: string;
+  subscriptionStatus?: string;
+  trialEndsAt?: string;
+  downloadsUsed?: number;
+  maxDownloads?: number;
 }
 
 export default function UserManagement() {
@@ -41,16 +47,18 @@ export default function UserManagement() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Try to load from database first
-      const { data: dbUsers, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Load all users from admin_users table AND real registered users
+      const [adminUsersResponse, profilesResponse, subscriptionsResponse] = await Promise.all([
+        supabase.from('admin_users').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id, name, email, created_at').order('created_at', { ascending: false }),
+        supabase.from('user_subscriptions').select('user_id, plan_type, status, trial_ends_at, max_downloads, downloads_used')
+      ]);
 
-      if (error) throw error;
+      const allUsers: User[] = [];
 
-      if (dbUsers && dbUsers.length > 0) {
-        const formattedUsers = dbUsers.map(dbUser => ({
+      // Add admin-created users
+      if (adminUsersResponse.data) {
+        const adminUsers = adminUsersResponse.data.map(dbUser => ({
           id: dbUser.id,
           email: dbUser.email,
           name: dbUser.name,
@@ -58,36 +66,39 @@ export default function UserManagement() {
           status: 'active' as const,
           registrationDate: new Date(dbUser.created_at).toISOString().split('T')[0],
           lastLogin: 'Unknown',
-          tempPassword: dbUser.temp_password
+          tempPassword: dbUser.temp_password,
+          source: 'admin_created' as const
         }));
-        setUsers(formattedUsers);
-      } else {
-        // Migrate localStorage data to database if no DB users exist
-        const savedUsers = localStorage.getItem('admin_users');
-        if (savedUsers) {
-          const localUsers = JSON.parse(savedUsers);
-          await migrateLocalUsersToDatabase(localUsers);
-          setUsers(localUsers);
-        } else {
-          // Initialize with mock data
-          const mockUsers: User[] = [
-            {
-              id: '1',
-              email: 'admin@trellix.com',
-              name: 'Admin',
-              role: 'admin',
-              status: 'active',
-              registrationDate: '2024-01-15',
-              lastLogin: '2024-07-11'
-            }
-          ];
-          await migrateLocalUsersToDatabase(mockUsers);
-          setUsers(mockUsers);
-        }
+        allUsers.push(...adminUsers);
       }
+
+      // Add real registered users from profiles
+      if (profilesResponse.data) {
+        const registeredUsers = profilesResponse.data.map(profile => {
+          const subscription = subscriptionsResponse.data?.find(sub => sub.user_id === profile.id);
+          return {
+            id: profile.id,
+            email: profile.email || 'unknown@email.com',
+            name: profile.name || 'Unknown User',
+            role: profile.email?.includes('admin') ? 'admin' as const : 'user' as const,
+            status: 'active' as const,
+            registrationDate: new Date(profile.created_at).toISOString().split('T')[0],
+            lastLogin: 'Unknown',
+            source: 'registered' as const,
+            planType: subscription?.plan_type,
+            subscriptionStatus: subscription?.status,
+            trialEndsAt: subscription?.trial_ends_at,
+            downloadsUsed: subscription?.downloads_used,
+            maxDownloads: subscription?.max_downloads
+          };
+        });
+        allUsers.push(...registeredUsers);
+      }
+
+      setUsers(allUsers);
     } catch (error) {
       console.error('Error loading users:', error);
-      // Fallback to localStorage
+      // Fallback to localStorage for admin users only
       const savedUsers = localStorage.getItem('admin_users');
       if (savedUsers) {
         setUsers(JSON.parse(savedUsers));
@@ -362,18 +373,40 @@ export default function UserManagement() {
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Plan</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Registration</TableHead>
-                <TableHead>Last Login</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.email}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>
+                      <div>{user.email}</div>
+                      {user.trialEndsAt && (
+                        <div className="text-xs text-muted-foreground">
+                          Trial ends: {new Date(user.trialEndsAt).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{user.name}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col space-y-1">
+                      <Badge variant={user.planType === 'free' ? 'secondary' : 'default'}>
+                        {user.planType || 'No Plan'}
+                      </Badge>
+                      {user.downloadsUsed !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          Downloads: {user.downloadsUsed}/{user.maxDownloads === -1 ? '∞' : user.maxDownloads}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       {user.role === 'admin' ? <Shield className="h-3 w-3" /> : <Settings className="h-3 w-3" />}
@@ -391,7 +424,11 @@ export default function UserManagement() {
                     </div>
                   </TableCell>
                   <TableCell>{user.registrationDate}</TableCell>
-                  <TableCell>{user.lastLogin}</TableCell>
+                  <TableCell>
+                    <Badge variant={user.source === 'registered' ? 'default' : 'outline'}>
+                      {user.source === 'registered' ? 'Registered' : 'Admin Created'}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Dialog>
                       <DialogTrigger asChild>

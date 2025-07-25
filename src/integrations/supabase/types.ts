@@ -1013,6 +1013,54 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          display_name: string
+          download_limit: number
+          endpoint_limit: number
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          is_free_trial: boolean | null
+          plan_name: string
+          price_monthly: number
+          price_yearly: number
+          trial_duration_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          download_limit?: number
+          endpoint_limit?: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_free_trial?: boolean | null
+          plan_name: string
+          price_monthly?: number
+          price_yearly?: number
+          trial_duration_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          download_limit?: number
+          endpoint_limit?: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_free_trial?: boolean | null
+          plan_name?: string
+          price_monthly?: number
+          price_yearly?: number
+          trial_duration_days?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       threat_classifications: {
         Row: {
           classification: string
@@ -1158,36 +1206,56 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          auto_renew: boolean | null
+          billing_cycle: string | null
           created_at: string | null
           downloads_used: number | null
           id: string
           max_downloads: number | null
+          plan_id: string | null
           plan_type: string
           status: string
+          trial_ends_at: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          auto_renew?: boolean | null
+          billing_cycle?: string | null
           created_at?: string | null
           downloads_used?: number | null
           id?: string
           max_downloads?: number | null
+          plan_id?: string | null
           plan_type: string
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          auto_renew?: boolean | null
+          billing_cycle?: string | null
           created_at?: string | null
           downloads_used?: number | null
           id?: string
           max_downloads?: number | null
+          plan_id?: string | null
           plan_type?: string
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallet_transactions: {
         Row: {
@@ -1228,6 +1296,10 @@ export type Database = {
           p_assigned_by: string
         }
         Returns: number
+      }
+      assign_free_trial: {
+        Args: { p_user_id: string }
+        Returns: string
       }
       calculate_driver_earnings: {
         Args: { p_ride_id: string; p_platform_fee_rate?: number }
@@ -1291,6 +1363,14 @@ export type Database = {
           p_status: string
           p_location?: Json
           p_heading?: number
+        }
+        Returns: string
+      }
+      upgrade_user_subscription: {
+        Args: {
+          p_user_id: string
+          p_plan_name: string
+          p_billing_cycle?: string
         }
         Returns: string
       }
