@@ -103,12 +103,15 @@ export type Database = {
           agent_version: string
           auto_update_enabled: boolean | null
           created_at: string
+          custom_tags: Json | null
           deployment_policies: Json | null
+          epo_credentials: Json | null
           epo_server_url: string | null
           group_name: string | null
           id: string
           last_sync_at: string | null
           organization_id: string | null
+          ou_groups: Json | null
           ou_name: string | null
           updated_at: string
           user_id: string
@@ -117,12 +120,15 @@ export type Database = {
           agent_version: string
           auto_update_enabled?: boolean | null
           created_at?: string
+          custom_tags?: Json | null
           deployment_policies?: Json | null
+          epo_credentials?: Json | null
           epo_server_url?: string | null
           group_name?: string | null
           id?: string
           last_sync_at?: string | null
           organization_id?: string | null
+          ou_groups?: Json | null
           ou_name?: string | null
           updated_at?: string
           user_id: string
@@ -131,12 +137,15 @@ export type Database = {
           agent_version?: string
           auto_update_enabled?: boolean | null
           created_at?: string
+          custom_tags?: Json | null
           deployment_policies?: Json | null
+          epo_credentials?: Json | null
           epo_server_url?: string | null
           group_name?: string | null
           id?: string
           last_sync_at?: string | null
           organization_id?: string | null
+          ou_groups?: Json | null
           ou_name?: string | null
           updated_at?: string
           user_id?: string
@@ -1132,6 +1141,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_custom_packages: {
+        Row: {
+          base_package_id: string
+          created_at: string | null
+          custom_config: Json | null
+          id: string
+          package_name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          base_package_id: string
+          created_at?: string | null
+          custom_config?: Json | null
+          id?: string
+          package_name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          base_package_id?: string
+          created_at?: string | null
+          custom_config?: Json | null
+          id?: string
+          package_name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_custom_packages_base_package_id_fkey"
+            columns: ["base_package_id"]
+            isOneToOne: false
+            referencedRelation: "admin_agent_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_locations: {
         Row: {
           created_at: string
@@ -1309,6 +1356,15 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      create_custom_package: {
+        Args: {
+          p_user_id: string
+          p_base_package_id: string
+          p_package_name: string
+          p_custom_config?: Json
+        }
+        Returns: string
+      }
       find_nearby_drivers: {
         Args: {
           p_pickup_lat: number
@@ -1384,6 +1440,10 @@ export type Database = {
           p_is_online?: boolean
         }
         Returns: string
+      }
+      user_has_paid_subscription: {
+        Args: { p_user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
