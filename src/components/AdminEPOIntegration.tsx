@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { 
   Server, 
   Shield, 
@@ -16,18 +18,38 @@ import {
   Settings,
   HelpCircle,
   Link,
-  Database
+  Database,
+  Save,
+  Edit,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
 export const AdminEPOIntegration = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected');
+  const [isEditing, setIsEditing] = useState(false);
   const [epoConfig, setEpoConfig] = useState({
-    serverUrl: 'https://epo.company.com:8443',
+    serverUrl: 'https://103-98-212-249.cloud-xip.com:8443',
+    serverName: 'trellixepo2025',
+    publicIP: '103.98.212.249',
+    hostname: '103-98-212-249.cloud-xip.com',
     username: '',
     password: '',
     certificatePath: '/etc/ssl/certs/epo-cert.pem',
     apiEndpoint: '/remote/core.executeTask'
+  });
+  const [apiSettings, setApiSettings] = useState({
+    autoSync: true,
+    syncInterval: 15,
+    retryAttempts: 3,
+    timeout: 30,
+    enableLogging: true,
+    apiKeys: {
+      primaryKey: '',
+      secondaryKey: ''
+    },
+    webhookUrl: '',
+    customHeaders: ''
   });
 
   const handleTestConnection = async () => {
@@ -99,10 +121,37 @@ export const AdminEPOIntegration = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <Label htmlFor="server-name">EPO Server Name</Label>
+                  <Input
+                    id="server-name"
+                    placeholder="trellixepo2025"
+                    value={epoConfig.serverName}
+                    onChange={(e) => setEpoConfig({ ...epoConfig, serverName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="public-ip">Public Internet IP (WAN)</Label>
+                  <Input
+                    id="public-ip"
+                    placeholder="103.98.212.249"
+                    value={epoConfig.publicIP}
+                    onChange={(e) => setEpoConfig({ ...epoConfig, publicIP: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hostname">Hostname</Label>
+                  <Input
+                    id="hostname"
+                    placeholder="103-98-212-249.cloud-xip.com"
+                    value={epoConfig.hostname}
+                    onChange={(e) => setEpoConfig({ ...epoConfig, hostname: e.target.value })}
+                  />
+                </div>
+                <div>
                   <Label htmlFor="server-url">EPO Server URL</Label>
                   <Input
                     id="server-url"
-                    placeholder="https://epo.company.com:8443"
+                    placeholder="https://103-98-212-249.cloud-xip.com:8443"
                     value={epoConfig.serverUrl}
                     onChange={(e) => setEpoConfig({ ...epoConfig, serverUrl: e.target.value })}
                   />
@@ -159,7 +208,15 @@ export const AdminEPOIntegration = () => {
                   Test Connection
                 </Button>
                 <Button variant="outline" disabled={connectionStatus !== 'connected'}>
+                  <Save className="h-4 w-4 mr-2" />
                   Save Configuration
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditing(!isEditing)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  {isEditing ? 'View Mode' : 'Edit Mode'}
                 </Button>
               </div>
             </CardContent>
@@ -331,16 +388,148 @@ export const AdminEPOIntegration = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>EPO API Reference</span>
-                <Button variant="outline" size="sm">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Full Documentation
-                </Button>
+                <span>API Configuration & Settings</span>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync EPO
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Documentation
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Common API Endpoints</h4>
+            <CardContent className="space-y-6">
+              {/* API Settings */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Sync & Integration Settings</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="auto-sync">Auto Sync with EPO</Label>
+                      <p className="text-xs text-muted-foreground">Automatically sync data every interval</p>
+                    </div>
+                    <Switch
+                      id="auto-sync"
+                      checked={apiSettings.autoSync}
+                      onCheckedChange={(checked) => setApiSettings({ ...apiSettings, autoSync: checked })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sync-interval">Sync Interval (minutes)</Label>
+                    <Input
+                      id="sync-interval"
+                      type="number"
+                      min="5"
+                      max="1440"
+                      value={apiSettings.syncInterval}
+                      onChange={(e) => setApiSettings({ ...apiSettings, syncInterval: parseInt(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="retry-attempts">Retry Attempts</Label>
+                    <Input
+                      id="retry-attempts"
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={apiSettings.retryAttempts}
+                      onChange={(e) => setApiSettings({ ...apiSettings, retryAttempts: parseInt(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="timeout">Timeout (seconds)</Label>
+                    <Input
+                      id="timeout"
+                      type="number"
+                      min="10"
+                      max="300"
+                      value={apiSettings.timeout}
+                      onChange={(e) => setApiSettings({ ...apiSettings, timeout: parseInt(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* API Keys */}
+              <div className="space-y-4">
+                <h4 className="font-medium">API Authentication</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="primary-key">Primary API Key</Label>
+                    <Input
+                      id="primary-key"
+                      type="password"
+                      placeholder="Enter primary API key"
+                      value={apiSettings.apiKeys.primaryKey}
+                      onChange={(e) => setApiSettings({
+                        ...apiSettings,
+                        apiKeys: { ...apiSettings.apiKeys, primaryKey: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="secondary-key">Secondary API Key (Backup)</Label>
+                    <Input
+                      id="secondary-key"
+                      type="password"
+                      placeholder="Enter secondary API key"
+                      value={apiSettings.apiKeys.secondaryKey}
+                      onChange={(e) => setApiSettings({
+                        ...apiSettings,
+                        apiKeys: { ...apiSettings.apiKeys, secondaryKey: e.target.value }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Webhook Configuration */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Webhook & Custom Settings</h4>
+                <div>
+                  <Label htmlFor="webhook-url">Webhook URL</Label>
+                  <Input
+                    id="webhook-url"
+                    placeholder="https://your-app.com/webhook/epo"
+                    value={apiSettings.webhookUrl}
+                    onChange={(e) => setApiSettings({ ...apiSettings, webhookUrl: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    URL to receive EPO event notifications
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="custom-headers">Custom Headers (JSON)</Label>
+                  <Textarea
+                    id="custom-headers"
+                    placeholder='{"X-Custom-Header": "value", "Authorization": "Bearer token"}'
+                    value={apiSettings.customHeaders}
+                    onChange={(e) => setApiSettings({ ...apiSettings, customHeaders: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={apiSettings.enableLogging}
+                    onCheckedChange={(checked) => setApiSettings({ ...apiSettings, enableLogging: checked })}
+                  />
+                  <Label>Enable API Logging</Label>
+                </div>
+                <Button>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save API Settings
+                </Button>
+              </div>
+
+              {/* API Reference */}
+              <div className="border-t pt-6">
+                <h4 className="font-medium mb-2">EPO API Endpoints</h4>
                 <div className="space-y-2">
                   <div className="bg-muted p-3 rounded">
                     <div className="font-mono text-sm">POST /remote/core.executeTask</div>
@@ -354,15 +543,10 @@ export const AdminEPOIntegration = () => {
                     <div className="font-mono text-sm">POST /remote/core.createGroup</div>
                     <div className="text-xs text-muted-foreground">Create new system groups</div>
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Authentication Headers</h4>
-                <div className="bg-muted p-3 rounded font-mono text-sm">
-                  <div>Authorization: Basic [base64-encoded-credentials]</div>
-                  <div>Content-Type: application/json</div>
-                  <div>Accept: application/json</div>
+                  <div className="bg-muted p-3 rounded">
+                    <div className="font-mono text-sm">POST /remote/core.assignAgentTask</div>
+                    <div className="text-xs text-muted-foreground">Assign agent deployment tasks to groups</div>
+                  </div>
                 </div>
               </div>
             </CardContent>

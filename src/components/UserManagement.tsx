@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Users, Search, UserCheck, UserX, Shield, UserPlus, Settings, Activity, Key } from "lucide-react";
+import { Users, Search, UserCheck, UserX, Shield, UserPlus, Settings, Activity, Key, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { BulkUserImport } from "@/components/BulkUserImport";
 import { supabase } from "@/integrations/supabase/client";
@@ -290,6 +290,10 @@ export default function UserManagement() {
           <div className="flex justify-between items-center">
             <CardTitle>User Management</CardTitle>
             <div className="flex items-center space-x-2">
+              <Button onClick={loadUsers} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sync Users
+              </Button>
               <BulkUserImport onUsersImported={handleBulkImport} />
               <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
                 <DialogTrigger asChild>
