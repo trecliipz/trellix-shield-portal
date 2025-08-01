@@ -290,37 +290,52 @@ export const AdminAgentManagement = () => {
     setNewPackage({ ...newPackage, file });
   };
 
-  const handleDeploy = (packageId: string, targetType: string) => {
+  const handleDeploy = async (packageId: string, targetType: string) => {
     const pkg = packages.find(p => p.id === packageId);
     if (!pkg) return;
 
-    const targetUsers = targetType === 'all' ? 250 : targetType === 'group' ? 50 : 25;
-    
-    const newDeployment: DeploymentJob = {
-      id: Date.now().toString(),
-      packageId,
-      packageName: `${pkg.name} (${pkg.platform})`,
-      targetUsers,
-      completedUsers: 0,
-      failedUsers: 0,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      progress: 0
-    };
+    try {
+      const { data, error } = await supabase.rpc('deploy_agent_to_users', {
+        p_agent_id: packageId,
+        p_deployment_target: targetType
+      });
 
-    setDeployments(prev => [newDeployment, ...prev]);
-    setShowDeployDialog(false);
+      if (error) throw error;
 
-    toast.success(`Deployment initiated for ${targetUsers} users`);
+      if (data && data.length > 0) {
+        const result = data[0];
+        toast.success(`${result.message} - Deployment ID: ${result.deployment_id}`);
+        
+        // Create a new deployment record for UI tracking
+        const newDeployment: DeploymentJob = {
+          id: result.deployment_id,
+          packageId,
+          packageName: `${pkg.name} (${pkg.platform})`,
+          targetUsers: result.target_count,
+          completedUsers: 0,
+          failedUsers: 0,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          progress: 0
+        };
 
-    // Simulate deployment progress
-    setTimeout(() => {
-      setDeployments(prev => prev.map(d => 
-        d.id === newDeployment.id 
-          ? { ...d, status: 'in_progress' as const }
-          : d
-      ));
-    }, 1000);
+        setDeployments(prev => [newDeployment, ...prev]);
+        
+        // Start tracking deployment progress
+        setTimeout(() => {
+          setDeployments(prev => prev.map(d => 
+            d.id === result.deployment_id 
+              ? { ...d, status: 'in_progress' as const, progress: 25 }
+              : d
+          ));
+        }, 2000);
+      }
+      
+      setShowDeployDialog(false);
+    } catch (error) {
+      console.error('Error deploying agent:', error);
+      toast.error("Failed to deploy agent package");
+    }
   };
 
   const handleBulkAssignAgent = async () => {

@@ -1365,6 +1365,18 @@ export type Database = {
         }
         Returns: string
       }
+      deploy_agent_to_users: {
+        Args: {
+          p_agent_id: string
+          p_deployment_target: string
+          p_target_user_ids?: string[]
+        }
+        Returns: {
+          deployment_id: string
+          target_count: number
+          message: string
+        }[]
+      }
       find_nearby_drivers: {
         Args: {
           p_pickup_lat: number
@@ -1378,6 +1390,18 @@ export type Database = {
           driver_rating: number
           vehicle_info: string
           current_location: Json
+        }[]
+      }
+      get_deployment_status: {
+        Args: { p_deployment_id: string }
+        Returns: {
+          deployment_id: string
+          status: string
+          total_users: number
+          completed_users: number
+          failed_users: number
+          progress_percentage: number
+          created_at: string
         }[]
       }
       get_driver_weekly_earnings: {
