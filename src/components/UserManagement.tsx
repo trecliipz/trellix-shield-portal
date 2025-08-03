@@ -48,10 +48,24 @@ export default function UserManagement() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.log('No authenticated user');
+        toast.error('Authentication required to load users');
         return;
       }
 
       console.log('Current user:', user.email);
+
+      // Check if user is admin
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile?.email?.includes('admin')) {
+        console.log('User is not admin');
+        toast.error('Admin access required');
+        return;
+      }
 
       // Load all users from admin_users table AND real registered users
       const [adminUsersResponse, profilesResponse, subscriptionsResponse] = await Promise.all([
@@ -208,7 +222,10 @@ export default function UserManagement() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        toast.error("Authentication required");
+        return;
+      }
 
       const tempPassword = Math.random().toString(36).slice(-8);
       

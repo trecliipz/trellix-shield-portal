@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -234,7 +233,10 @@ export const AdminAgentManagement = () => {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        toast.error("Authentication required");
+        return;
+      }
 
       const featuresArray = newPackage.features.split(',').map(f => f.trim()).filter(f => f);
 
@@ -543,7 +545,7 @@ export const AdminAgentManagement = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Dialog open={showDeployDialog} onOpenChange={setShowDeployDialog}>
+                          <Dialog>
                             <DialogTrigger asChild>
                               <Button 
                                 variant="outline" 
@@ -558,29 +560,27 @@ export const AdminAgentManagement = () => {
                               <DialogHeader>
                                 <DialogTitle>Deploy Agent Package</DialogTitle>
                               </DialogHeader>
-                              {selectedPackage && (
-                                <div className="space-y-4">
-                                  <div className="p-4 bg-muted rounded-lg">
-                                    <h4 className="font-medium">{selectedPackage.name}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                      Version {selectedPackage.version} • {selectedPackage.platform}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <Label>Deployment Target</Label>
-                                    <Select onValueChange={(value) => handleDeploy(selectedPackage.id, value)}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select deployment target" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="all">All Users (250 endpoints)</SelectItem>
-                                        <SelectItem value="group">Specific Group (50 endpoints)</SelectItem>
-                                        <SelectItem value="test">Test Group (25 endpoints)</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                              <div className="space-y-4">
+                                <div className="p-4 bg-muted rounded-lg">
+                                  <h4 className="font-medium">{pkg.name}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    Version {pkg.version} • {pkg.platform}
+                                  </p>
                                 </div>
-                              )}
+                                <div>
+                                  <Label>Deployment Target</Label>
+                                  <Select onValueChange={(value) => handleDeploy(pkg.id, value)}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select deployment target" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="all">All Users (250 endpoints)</SelectItem>
+                                      <SelectItem value="group">Specific Group (50 endpoints)</SelectItem>
+                                      <SelectItem value="test">Test Group (25 endpoints)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
                             </DialogContent>
                           </Dialog>
                           <Button variant="ghost" size="sm">
