@@ -44,8 +44,14 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
+      console.log('Loading users...');
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No authenticated user');
+        return;
+      }
+
+      console.log('Current user:', user.email);
 
       // Load all users from admin_users table AND real registered users
       const [adminUsersResponse, profilesResponse, subscriptionsResponse] = await Promise.all([
@@ -53,6 +59,10 @@ export default function UserManagement() {
         supabase.from('profiles').select('id, name, email, created_at').order('created_at', { ascending: false }),
         supabase.from('user_subscriptions').select('user_id, plan_type, status, trial_ends_at, max_downloads, downloads_used')
       ]);
+
+      console.log('Admin users response:', adminUsersResponse);
+      console.log('Profiles response:', profilesResponse);
+      console.log('Subscriptions response:', subscriptionsResponse);
 
       const allUsers: User[] = [];
 
@@ -70,6 +80,7 @@ export default function UserManagement() {
           source: 'admin_created' as const
         }));
         allUsers.push(...adminUsers);
+        console.log('Added admin users:', adminUsers.length);
       }
 
       // Add real registered users from profiles
@@ -93,15 +104,21 @@ export default function UserManagement() {
           };
         });
         allUsers.push(...registeredUsers);
+        console.log('Added registered users:', registeredUsers.length);
       }
 
+      console.log('Total users loaded:', allUsers.length);
       setUsers(allUsers);
+      toast.success(`Loaded ${allUsers.length} users successfully`);
     } catch (error) {
       console.error('Error loading users:', error);
+      toast.error('Failed to load users');
       // Fallback to localStorage for admin users only
       const savedUsers = localStorage.getItem('admin_users');
       if (savedUsers) {
-        setUsers(JSON.parse(savedUsers));
+        const localUsers = JSON.parse(savedUsers);
+        setUsers(localUsers);
+        console.log('Loaded from localStorage:', localUsers.length);
       }
     }
   };
