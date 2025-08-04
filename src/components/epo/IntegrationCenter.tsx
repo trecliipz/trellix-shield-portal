@@ -21,7 +21,12 @@ import {
   Trash2,
   Webhook,
   Key,
-  Plug
+  Plug,
+  Terminal,
+  Play,
+  FileText,
+  Users,
+  Activity
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -69,6 +74,26 @@ export const IntegrationCenter = () => {
     password: '',
     port: '8443'
   });
+
+  // API Commands state
+  const [selectedConnection, setSelectedConnection] = useState<string>('');
+  const [selectedCommand, setSelectedCommand] = useState<string>('');
+  const [commandParameters, setCommandParameters] = useState<string>('');
+  const [commandResults, setCommandResults] = useState<string>('');
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  const epoCommands = [
+    { value: 'system.find', label: 'Get Agent/System Info', description: 'Retrieve agent and system information' },
+    { value: 'policy.listPolicies', label: 'List Policies', description: 'Get all policies from EPO server' },
+    { value: 'policy.getPolicy', label: 'Get Policy Details', description: 'Get detailed policy information' },
+    { value: 'system.listUsers', label: 'List Users', description: 'Get all users from EPO server' },
+    { value: 'core.getVersion', label: 'Get EPO Version', description: 'Get EPO server version information' },
+    { value: 'system.clearTags', label: 'Clear Tags', description: 'Clear tags from systems' },
+    { value: 'system.applyTag', label: 'Apply Tag', description: 'Apply tags to systems' },
+    { value: 'clienttask.run', label: 'Run Client Task', description: 'Execute client task on endpoints' },
+    { value: 'repository.findPackages', label: 'Find Packages', description: 'Find packages in repository' },
+    { value: 'system.getLastAgent', label: 'Get Last Agent Communication', description: 'Get last agent communication time' }
+  ];
 
   const handleAddConnection = async () => {
     if (!newConnection.name || !newConnection.serverUrl || !newConnection.username) {
@@ -119,6 +144,93 @@ export const IntegrationCenter = () => {
     }, 2000);
   };
 
+  const handleExecuteCommand = async () => {
+    if (!selectedConnection || !selectedCommand) {
+      toast.error("Please select a connection and command");
+      return;
+    }
+
+    const connection = connections.find(c => c.id === selectedConnection);
+    if (!connection) {
+      toast.error("Selected connection not found");
+      return;
+    }
+
+    if (connection.status !== 'connected') {
+      toast.error("Connection must be active to execute commands");
+      return;
+    }
+
+    setIsExecuting(true);
+    toast.info("Executing EPO command...");
+
+    // Simulate API command execution
+    setTimeout(() => {
+      const mockResponses = {
+        'system.find': `[
+  {
+    "EPOBranchNode.AutoID": 3,
+    "EPOLeafNode.NodeName": "WORKSTATION-001",
+    "EPOComputerProperties.IPAddress": "192.168.1.100",
+    "EPOComputerProperties.OSType": "Windows 10 Pro",
+    "EPOComputerProperties.LastUpdate": "2024-08-03T14:30:00Z",
+    "EPOComputerProperties.AgentVersion": "5.10.0.123"
+  }
+]`,
+        'policy.listPolicies': `[
+  {
+    "productId": "ENDP_AM_1000",
+    "policyName": "Default Anti-Malware Policy",
+    "policyType": "Anti-Malware",
+    "assignedSystems": 45,
+    "lastModified": "2024-08-01T10:15:00Z"
+  },
+  {
+    "productId": "ENDP_FW_1000", 
+    "policyName": "Corporate Firewall Policy",
+    "policyType": "Firewall",
+    "assignedSystems": 52,
+    "lastModified": "2024-07-28T16:45:00Z"
+  }
+]`,
+        'system.listUsers': `[
+  {
+    "userId": 1,
+    "userName": "admin",
+    "fullName": "Administrator",
+    "email": "admin@company.com",
+    "lastLogin": "2024-08-03T09:30:00Z",
+    "permissions": ["SuperUser"]
+  }
+]`,
+        'core.getVersion': `{
+  "version": "5.10.0 Build 3201",
+  "build": "3201",
+  "buildDate": "2024-07-15",
+  "hotfixes": ["HF1234567", "HF1234568"]
+}`,
+        'repository.findPackages': `[
+  {
+    "packageId": 1001,
+    "packageName": "ENS 10.7.0 Windows",
+    "version": "10.7.0.1234",
+    "platform": "Windows",
+    "packageType": "Product Package",
+    "size": "256 MB",
+    "checkInDate": "2024-08-01T14:22:00Z"
+  }
+]`
+      };
+
+      const result = mockResponses[selectedCommand as keyof typeof mockResponses] || 
+        `Command executed successfully on ${connection.name}`;
+      
+      setCommandResults(result);
+      setIsExecuting(false);
+      toast.success("Command executed successfully");
+    }, 2000);
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       connected: { variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
@@ -156,6 +268,7 @@ export const IntegrationCenter = () => {
           <TabsTrigger value="connectors">Available Connectors</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="api">API Management</TabsTrigger>
+          <TabsTrigger value="commands">API Commands</TabsTrigger>
           <TabsTrigger value="sync">Synchronization</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -384,6 +497,142 @@ export const IntegrationCenter = () => {
                       <p className="text-sm text-muted-foreground">requests per day</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="commands" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Terminal className="h-5 w-5" />
+                EPO API Commands
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label>Select Connection</Label>
+                    <Select value={selectedConnection} onValueChange={setSelectedConnection}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose EPO connection" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {connections.filter(c => c.status === 'connected').map((connection) => (
+                          <SelectItem key={connection.id} value={connection.id}>
+                            {connection.name} ({connection.serverUrl})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Select Command</Label>
+                    <Select value={selectedCommand} onValueChange={setSelectedCommand}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose EPO command" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {epoCommands.map((command) => (
+                          <SelectItem key={command.value} value={command.value}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{command.label}</span>
+                              <span className="text-xs text-muted-foreground">{command.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Parameters (JSON)</Label>
+                    <textarea
+                      className="w-full h-24 p-3 border rounded-md font-mono text-sm"
+                      placeholder='{"searchText": "WORKSTATION-*", "maxResults": 10}'
+                      value={commandParameters}
+                      onChange={(e) => setCommandParameters(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Optional: Provide parameters in JSON format
+                    </p>
+                  </div>
+
+                  <Button 
+                    onClick={handleExecuteCommand} 
+                    className="w-full"
+                    disabled={isExecuting || !selectedConnection || !selectedCommand}
+                  >
+                    {isExecuting ? (
+                      <>
+                        <Activity className="h-4 w-4 mr-2 animate-spin" />
+                        Executing...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4 mr-2" />
+                        Execute Command
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Command Results
+                    </Label>
+                    <div className="bg-muted p-4 rounded-lg border">
+                      <pre className="text-sm overflow-auto max-h-96 whitespace-pre-wrap">
+                        {commandResults || 'No results yet. Execute a command to see output.'}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setCommandResults('')}
+                    >
+                      Clear Results
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (commandResults) {
+                          navigator.clipboard.writeText(commandResults);
+                          toast.success("Results copied to clipboard");
+                        }
+                      }}
+                    >
+                      Copy Results
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Available Commands
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {epoCommands.map((command) => (
+                    <div key={command.value} className="p-3 border rounded-lg">
+                      <h4 className="font-medium text-sm">{command.label}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">{command.description}</p>
+                      <Badge variant="outline" className="mt-2 text-xs">
+                        {command.value}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
               </div>
             </CardContent>
