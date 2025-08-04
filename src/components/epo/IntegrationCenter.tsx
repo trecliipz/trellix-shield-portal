@@ -18,7 +18,10 @@ import {
   Clock,
   Plus,
   Edit,
-  Trash2
+  Trash2,
+  Webhook,
+  Key,
+  Plug
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -150,6 +153,9 @@ export const IntegrationCenter = () => {
       <Tabs defaultValue="connections" className="space-y-6">
         <TabsList>
           <TabsTrigger value="connections">Connections</TabsTrigger>
+          <TabsTrigger value="connectors">Available Connectors</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+          <TabsTrigger value="api">API Management</TabsTrigger>
           <TabsTrigger value="sync">Synchronization</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -228,6 +234,157 @@ export const IntegrationCenter = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="connectors" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Connectors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Shield className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Trellix EPO</h3>
+                      <p className="text-sm text-muted-foreground">Enterprise security management</p>
+                    </div>
+                  </div>
+                  <Badge variant="default">Active</Badge>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="p-2 bg-secondary/10 rounded-lg">
+                      <Database className="h-6 w-6 text-secondary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">SIEM Integration</h3>
+                      <p className="text-sm text-muted-foreground">Security information management</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary">Available</Badge>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="p-2 bg-accent/10 rounded-lg">
+                      <Network className="h-6 w-6 text-accent" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Active Directory</h3>
+                      <p className="text-sm text-muted-foreground">User directory integration</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline">Coming Soon</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="webhooks" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                Webhook Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Active Webhooks</h3>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Webhook
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Threat Detection Events</h4>
+                      <p className="text-sm text-muted-foreground">https://api.company.com/webhooks/threats</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="default">Active</Badge>
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Policy Updates</h4>
+                      <p className="text-sm text-muted-foreground">https://api.company.com/webhooks/policies</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary">Inactive</Badge>
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="api" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                API Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-3">API Keys</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">Production API Key</h4>
+                        <p className="text-sm text-muted-foreground">sk-prod-xxxxxxxxxxxxxxxx</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="default">Active</Badge>
+                        <Button variant="outline" size="sm">Regenerate</Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">Development API Key</h4>
+                        <p className="text-sm text-muted-foreground">sk-dev-xxxxxxxxxxxxxxxx</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary">Test</Badge>
+                        <Button variant="outline" size="sm">Regenerate</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium mb-3">Rate Limits</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-3 border rounded-lg">
+                      <h4 className="font-medium">Current Usage</h4>
+                      <p className="text-2xl font-bold">1,247</p>
+                      <p className="text-sm text-muted-foreground">requests today</p>
+                    </div>
+                    <div className="p-3 border rounded-lg">
+                      <h4 className="font-medium">Rate Limit</h4>
+                      <p className="text-2xl font-bold">10,000</p>
+                      <p className="text-sm text-muted-foreground">requests per day</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
