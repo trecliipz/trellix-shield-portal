@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit, Trash2, Upload, Package } from "lucide-react";
+import { Plus, Edit, Trash2, Upload, Package, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Agent {
@@ -195,6 +195,23 @@ export const AgentManagement = () => {
       title: "Success",
       description: "Agent file updated successfully",
     });
+  };
+
+  const handleDeployAgent = (agent: Agent) => {
+    if (confirm(`Are you sure you want to deploy ${agent.name} v${agent.version}?`)) {
+      toast({
+        title: "Deployment Started",
+        description: `Deploying ${agent.name} to selected endpoints...`,
+      });
+      
+      // Simulate deployment process
+      setTimeout(() => {
+        toast({
+          title: "Deployment Complete",
+          description: `${agent.name} has been successfully deployed.`,
+        });
+      }, 2000);
+    }
   };
 
   const stats = {
@@ -432,6 +449,15 @@ export const AgentManagement = () => {
                           </div>
                         </DialogContent>
                       </Dialog>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDeployAgent(agent)}
+                        className="text-green-600 hover:text-green-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950"
+                        title="Deploy"
+                      >
+                        <Rocket className="h-4 w-4" />
+                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
