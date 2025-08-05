@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Plus, Edit, Trash2, Upload, Package, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DeploymentModal } from "@/components/DeploymentModal";
 
 interface Agent {
   id: string;
@@ -28,6 +29,7 @@ export const AgentManagement = () => {
   const [isAddingAgent, setIsAddingAgent] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [uploadingAgent, setUploadingAgent] = useState<Agent | null>(null);
+  const [deployingAgent, setDeployingAgent] = useState<Agent | null>(null);
   const [newAgent, setNewAgent] = useState({
     name: '',
     version: '',
@@ -198,20 +200,7 @@ export const AgentManagement = () => {
   };
 
   const handleDeployAgent = (agent: Agent) => {
-    if (confirm(`Are you sure you want to deploy ${agent.name} v${agent.version}?`)) {
-      toast({
-        title: "Deployment Started",
-        description: `Deploying ${agent.name} to selected endpoints...`,
-      });
-      
-      // Simulate deployment process
-      setTimeout(() => {
-        toast({
-          title: "Deployment Complete",
-          description: `${agent.name} has been successfully deployed.`,
-        });
-      }, 2000);
-    }
+    setDeployingAgent(agent);
   };
 
   const stats = {
@@ -474,6 +463,15 @@ export const AgentManagement = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Deployment Modal */}
+      {deployingAgent && (
+        <DeploymentModal
+          open={!!deployingAgent}
+          onOpenChange={(open) => !open && setDeployingAgent(null)}
+          agent={deployingAgent}
+        />
+      )}
     </div>
   );
 };

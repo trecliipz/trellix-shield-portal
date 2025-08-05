@@ -797,8 +797,11 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          department: string | null
           email: string | null
           id: string
+          is_online: boolean | null
+          last_seen: string | null
           name: string
           phone: string | null
           photo: string | null
@@ -809,8 +812,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           email?: string | null
           id: string
+          is_online?: boolean | null
+          last_seen?: string | null
           name?: string
           phone?: string | null
           photo?: string | null
@@ -821,8 +827,11 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           email?: string | null
           id?: string
+          is_online?: boolean | null
+          last_seen?: string | null
           name?: string
           phone?: string | null
           photo?: string | null
