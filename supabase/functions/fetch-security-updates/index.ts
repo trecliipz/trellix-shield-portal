@@ -44,47 +44,74 @@ serve(async (req) => {
     console.log('Starting security updates fetch...');
     const startTime = Date.now();
 
-    // Fetch real security updates focusing on DAT tab
-    const trellixUrl = 'https://www.trellix.com/downloads/security-updates/?selectedTab=dat';
+    // Fetch from all specified Trellix URLs
+    const trellixUrls = [
+      'https://www.trellix.com/downloads/security-updates/',
+      'https://www.trellix.com/downloads/security-updates/?selectedTab=engines', 
+      'https://www.trellix.com/downloads/security-updates/?selectedTab=updates'
+    ];
     
     let allUpdates: SecurityUpdate[] = [];
     
-    try {
-      console.log(`Fetching ${trellixUrl}...`);
-      const response = await fetch(trellixUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Security-Updates-Bot/1.0)',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate'
+    // Fetch from each URL sequentially
+    for (const url of trellixUrls) {
+      try {
+        console.log(`Fetching from ${url}...`);
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          redirect: 'follow'
+        });
+        
+        if (!response.ok) {
+          console.warn(`Failed to fetch ${url}: ${response.status}`);
+          continue;
         }
-      });
-      
-      if (!response.ok) {
-        console.warn(`Failed to fetch ${trellixUrl}: ${response.status}`);
-        throw new Error(`HTTP ${response.status}`);
+        
+        const html = await response.text();
+        console.log(`Successfully fetched ${url}, parsing content...`);
+        
+        // Parse the HTML to extract security updates
+        const parsedUpdates = await parseSecurityUpdates(html);
+        console.log(`Parsed ${parsedUpdates.length} updates from ${url}`);
+        
+        // Merge updates, avoiding duplicates
+        for (const update of parsedUpdates) {
+          const exists = allUpdates.some(existing => 
+            existing.name === update.name && 
+            existing.version === update.version && 
+            existing.platform === update.platform
+          );
+          if (!exists) {
+            allUpdates.push(update);
+          }
+        }
+        
+      } catch (error) {
+        console.error(`Error fetching from ${url}:`, error);
+        continue;
       }
+    }
       
-      const html = await response.text();
-      console.log('Successfully fetched DAT updates page, parsing content...');
-      
-      // Parse the HTML to extract V3 DAT and MEDDAT updates
-      const parsedUpdates = await parseSecurityUpdates(html);
-      console.log(`Parsed ${parsedUpdates.length} updates from DAT tab`);
-      
-      allUpdates = parsedUpdates;
-      
-      // If no updates were parsed from the real data, fall back to mock data
-      if (allUpdates.length === 0) {
-        console.log('No updates parsed from real data, falling back to enhanced mock data...');
-        allUpdates = getMockUpdates();
-      }
+    // Always ensure we have some updates for demo purposes
+    if (allUpdates.length === 0) {
+      console.log('No updates parsed from real data, falling back to enhanced mock data...');
+      allUpdates = getMockUpdates();
+    } else {
+      console.log(`Successfully fetched ${allUpdates.length} total updates from all Trellix URLs`);
+    }
       
     } catch (error) {
       console.error('Error fetching from Trellix:', error);
       console.log('Falling back to enhanced mock data...');
       
-      // Enhanced mock data with V3 DAT and MEDDAT updates
+    // Enhanced mock data with comprehensive security updates including DAT/AMcore
       allUpdates = getMockUpdates();
     }
 
@@ -122,20 +149,29 @@ serve(async (req) => {
    }
  });
 
-// Enhanced parsing for V3 DAT and MEDDAT updates
+// Enhanced parsing for security updates from Trellix pages
 async function parseSecurityUpdates(html: string): Promise<SecurityUpdate[]> {
   const updates: SecurityUpdate[] = [];
   
-  console.log('Starting enhanced parsing for V3 DAT and MEDDAT updates');
+  console.log('Starting enhanced parsing for DAT, AMcore, and engine updates');
   
-  // V3 DAT specific patterns
-  const v3DatPatterns = [
-    // V3 DAT with version number
+  // Enhanced patterns for various update types
+  const datPatterns = [
+    // Standard DAT patterns
+    /avvdat-(\d{5})\.zip/gi,
+    /DAT.*?(\d{5})/gi,
+    /virus.*?definition.*?(\d{5})/gi,
+    // V3 DAT patterns
     /V3.*?(\d{4}).*?dat/gi,
-    // V3 with file extension
     /V3_(\d{4})dat\.exe/gi,
-    // Version references
     /Version.*?(\d{4}).*?V3/gi
+  ];
+  
+  // AMcore engine patterns
+  const amcorePatterns = [
+    /AMcore.*?(\d+\.\d+\.\d+)/gi,
+    /engine.*?(\d+\.\d+\.\d+)/gi,
+    /scanning.*?engine.*?(\d+\.\d+)/gi
   ];
   
   // MEDDAT specific patterns
@@ -145,41 +181,116 @@ async function parseSecurityUpdates(html: string): Promise<SecurityUpdate[]> {
     /Healthcare.*?(\d+\.\d+\.\d+)/gi
   ];
   
-  // Try V3 DAT patterns
-  for (const pattern of v3DatPatterns) {
+  // Exploit prevention patterns
+  const exploitPatterns = [
+    /Exploit.*?Prevention.*?(\d{4}\.\d{2}\.\d{2})/gi,
+    /EP.*?Content.*?(\d{4}\.\d{2}\.\d{2})/gi
+  ];
+  
+  // TIE intelligence patterns
+  const tiePatterns = [
+    /TIE.*?(\d+\.\d+\.\d+)/gi,
+    /Threat.*?Intelligence.*?(\d+\.\d+)/gi
+  ];
+  
+  // Process DAT patterns
+  for (const pattern of datPatterns) {
     let match;
     while ((match = pattern.exec(html)) !== null) {
       const version = match[1];
-      if (version && version.length === 4) {
+      if (version) {
+        if (version.length === 5) {
+          // Standard DAT file
+          updates.push({
+            name: 'Standard DAT Files',
+            type: 'dat',
+            platform: 'All Platforms',
+            version: version,
+            release_date: new Date().toISOString(),
+            file_size: 167000000 + Math.random() * 10000000,
+            file_name: `avvdat-${version}.zip`,
+            sha256: generateMockSHA256(),
+            description: 'Traditional DAT files containing virus definitions and signatures',
+            is_recommended: true,
+            download_url: `https://update.nai.com/Products/CommonUpdater/avvdat-${version}.zip`,
+            update_category: 'endpoint',
+            criticality_level: 'high',
+            target_systems: ['Endpoint Security', 'File & Removable Media Protection'],
+            dependencies: [],
+            compatibility_info: {
+              minimum_version: '1.0.0',
+              supported_platforms: ['Windows', 'Linux', 'Mac'],
+              last_supported_version: null
+            },
+            threat_coverage: ['Viruses', 'Trojans', 'Malware', 'Spyware'],
+            deployment_notes: 'Standard deployment procedures apply.'
+          });
+        } else if (version.length === 4) {
+          // V3 DAT file
+          updates.push({
+            name: 'V3 Virus Definition Files',
+            type: 'datv3',
+            platform: 'Windows',
+            version: version,
+            release_date: new Date().toISOString(),
+            file_size: 189000000 + Math.random() * 10000000,
+            file_name: `V3_${version}dat.exe`,
+            sha256: generateMockSHA256(),
+            description: 'Next-generation V3 virus definition files with enhanced detection capabilities',
+            is_recommended: true,
+            download_url: `https://update.nai.com/Products/CommonUpdater/V3_${version}dat.exe`,
+            update_category: 'endpoint',
+            criticality_level: 'high',
+            target_systems: ['Next-Gen Endpoint', 'Advanced Threat Protection'],
+            dependencies: ['Security Engine 5.7.0+'],
+            compatibility_info: {
+              minimum_version: '5.7.0',
+              supported_platforms: ['Windows'],
+              last_supported_version: null
+            },
+            threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
+            deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
+          });
+        }
+      }
+    }
+  }
+  
+  // Process AMcore engine patterns
+  for (const pattern of amcorePatterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null) {
+      const version = match[1];
+      if (version) {
         updates.push({
-          name: 'V3 Virus Definition Files',
-          type: 'datv3',
-          platform: 'Windows',
+          name: 'AMcore Scanning Engine',
+          type: 'engine',
+          platform: 'Multi-Platform',
           version: version,
           release_date: new Date().toISOString(),
-          file_size: 189000000 + Math.random() * 10000000,
-          file_name: `V3_${version}dat.exe`,
+          file_size: 245000000 + Math.random() * 20000000,
+          file_name: `AMCore_${version.replace(/\./g, '_')}.zip`,
           sha256: generateMockSHA256(),
-          description: 'Next-generation V3 virus definition files with enhanced detection capabilities',
+          description: 'Advanced malware core scanning engine with real-time protection capabilities',
           is_recommended: true,
-          download_url: `https://update.nai.com/Products/CommonUpdater/V3_${version}dat.exe`,
-          update_category: 'endpoint',
-          criticality_level: 'high',
-          target_systems: ['Next-Gen Endpoint', 'Advanced Threat Protection'],
-          dependencies: ['Security Engine 5.7.0+'],
+          download_url: `https://update.nai.com/Products/Engines/AMCore_${version.replace(/\./g, '_')}.zip`,
+          update_category: 'engine',
+          criticality_level: 'critical',
+          target_systems: ['Endpoint Protection', 'Gateway Security', 'Mail Security'],
+          dependencies: ['Framework 10.0+'],
           compatibility_info: {
-            minimum_version: '5.7.0',
-            supported_platforms: ['Windows'],
+            minimum_version: '10.0.0',
+            supported_platforms: ['Windows', 'Linux'],
             last_supported_version: null
           },
-          threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
-          deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
+          threat_coverage: ['Real-time Scanning', 'Behavioral Analysis', 'Heuristic Detection'],
+          deployment_notes: 'Engine update requires service restart. Schedule during maintenance window.'
         });
       }
     }
   }
   
-  // Try MEDDAT patterns
+  // Process MEDDAT patterns
   for (const pattern of meddatPatterns) {
     let match;
     while ((match = pattern.exec(html)) !== null) {
@@ -208,6 +319,74 @@ async function parseSecurityUpdates(html: string): Promise<SecurityUpdate[]> {
           },
           threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats'],
           deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
+        });
+      }
+    }
+  }
+  
+  // Process exploit prevention patterns
+  for (const pattern of exploitPatterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null) {
+      const version = match[1];
+      if (version) {
+        updates.push({
+          name: 'Exploit Prevention Content',
+          type: 'exploit_prevention',
+          platform: 'Windows',
+          version: version,
+          release_date: new Date().toISOString(),
+          file_size: 156000000 + Math.random() * 10000000,
+          file_name: `EPContent_${version}.zip`,
+          sha256: generateMockSHA256(),
+          description: 'Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields',
+          is_recommended: true,
+          download_url: `https://update.nai.com/Products/EP/EPContent_${version}.zip`,
+          update_category: 'protection',
+          criticality_level: 'critical',
+          target_systems: ['Exploit Prevention Module', 'Host IPS', 'Behavioral Analytics'],
+          dependencies: ['Exploit Prevention Engine 2.0.0+'],
+          compatibility_info: {
+            minimum_version: '2.0.0',
+            supported_platforms: ['Windows', 'Linux'],
+            last_supported_version: null
+          },
+          threat_coverage: ['Zero-day Exploits', 'Memory Corruption', 'ROP/JOP Attacks', 'Heap Spray Protection'],
+          deployment_notes: 'Critical security update. Deploy immediately during maintenance window.'
+        });
+      }
+    }
+  }
+  
+  // Process TIE intelligence patterns
+  for (const pattern of tiePatterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null) {
+      const version = match[1];
+      if (version) {
+        updates.push({
+          name: 'TIE Intelligence Updates',
+          type: 'tie',
+          platform: 'Multi-Platform',
+          version: version,
+          release_date: new Date().toISOString(),
+          file_size: 98000000 + Math.random() * 10000000,
+          file_name: `TIEContent_${version}.zip`,
+          sha256: generateMockSHA256(),
+          description: 'Global threat intelligence feeds with real-time reputation data and file reputation scoring',
+          is_recommended: true,
+          download_url: `https://update.nai.com/Products/TIE/TIEContent_${version}.zip`,
+          update_category: 'intelligence',
+          criticality_level: 'high',
+          target_systems: ['TIE Server', 'Gateway Security', 'Endpoint Protection'],
+          dependencies: ['TIE Server 3.0.0+'],
+          compatibility_info: {
+            minimum_version: '3.0.0',
+            supported_platforms: ['Windows', 'Linux'],
+            last_supported_version: null
+          },
+          threat_coverage: ['File Reputation', 'Certificate Reputation', 'Web Reputation', 'Malware Intelligence'],
+          deployment_notes: 'Continuous updates to global threat intelligence database. No restart required.'
         });
       }
     }
