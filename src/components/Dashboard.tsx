@@ -13,6 +13,7 @@ import { EPOManagement } from "@/components/EPOManagement";
 import { AdminMessages } from "@/components/AdminMessages";
 import { SecurityCompliance } from "@/components/SecurityCompliance";
 import { AuditLog } from "@/components/AuditLog";
+import { ErrorLogs } from "@/components/ErrorLogs";
 import UserProfile from "@/components/UserProfile";
 
 interface DashboardProps {
@@ -173,6 +174,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Messages</TabsTrigger>
             <TabsTrigger value="security" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Security</TabsTrigger>
             <TabsTrigger value="audit" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Audit Log</TabsTrigger>
+            <TabsTrigger value="errors" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Error Logs</TabsTrigger>
             <TabsTrigger value="analytics" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Analytics</TabsTrigger>
           </TabsList>
 
@@ -238,6 +240,10 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
           <TabsContent value="audit">
             <AuditLog />
+          </TabsContent>
+
+          <TabsContent value="errors">
+            <ErrorLogs />
           </TabsContent>
 
           <TabsContent value="analytics">

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit, Trash2, Upload, Package, Rocket } from "lucide-react";
+import { Plus, Edit, Trash2, Download, Package, List, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DeploymentModal } from "@/components/DeploymentModal";
 
@@ -28,8 +28,8 @@ export const AgentManagement = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
-  const [uploadingAgent, setUploadingAgent] = useState<Agent | null>(null);
   const [deployingAgent, setDeployingAgent] = useState<Agent | null>(null);
+  const [downloadingAgents, setDownloadingAgents] = useState<Set<string>>(new Set());
   const [newAgent, setNewAgent] = useState({
     name: '',
     version: '',
@@ -37,7 +37,7 @@ export const AgentManagement = () => {
     features: '',
     file: null as File | null
   });
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -171,32 +171,36 @@ export const AgentManagement = () => {
     });
   };
 
-  const handleUploadAgent = (agent: Agent) => {
-    if (!uploadFile) {
+  const handleDownloadAgent = async (agent: Agent) => {
+    setDownloadingAgents(prev => new Set(prev).add(agent.id));
+    
+    try {
+      // Simulate download process
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       toast({
-        title: "Error",
-        description: "Please select a file to upload",
+        title: "Download Complete",
+        description: `${agent.fileName} has been downloaded successfully.`,
+      });
+      
+      // Update download count
+      const updatedAgents = agents.map(a => 
+        a.id === agent.id ? { ...a, downloads: a.downloads + 1 } : a
+      );
+      saveAgents(updatedAgents);
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the agent. Please try again.",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setDownloadingAgents(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(agent.id);
+        return newSet;
+      });
     }
-
-    const updatedAgent = {
-      ...agent,
-      size: `${Math.round(uploadFile.size / (1024 * 1024))} MB`,
-      fileName: uploadFile.name,
-      uploadDate: new Date().toISOString().split('T')[0]
-    };
-
-    const updatedAgents = agents.map(a => a.id === agent.id ? updatedAgent : a);
-    saveAgents(updatedAgents);
-    setUploadingAgent(null);
-    setUploadFile(null);
-    
-    toast({
-      title: "Success",
-      description: "Agent file updated successfully",
-    });
   };
 
   const handleDeployAgent = (agent: Agent) => {
@@ -234,7 +238,7 @@ export const AgentManagement = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
-            <Upload className="h-4 w-4 text-muted-foreground" />
+            <Download className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalDownloads}</div>
@@ -352,9 +356,16 @@ export const AgentManagement = () => {
                   <TableCell>{agent.uploadDate}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
+                      {/* Edit Button */}
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setEditingAgent(agent)}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setEditingAgent(agent)}
+                            className="hover:bg-trellix-orange/10 hover:border-trellix-orange/50 hover:text-trellix-orange transition-all duration-200"
+                            title="Edit Agent"
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -399,59 +410,48 @@ export const AgentManagement = () => {
                                   })}
                                 />
                               </div>
-                              <Button onClick={() => handleEditAgent(editingAgent)} className="w-full">
+                              <Button onClick={() => handleEditAgent(editingAgent)} className="w-full glow-button">
                                 Update Agent
                               </Button>
                             </div>
                           )}
                         </DialogContent>
                       </Dialog>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setUploadingAgent(agent)}>
-                            <Upload className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Upload New File for: {uploadingAgent?.name}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="upload-file">Select New Agent File</Label>
-                              <Input
-                                id="upload-file"
-                                type="file"
-                                accept=".msi,.exe,.zip"
-                                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                              />
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Current file: {uploadingAgent?.fileName}
-                            </p>
-                            <Button 
-                              onClick={() => uploadingAgent && handleUploadAgent(uploadingAgent)} 
-                              className="w-full"
-                            >
-                              Update Agent File
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      
+                      {/* Download Button */}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDownloadAgent(agent)}
+                        disabled={downloadingAgents.has(agent.id)}
+                        className="hover:bg-blue-500/10 hover:border-blue-500/50 hover:text-blue-400 transition-all duration-200"
+                        title="Download Agent"
+                      >
+                        {downloadingAgents.has(agent.id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                      </Button>
+                      
+                      {/* Deploy Button */}
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => handleDeployAgent(agent)}
-                        className="text-green-600 hover:text-green-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950"
-                        title="Deploy"
+                        className="hover:bg-trellix-orange/10 hover:border-trellix-orange/50 hover:text-trellix-orange transition-all duration-200"
+                        title="Deploy Agent"
                       >
-                        <Rocket className="h-4 w-4" />
+                        <List className="h-4 w-4" />
                       </Button>
+                      
+                      {/* Delete Button */}
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => handleDeleteAgent(agent.id)}
-                        className="text-destructive hover:text-destructive"
+                        className="hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive transition-all duration-200"
+                        title="Delete Agent"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
