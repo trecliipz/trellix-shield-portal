@@ -11,6 +11,7 @@ import { Users, Search, UserCheck, UserX, Shield, UserPlus, Settings, Activity, 
 import { toast } from "sonner";
 import { BulkUserImport } from "@/components/BulkUserImport";
 import { supabase } from "@/integrations/supabase/client";
+import { useErrorHandling } from "@/hooks/useErrorHandling";
 
 interface User {
   id: string;
@@ -37,103 +38,143 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "user" as 'admin' | 'user' });
+  const [isLoading, setIsLoading] = useState(false);
+  const { handleError, retryOperation } = useErrorHandling();
 
   useEffect(() => {
     loadUsers();
   }, []);
 
   const loadUsers = async () => {
+    setIsLoading(true);
     try {
-      console.log('Loading users...');
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log('No authenticated user');
-        toast.error('Authentication required to load users');
-        return;
-      }
+      await retryOperation(async () => {
+        console.log('Loading users...');
+        
+        // Check authentication
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          throw new Error('Failed to load user data from API');
+        }
+        
+        if (!user) {
+          throw new Error('Authentication required to load users');
+        }
 
-      console.log('Current user:', user.email);
+        console.log('Current user:', user.email);
 
-      // Check if user is admin
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', user.id)
-        .single();
+        // Check if user is admin with retry logic
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', user.id)
+          .maybeSingle();
 
-      if (profileError || !profile?.email?.includes('admin')) {
-        console.log('User is not admin');
-        toast.error('Admin access required');
-        return;
-      }
+        if (profileError) {
+          console.error('Profile error:', profileError);
+          throw new Error('database connection lost');
+        }
 
-      // Load all users from admin_users table AND real registered users
-      const [adminUsersResponse, profilesResponse, subscriptionsResponse] = await Promise.all([
-        supabase.from('admin_users').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('id, name, email, created_at').order('created_at', { ascending: false }),
-        supabase.from('user_subscriptions').select('user_id, plan_type, status, trial_ends_at, max_downloads, downloads_used')
-      ]);
+        if (!profile?.email?.includes('admin')) {
+          throw new Error('Admin access required');
+        }
 
-      console.log('Admin users response:', adminUsersResponse);
-      console.log('Profiles response:', profilesResponse);
-      console.log('Subscriptions response:', subscriptionsResponse);
+        // Load all users from admin_users table AND real registered users with error handling
+        const [adminUsersResponse, profilesResponse, subscriptionsResponse] = await Promise.all([
+          supabase.from('admin_users').select('*').order('created_at', { ascending: false }),
+          supabase.from('profiles').select('id, name, email, created_at').order('created_at', { ascending: false }),
+          supabase.from('user_subscriptions').select('user_id, plan_type, status, trial_ends_at, max_downloads, downloads_used')
+        ]);
 
-      const allUsers: User[] = [];
+        // Check for database errors
+        if (adminUsersResponse.error) {
+          console.error('Admin users error:', adminUsersResponse.error);
+          throw new Error('database connection lost');
+        }
+        
+        if (profilesResponse.error) {
+          console.error('Profiles error:', profilesResponse.error);
+          throw new Error('database connection lost');
+        }
+        
+        if (subscriptionsResponse.error) {
+          console.error('Subscriptions error:', subscriptionsResponse.error);
+          // Don't fail for subscriptions errors, just log
+          console.warn('Could not load subscription data');
+        }
 
-      // Add admin-created users
-      if (adminUsersResponse.data) {
-        const adminUsers = adminUsersResponse.data.map(dbUser => ({
-          id: dbUser.id,
-          email: dbUser.email,
-          name: dbUser.name,
-          role: dbUser.role as 'admin' | 'user',
-          status: 'active' as const,
-          registrationDate: new Date(dbUser.created_at).toISOString().split('T')[0],
-          lastLogin: 'Unknown',
-          tempPassword: dbUser.temp_password,
-          source: 'admin_created' as const
-        }));
-        allUsers.push(...adminUsers);
-        console.log('Added admin users:', adminUsers.length);
-      }
+        console.log('Admin users response:', adminUsersResponse);
+        console.log('Profiles response:', profilesResponse);
+        console.log('Subscriptions response:', subscriptionsResponse);
 
-      // Add real registered users from profiles
-      if (profilesResponse.data) {
-        const registeredUsers = profilesResponse.data.map(profile => {
-          const subscription = subscriptionsResponse.data?.find(sub => sub.user_id === profile.id);
-          return {
-            id: profile.id,
-            email: profile.email || 'unknown@email.com',
-            name: profile.name || 'Unknown User',
-            role: profile.email?.includes('admin') ? 'admin' as const : 'user' as const,
+        const allUsers: User[] = [];
+
+        // Add admin-created users
+        if (adminUsersResponse.data) {
+          const adminUsers = adminUsersResponse.data.map(dbUser => ({
+            id: dbUser.id,
+            email: dbUser.email,
+            name: dbUser.name,
+            role: dbUser.role as 'admin' | 'user',
             status: 'active' as const,
-            registrationDate: new Date(profile.created_at).toISOString().split('T')[0],
+            registrationDate: new Date(dbUser.created_at).toISOString().split('T')[0],
             lastLogin: 'Unknown',
-            source: 'registered' as const,
-            planType: subscription?.plan_type,
-            subscriptionStatus: subscription?.status,
-            trialEndsAt: subscription?.trial_ends_at,
-            downloadsUsed: subscription?.downloads_used,
-            maxDownloads: subscription?.max_downloads
-          };
-        });
-        allUsers.push(...registeredUsers);
-        console.log('Added registered users:', registeredUsers.length);
-      }
+            tempPassword: dbUser.temp_password,
+            source: 'admin_created' as const
+          }));
+          allUsers.push(...adminUsers);
+          console.log('Added admin users:', adminUsers.length);
+        }
 
-      console.log('Total users loaded:', allUsers.length);
-      setUsers(allUsers);
-      toast.success(`Loaded ${allUsers.length} users successfully`);
+        // Add real registered users from profiles
+        if (profilesResponse.data) {
+          const registeredUsers = profilesResponse.data.map(profile => {
+            const subscription = subscriptionsResponse.data?.find(sub => sub.user_id === profile.id);
+            return {
+              id: profile.id,
+              email: profile.email || 'unknown@email.com',
+              name: profile.name || 'Unknown User',
+              role: profile.email?.includes('admin') ? 'admin' as const : 'user' as const,
+              status: 'active' as const,
+              registrationDate: new Date(profile.created_at).toISOString().split('T')[0],
+              lastLogin: 'Unknown',
+              source: 'registered' as const,
+              planType: subscription?.plan_type,
+              subscriptionStatus: subscription?.status,
+              trialEndsAt: subscription?.trial_ends_at,
+              downloadsUsed: subscription?.downloads_used,
+              maxDownloads: subscription?.max_downloads
+            };
+          });
+          allUsers.push(...registeredUsers);
+          console.log('Added registered users:', registeredUsers.length);
+        }
+
+        console.log('Total users loaded:', allUsers.length);
+        setUsers(allUsers);
+        toast.success(`Synced ${allUsers.length} users from database`);
+        
+        return allUsers;
+      });
     } catch (error) {
-      console.error('Error loading users:', error);
-      toast.error('Failed to load users');
+      console.error('Error loading users after retries:', error);
+      handleError(error);
+      
       // Fallback to localStorage for admin users only
       const savedUsers = localStorage.getItem('admin_users');
       if (savedUsers) {
-        const localUsers = JSON.parse(savedUsers);
-        setUsers(localUsers);
-        console.log('Loaded from localStorage:', localUsers.length);
+        try {
+          const localUsers = JSON.parse(savedUsers);
+          setUsers(localUsers);
+          console.log('Loaded from localStorage fallback:', localUsers.length);
+          toast.info(`Loaded ${localUsers.length} users from local storage (offline mode)`);
+        } catch (parseError) {
+          console.error('Error parsing localStorage users:', parseError);
+          toast.error('Failed to load users from any source');
+        }
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -324,9 +365,9 @@ export default function UserManagement() {
           <div className="flex justify-between items-center">
             <CardTitle>User Management</CardTitle>
             <div className="flex items-center space-x-2">
-              <Button onClick={loadUsers} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Sync Users
+              <Button onClick={loadUsers} variant="outline" disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Syncing...' : 'Sync Users'}
               </Button>
               <BulkUserImport onUsersImported={handleBulkImport} />
               <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
