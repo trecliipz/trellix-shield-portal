@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5';
 
@@ -106,14 +105,6 @@ serve(async (req) => {
     } else {
       console.log(`Successfully fetched ${allUpdates.length} total updates from all Trellix URLs`);
     }
-      
-    } catch (error) {
-      console.error('Error fetching from Trellix:', error);
-      console.log('Falling back to enhanced mock data...');
-      
-    // Enhanced mock data with comprehensive security updates including DAT/AMcore
-      allUpdates = getMockUpdates();
-    }
 
     // Process and store the updates
     return await processUpdates(supabase, allUpdates, startTime);
@@ -145,9 +136,9 @@ serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-     );
-   }
- });
+    );
+  }
+});
 
 // Enhanced parsing for security updates from Trellix pages
 async function parseSecurityUpdates(html: string): Promise<SecurityUpdate[]> {
