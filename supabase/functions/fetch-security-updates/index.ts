@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5';
 
@@ -15,90 +16,60 @@ interface SecurityUpdate {
   file_size: number;
   file_name: string;
   sha256?: string;
-  description: string;
+  description?: string;
   is_recommended: boolean;
-  download_url?: string;
-  changelog?: string;
   update_category?: string;
   criticality_level?: string;
-  target_systems?: any;
-  dependencies?: any;
-  compatibility_info?: any;
-  threat_coverage?: string[];
-  deployment_notes?: string;
+  download_url?: string;
+  changelog?: string;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     console.log('Starting security updates fetch...');
     const startTime = Date.now();
+    
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    // Fetch from all specified Trellix URLs
-    const trellixUrls = [
+    const urls = [
       'https://www.trellix.com/downloads/security-updates/',
       'https://www.trellix.com/downloads/security-updates/?selectedTab=engines', 
       'https://www.trellix.com/downloads/security-updates/?selectedTab=updates'
     ];
-    
+
     let allUpdates: SecurityUpdate[] = [];
-    
-    // Fetch from each URL sequentially
-    for (const url of trellixUrls) {
+
+    // Fetch from all three URLs
+    for (const url of urls) {
       try {
         console.log(`Fetching from ${url}...`);
         const response = await fetch(url, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-          },
-          redirect: 'follow'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
         });
         
-        if (!response.ok) {
-          console.warn(`Failed to fetch ${url}: ${response.status}`);
-          continue;
+        if (response.ok) {
+          const html = await response.text();
+          const updates = await parseSecurityUpdates(html, url);
+          allUpdates.push(...updates);
+          console.log(`Parsed ${updates.length} updates from ${url}`);
+        } else {
+          console.error(`Failed to fetch ${url}: ${response.status}`);
         }
-        
-        const html = await response.text();
-        console.log(`Successfully fetched ${url}, parsing content...`);
-        
-        // Parse the HTML to extract security updates
-        const parsedUpdates = await parseSecurityUpdates(html);
-        console.log(`Parsed ${parsedUpdates.length} updates from ${url}`);
-        
-        // Merge updates, avoiding duplicates
-        for (const update of parsedUpdates) {
-          const exists = allUpdates.some(existing => 
-            existing.name === update.name && 
-            existing.version === update.version && 
-            existing.platform === update.platform
-          );
-          if (!exists) {
-            allUpdates.push(update);
-          }
-        }
-        
       } catch (error) {
         console.error(`Error fetching from ${url}:`, error);
-        continue;
       }
     }
-      
-    // Always ensure we have some updates for demo purposes
+
+    // If no updates found from real data, use enhanced mock data
     if (allUpdates.length === 0) {
       console.log('No updates parsed from real data, falling back to enhanced mock data...');
       allUpdates = getMockUpdates();
@@ -111,27 +82,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in fetch-security-updates function:', error);
-    
-    // Log the error
-    try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      
-      await supabase
-        .from('update_logs')
-        .insert([{
-          updates_found: 0,
-          new_updates: 0,
-          status: 'failed',
-          error_message: error.message
-        }]);
-    } catch (logError) {
-      console.error('Failed to log error:', logError);
-    }
-
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message 
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -141,590 +96,292 @@ serve(async (req) => {
 });
 
 // Enhanced parsing for security updates from Trellix pages
-async function parseSecurityUpdates(html: string): Promise<SecurityUpdate[]> {
+async function parseSecurityUpdates(html: string, sourceUrl: string): Promise<SecurityUpdate[]> {
   const updates: SecurityUpdate[] = [];
   
-  console.log('Starting enhanced parsing for DAT, AMcore, and engine updates');
-  
-  // Enhanced patterns for various update types
-  const datPatterns = [
-    // Standard DAT patterns
-    /avvdat-(\d{5})\.zip/gi,
-    /DAT.*?(\d{5})/gi,
-    /virus.*?definition.*?(\d{5})/gi,
-    // V3 DAT patterns
-    /V3.*?(\d{4}).*?dat/gi,
-    /V3_(\d{4})dat\.exe/gi,
-    /Version.*?(\d{4}).*?V3/gi
-  ];
-  
-  // AMcore engine patterns
-  const amcorePatterns = [
-    /AMcore.*?(\d+\.\d+\.\d+)/gi,
-    /engine.*?(\d+\.\d+\.\d+)/gi,
-    /scanning.*?engine.*?(\d+\.\d+)/gi
-  ];
-  
-  // MEDDAT specific patterns
-  const meddatPatterns = [
-    /MEDDAT.*?(\d+\.\d+\.\d+)/gi,
-    /Medical.*?DAT.*?(\d+\.\d+)/gi,
-    /Healthcare.*?(\d+\.\d+\.\d+)/gi
-  ];
-  
-  // Exploit prevention patterns
-  const exploitPatterns = [
-    /Exploit.*?Prevention.*?(\d{4}\.\d{2}\.\d{2})/gi,
-    /EP.*?Content.*?(\d{4}\.\d{2}\.\d{2})/gi
-  ];
-  
-  // TIE intelligence patterns
-  const tiePatterns = [
-    /TIE.*?(\d+\.\d+\.\d+)/gi,
-    /Threat.*?Intelligence.*?(\d+\.\d+)/gi
-  ];
-  
-  // Process DAT patterns
-  for (const pattern of datPatterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const version = match[1];
-      if (version) {
-        if (version.length === 5) {
-          // Standard DAT file
-          updates.push({
-            name: 'Standard DAT Files',
-            type: 'dat',
-            platform: 'All Platforms',
-            version: version,
-            release_date: new Date().toISOString(),
-            file_size: 167000000 + Math.random() * 10000000,
-            file_name: `avvdat-${version}.zip`,
-            sha256: generateMockSHA256(),
-            description: 'Traditional DAT files containing virus definitions and signatures',
-            is_recommended: true,
-            download_url: `https://update.nai.com/Products/CommonUpdater/avvdat-${version}.zip`,
-            update_category: 'endpoint',
-            criticality_level: 'high',
-            target_systems: ['Endpoint Security', 'File & Removable Media Protection'],
-            dependencies: [],
-            compatibility_info: {
-              minimum_version: '1.0.0',
-              supported_platforms: ['Windows', 'Linux', 'Mac'],
-              last_supported_version: null
-            },
-            threat_coverage: ['Viruses', 'Trojans', 'Malware', 'Spyware'],
-            deployment_notes: 'Standard deployment procedures apply.'
-          });
-        } else if (version.length === 4) {
-          // V3 DAT file
-          updates.push({
-            name: 'V3 Virus Definition Files',
-            type: 'datv3',
-            platform: 'Windows',
-            version: version,
-            release_date: new Date().toISOString(),
-            file_size: 189000000 + Math.random() * 10000000,
-            file_name: `V3_${version}dat.exe`,
-            sha256: generateMockSHA256(),
-            description: 'Next-generation V3 virus definition files with enhanced detection capabilities',
-            is_recommended: true,
-            download_url: `https://update.nai.com/Products/CommonUpdater/V3_${version}dat.exe`,
-            update_category: 'endpoint',
-            criticality_level: 'high',
-            target_systems: ['Next-Gen Endpoint', 'Advanced Threat Protection'],
-            dependencies: ['Security Engine 5.7.0+'],
-            compatibility_info: {
-              minimum_version: '5.7.0',
-              supported_platforms: ['Windows'],
-              last_supported_version: null
-            },
-            threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
-            deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
-          });
-        }
-      }
-    }
-  }
-  
-  // Process AMcore engine patterns
-  for (const pattern of amcorePatterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const version = match[1];
-      if (version) {
+  try {
+    // Enhanced parsing logic for different page types
+    if (sourceUrl.includes('selectedTab=engines')) {
+      // Parse engines page - look for product names and versions
+      const engineRegex = /<div[^>]*class[^>]*download[^>]*>[\s\S]*?<h[^>]*>([^<]+)<\/h[^>]*>[\s\S]*?version[^>]*>([^<]+)</gi;
+      let match;
+      while ((match = engineRegex.exec(html)) !== null) {
         updates.push({
-          name: 'AMcore Scanning Engine',
-          type: 'engine',
+          name: match[1].trim(),
+          type: 'security_engine',
           platform: 'Multi-Platform',
-          version: version,
+          version: match[2].trim(),
           release_date: new Date().toISOString(),
-          file_size: 245000000 + Math.random() * 20000000,
-          file_name: `AMCore_${version.replace(/\./g, '_')}.zip`,
-          sha256: generateMockSHA256(),
-          description: 'Advanced malware core scanning engine with real-time protection capabilities',
+          file_size: Math.floor(Math.random() * 50000000) + 10000000,
+          file_name: `${match[1].toLowerCase().replace(/\s+/g, '_')}_${match[2]}.exe`,
           is_recommended: true,
-          download_url: `https://update.nai.com/Products/Engines/AMCore_${version.replace(/\./g, '_')}.zip`,
           update_category: 'engine',
-          criticality_level: 'critical',
-          target_systems: ['Endpoint Protection', 'Gateway Security', 'Mail Security'],
-          dependencies: ['Framework 10.0+'],
-          compatibility_info: {
-            minimum_version: '10.0.0',
-            supported_platforms: ['Windows', 'Linux'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Real-time Scanning', 'Behavioral Analysis', 'Heuristic Detection'],
-          deployment_notes: 'Engine update requires service restart. Schedule during maintenance window.'
+          criticality_level: 'high'
         });
       }
-    }
-  }
-  
-  // Process MEDDAT patterns
-  for (const pattern of meddatPatterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const version = match[1];
-      if (version) {
+    } else if (sourceUrl.includes('selectedTab=updates')) {
+      // Parse content updates page - look for content file names and versions
+      const contentRegex = /<div[^>]*class[^>]*update[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>[\s\S]*?<span[^>]*version[^>]*>([^<]+)</gi;
+      let match;
+      while ((match = contentRegex.exec(html)) !== null) {
         updates.push({
-          name: 'Medical Device DAT Files',
-          type: 'meddat',
-          platform: 'Medical Devices',
-          version: version,
+          name: match[1].trim(),
+          type: 'content_package',
+          platform: 'All Platforms',
+          version: match[2].trim(),
           release_date: new Date().toISOString(),
-          file_size: 145000000 + Math.random() * 10000000,
-          file_name: `MEDDAT_${version}.zip`,
-          sha256: generateMockSHA256(),
-          description: 'Specialized threat definitions for medical device security and healthcare networks',
+          file_size: Math.floor(Math.random() * 20000000) + 5000000,
+          file_name: `${match[1].toLowerCase().replace(/\s+/g, '_')}_${match[2]}.zip`,
           is_recommended: true,
-          download_url: `https://update.nai.com/Products/Medical/MEDDAT_${version}.zip`,
-          update_category: 'medical',
-          criticality_level: 'critical',
-          target_systems: ['Medical Device Security', 'Healthcare Networks'],
-          dependencies: ['Medical Device Connector'],
-          compatibility_info: {
-            minimum_version: '2.0.0',
-            supported_platforms: ['Medical Devices'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats'],
-          deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
+          update_category: 'content',
+          criticality_level: 'medium'
         });
       }
-    }
-  }
-  
-  // Process exploit prevention patterns
-  for (const pattern of exploitPatterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const version = match[1];
-      if (version) {
+    } else {
+      // Parse main DAT page - look for DAT file names and versions
+      const datRegex = /<div[^>]*class[^>]*dat[^>]*>[\s\S]*?<h[^>]*>([^<]+)<\/h[^>]*>[\s\S]*?version[^>]*>([^<]+)</gi;
+      let match;
+      while ((match = datRegex.exec(html)) !== null) {
         updates.push({
-          name: 'Exploit Prevention Content',
-          type: 'exploit_prevention',
+          name: match[1].trim(),
+          type: match[1].toLowerCase().includes('v3') ? 'datv3' : 'dat',
           platform: 'Windows',
-          version: version,
+          version: match[2].trim(),
           release_date: new Date().toISOString(),
-          file_size: 156000000 + Math.random() * 10000000,
-          file_name: `EPContent_${version}.zip`,
-          sha256: generateMockSHA256(),
-          description: 'Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields',
+          file_size: Math.floor(Math.random() * 100000000) + 20000000,
+          file_name: `${match[1].toLowerCase().replace(/\s+/g, '_')}_${match[2]}.dat`,
           is_recommended: true,
-          download_url: `https://update.nai.com/Products/EP/EPContent_${version}.zip`,
-          update_category: 'protection',
-          criticality_level: 'critical',
-          target_systems: ['Exploit Prevention Module', 'Host IPS', 'Behavioral Analytics'],
-          dependencies: ['Exploit Prevention Engine 2.0.0+'],
-          compatibility_info: {
-            minimum_version: '2.0.0',
-            supported_platforms: ['Windows', 'Linux'],
-            last_supported_version: null
-          },
-          threat_coverage: ['Zero-day Exploits', 'Memory Corruption', 'ROP/JOP Attacks', 'Heap Spray Protection'],
-          deployment_notes: 'Critical security update. Deploy immediately during maintenance window.'
+          update_category: 'dat_file',
+          criticality_level: 'critical'
         });
       }
     }
+  } catch (error) {
+    console.error('Error parsing HTML:', error);
   }
-  
-  // Process TIE intelligence patterns
-  for (const pattern of tiePatterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const version = match[1];
-      if (version) {
-        updates.push({
-          name: 'TIE Intelligence Updates',
-          type: 'tie',
-          platform: 'Multi-Platform',
-          version: version,
-          release_date: new Date().toISOString(),
-          file_size: 98000000 + Math.random() * 10000000,
-          file_name: `TIEContent_${version}.zip`,
-          sha256: generateMockSHA256(),
-          description: 'Global threat intelligence feeds with real-time reputation data and file reputation scoring',
-          is_recommended: true,
-          download_url: `https://update.nai.com/Products/TIE/TIEContent_${version}.zip`,
-          update_category: 'intelligence',
-          criticality_level: 'high',
-          target_systems: ['TIE Server', 'Gateway Security', 'Endpoint Protection'],
-          dependencies: ['TIE Server 3.0.0+'],
-          compatibility_info: {
-            minimum_version: '3.0.0',
-            supported_platforms: ['Windows', 'Linux'],
-            last_supported_version: null
-          },
-          threat_coverage: ['File Reputation', 'Certificate Reputation', 'Web Reputation', 'Malware Intelligence'],
-          deployment_notes: 'Continuous updates to global threat intelligence database. No restart required.'
-        });
-      }
-    }
-  }
-  
+
   return updates;
 }
 
-// Generate mock SHA256 for demo purposes
-function generateMockSHA256(): string {
-  const chars = '0123456789ABCDEF';
-  let result = '';
-  for (let i = 0; i < 64; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-// Get mock updates for fallback
+// Enhanced mock data with comprehensive security updates
 function getMockUpdates(): SecurityUpdate[] {
+  const currentDate = new Date();
+  const yesterday = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000);
+  const twoDaysAgo = new Date(currentDate.getTime() - 2 * 24 * 60 * 60 * 1000);
+
   return [
-    // V3 DAT Updates
+    // V3 DAT Files
     {
       name: 'V3 Virus Definition Files',
       type: 'datv3',
       platform: 'Windows',
-      version: '5950',
-      release_date: new Date().toISOString(),
-      file_size: 189750000,
-      file_name: 'V3_5950dat.exe',
-      sha256: 'a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
-      description: 'Next-generation V3 virus definition files with enhanced detection capabilities and improved performance',
+      version: '2024.01.15.001',
+      release_date: currentDate.toISOString(),
+      file_size: 245000000,
+      file_name: 'v3_dat_2024_01_15_001.zip',
       is_recommended: true,
-      download_url: 'https://update.nai.com/Products/CommonUpdater/V3_5950dat.exe',
-      update_category: 'endpoint',
-      criticality_level: 'high',
-      target_systems: ['Next-Gen Endpoint', 'Advanced Threat Protection'],
-      dependencies: ['Security Engine 5.7.0+'],
-      compatibility_info: {
-        minimum_version: '5.7.0',
-        supported_platforms: ['Windows'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
-      deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
+      update_category: 'dat_file',
+      criticality_level: 'critical',
+      description: 'Latest V3 virus definition files with enhanced detection capabilities'
     },
-    {
-      name: 'V3 Virus Definition Files',
-      type: 'datv3',
-      platform: 'Linux',
-      version: '5950',
-      release_date: new Date().toISOString(),
-      file_size: 178900000,
-      file_name: 'V3_5950dat.tar.gz',
-      sha256: 'b2c3d4e5f6789012345678901234567890123456789012345678901234567890a1',
-      description: 'V3 virus definition files for Linux environments with enhanced malware detection',
-      is_recommended: true,
-      download_url: 'https://update.nai.com/Products/CommonUpdater/V3_5950dat.tar.gz',
-      update_category: 'endpoint',
-      criticality_level: 'high',
-      target_systems: ['Linux Endpoint Protection', 'Server Security'],
-      dependencies: ['Security Engine 5.7.0+'],
-      compatibility_info: {
-        minimum_version: '5.7.0',
-        supported_platforms: ['Linux'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Advanced Persistent Threats', 'Zero-day Exploits', 'Ransomware'],
-      deployment_notes: 'Requires engine restart after deployment. Test in non-production environment first.'
-    },
-    // MEDDAT Updates
+    // Medical DAT
     {
       name: 'Medical Device DAT Files',
       type: 'meddat',
       platform: 'Medical Devices',
-      version: '2.4.1',
-      release_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      file_size: 145890000,
-      file_name: 'MEDDAT_2.4.1.zip',
-      sha256: 'd4e5f6789012345678901234567890123456789012345678901234567890a1b2c3',
-      description: 'Specialized threat definitions for medical device security and healthcare networks',
+      version: '2024.01.12.003',
+      release_date: yesterday.toISOString(),
+      file_size: 89000000,
+      file_name: 'meddat_2024_01_12_003.dat',
       is_recommended: true,
-      download_url: 'https://update.nai.com/Products/Medical/MEDDAT_2.4.1.zip',
       update_category: 'medical',
       criticality_level: 'critical',
-      target_systems: ['Medical Device Security', 'Healthcare Networks'],
-      dependencies: ['Medical Device Connector'],
-      compatibility_info: {
-        minimum_version: '2.0.0',
-        supported_platforms: ['Medical Devices'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats'],
-      deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
+      description: 'Specialized threat definitions for medical device security'
     },
-    {
-      name: 'Medical Device DAT Files',
-      type: 'meddat',
-      platform: 'Healthcare Systems',
-      version: '2.4.1',
-      release_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      file_size: 156780000,
-      file_name: 'MEDDAT_Healthcare_2.4.1.zip',
-      sha256: 'e5f6789012345678901234567890123456789012345678901234567890a1b2c3d4',
-      description: 'Healthcare system-specific DAT files with enhanced medical device protection',
-      is_recommended: true,
-      download_url: 'https://update.nai.com/Products/Medical/MEDDAT_Healthcare_2.4.1.zip',
-      update_category: 'medical',
-      criticality_level: 'critical',
-      target_systems: ['Healthcare Systems', 'Medical Networks'],
-      dependencies: ['Medical Device Connector', 'Healthcare Security Module'],
-      compatibility_info: {
-        minimum_version: '2.0.0',
-        supported_platforms: ['Healthcare Systems'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Medical Device Vulnerabilities', 'Healthcare-specific Threats', 'HIPAA Compliance'],
-      deployment_notes: 'Critical for healthcare environments. Deploy during maintenance windows.'
-    },
-    // TIE Intelligence Updates
+    // TIE Intelligence
     {
       name: 'TIE Intelligence Updates',
       type: 'tie',
-      platform: 'Windows',
-      version: '3.2.5',
-      release_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      file_size: 98750000,
-      file_name: 'TIEContent_3.2.5.zip',
-      sha256: 'f6789012345678901234567890123456789012345678901234567890a1b2c3d4e5',
-      description: 'Global threat intelligence feeds with real-time reputation data and file reputation scoring',
+      platform: 'All Platforms',
+      version: '2024.01.15.007',
+      release_date: currentDate.toISOString(),
+      file_size: 156000000,
+      file_name: 'tie_intel_2024_01_15_007.zip',
       is_recommended: true,
-      download_url: 'https://update.nai.com/Products/TIE/TIEContent_3.2.5.zip',
       update_category: 'intelligence',
       criticality_level: 'high',
-      target_systems: ['TIE Server', 'Gateway Security', 'Endpoint Protection'],
-      dependencies: ['TIE Server 3.0.0+'],
-      compatibility_info: {
-        minimum_version: '3.0.0',
-        supported_platforms: ['Windows', 'Linux'],
-        last_supported_version: null
-      },
-      threat_coverage: ['File Reputation', 'Certificate Reputation', 'Web Reputation', 'Malware Intelligence'],
-      deployment_notes: 'Continuous updates to global threat intelligence database. No restart required.'
+      description: 'Global threat intelligence feeds with real-time reputation data'
     },
-    {
-      name: 'TIE Gateway Intelligence',
-      type: 'tie',
-      platform: 'Gateway',
-      version: '3.2.5',
-      release_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      file_size: 87650000,
-      file_name: 'TIEGateway_3.2.5.exe',
-      sha256: 'g7890123456789012345678901234567890123456789012345678901234567890f',
-      description: 'TIE intelligence feeds optimized for gateway and network security appliances',
-      is_recommended: true,
-      download_url: 'https://update.nai.com/Products/TIE/TIEGateway_3.2.5.exe',
-      update_category: 'intelligence',
-      criticality_level: 'high',
-      target_systems: ['Gateway Security', 'Network Security', 'Web Protection'],
-      dependencies: ['Gateway Module 3.0.0+'],
-      compatibility_info: {
-        minimum_version: '3.0.0',
-        supported_platforms: ['Gateway'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Web Reputation', 'URL Filtering', 'Malicious IP Detection', 'Domain Reputation'],
-      deployment_notes: 'Gateway-specific intelligence feeds. Automatic deployment recommended.'
-    },
-    // Exploit Prevention Updates
+    // Exploit Prevention
     {
       name: 'Exploit Prevention Content',
       type: 'exploit_prevention',
-      platform: 'Windows',
-      version: '2024.01.15',
-      release_date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      file_size: 156890000,
-      file_name: 'EPContent_2024.01.15.zip',
-      sha256: 'h8901234567890123456789012345678901234567890123456789012345678901g',
-      description: 'Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields',
+      platform: 'Windows/Linux',
+      version: '2024.01.14.002',
+      release_date: twoDaysAgo.toISOString(),
+      file_size: 78000000,
+      file_name: 'exploit_prev_2024_01_14_002.epo',
       is_recommended: true,
-      download_url: 'https://update.nai.com/Products/EP/EPContent_2024.01.15.zip',
-      update_category: 'protection',
+      update_category: 'exploit',
       criticality_level: 'critical',
-      target_systems: ['Exploit Prevention Module', 'Host IPS', 'Behavioral Analytics'],
-      dependencies: ['Exploit Prevention Engine 2.0.0+'],
-      compatibility_info: {
-        minimum_version: '2.0.0',
-        supported_platforms: ['Windows', 'Linux'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Zero-day Exploits', 'Memory Corruption', 'ROP/JOP Attacks', 'Heap Spray Protection'],
-      deployment_notes: 'Critical security update. Deploy immediately during maintenance window.'
+      description: 'Zero-day exploit protection rules and behavioral heuristics'
     },
-    {
-      name: 'Exploit Prevention Rules',
-      type: 'exploit_prevention',
-      platform: 'Linux',
-      version: '2024.01.15',
-      release_date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      file_size: 134567000,
-      file_name: 'EPRules_2024.01.15.dat',
-      sha256: 'i9012345678901234567890123456789012345678901234567890123456789012h',
-      description: 'Linux-specific exploit prevention rules and system call monitoring patterns',
-      is_recommended: true,
-      download_url: 'https://update.nai.com/Products/EP/EPRules_2024.01.15.dat',
-      update_category: 'protection',
-      criticality_level: 'critical',
-      target_systems: ['Linux Host Protection', 'Server Security', 'Container Security'],
-      dependencies: ['Linux Security Module 2.0.0+'],
-      compatibility_info: {
-        minimum_version: '2.0.0',
-        supported_platforms: ['Linux'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Privilege Escalation', 'Kernel Exploits', 'Container Breakout', 'System Call Abuse'],
-      deployment_notes: 'Server-specific protection rules. Coordinate with system administrators.'
-    },
-    {
-      name: 'Server Exploit Prevention',
-      type: 'exploit_prevention',
-      platform: 'Server',
-      version: '2024.01.12',
-      release_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      file_size: 189430000,
-      file_name: 'ServerEP_2024.01.12.msi',
-      sha256: 'j0123456789012345678901234567890123456789012345678901234567890123i',
-      description: 'Enterprise server exploit prevention with advanced threat detection and response',
-      is_recommended: true,
-      download_url: 'https://update.nai.com/Products/EP/ServerEP_2024.01.12.msi',
-      update_category: 'protection',
-      criticality_level: 'critical',
-      target_systems: ['Windows Server', 'Exchange Server', 'SQL Server', 'Web Servers'],
-      dependencies: ['Server Security Suite 2.5.0+'],
-      compatibility_info: {
-        minimum_version: '2.5.0',
-        supported_platforms: ['Windows Server'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Server-side Exploits', 'Service Vulnerabilities', 'Remote Code Execution', 'Privilege Escalation'],
-      deployment_notes: 'Enterprise server protection. Schedule deployment during planned maintenance.'
-    },
-    // Standard DAT for comparison
+    // Standard DAT
     {
       name: 'Standard DAT Files',
       type: 'dat',
-      platform: 'All Platforms',
-      version: '10999',
-      release_date: new Date().toISOString(),
-      file_size: 167890000,
-      file_name: 'avvdat-10999.zip',
-      sha256: 'f6789012345678901234567890123456789012345678901234567890a1b2c3d4e5',
-      description: 'Traditional DAT files containing virus definitions and signatures',
+      platform: 'Windows',
+      version: '2024.01.15.004',
+      release_date: currentDate.toISOString(),
+      file_size: 189000000,
+      file_name: 'standard_dat_2024_01_15_004.dat',
+      is_recommended: false,
+      update_category: 'dat_file',
+      criticality_level: 'medium',
+      description: 'Traditional virus definition files for comprehensive protection'
+    },
+    // AMCore Content
+    {
+      name: 'AMCore Content Updates',
+      type: 'amcore_dat',
+      platform: 'Enterprise',
+      version: '2024.01.13.001',
+      release_date: twoDaysAgo.toISOString(),
+      file_size: 134000000,
+      file_name: 'amcore_2024_01_13_001.amc',
       is_recommended: true,
-      download_url: 'https://update.nai.com/Products/CommonUpdater/avvdat-10999.zip',
-      update_category: 'endpoint',
+      update_category: 'amcore',
       criticality_level: 'high',
-      target_systems: ['Endpoint Security', 'File & Removable Media Protection'],
-      dependencies: [],
-      compatibility_info: {
-        minimum_version: '1.0.0',
-        supported_platforms: ['Windows', 'Linux', 'Mac'],
-        last_supported_version: null
-      },
-      threat_coverage: ['Viruses', 'Trojans', 'Malware', 'Spyware'],
-      deployment_notes: 'Standard deployment procedures apply.'
+      description: 'Advanced malware core content with behavioral analysis'
+    },
+    // Security Engine
+    {
+      name: 'Security Engine Update',
+      type: 'security_engine',
+      platform: 'All Platforms',
+      version: '8.2.15.0',
+      release_date: yesterday.toISOString(),
+      file_size: 67000000,
+      file_name: 'security_engine_8_2_15_0.exe',
+      is_recommended: true,
+      update_category: 'engine',
+      criticality_level: 'high',
+      description: 'Core scanning engine with latest detection capabilities'
+    },
+    // Gateway DAT
+    {
+      name: 'Gateway Protection DAT',
+      type: 'gateway_dat',
+      platform: 'Gateway Appliances',
+      version: '2024.01.14.005',
+      release_date: twoDaysAgo.toISOString(),
+      file_size: 112000000,
+      file_name: 'gateway_dat_2024_01_14_005.gwt',
+      is_recommended: true,
+      update_category: 'gateway',
+      criticality_level: 'medium',
+      description: 'Gateway-specific protection definitions'
+    },
+    // Email Security
+    {
+      name: 'Email Security Updates',
+      type: 'email_dat',
+      platform: 'Email Servers',
+      version: '2024.01.15.002',
+      release_date: currentDate.toISOString(),
+      file_size: 45000000,
+      file_name: 'email_security_2024_01_15_002.eml',
+      is_recommended: false,
+      update_category: 'email',
+      criticality_level: 'medium',
+      description: 'Email-specific threat protection updates'
+    },
+    // Policy Templates
+    {
+      name: 'Security Policy Templates',
+      type: 'policy_template',
+      platform: 'Management Console',
+      version: '2024.01.10.001',
+      release_date: new Date(currentDate.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      file_size: 23000000,
+      file_name: 'policy_templates_2024_01_10_001.xml',
+      is_recommended: false,
+      update_category: 'policy',
+      criticality_level: 'low',
+      description: 'Updated security policy templates and configurations'
     }
   ];
 }
 
-// Process and store updates in database
-async function processUpdates(supabase: any, updates: SecurityUpdate[], startTime: number) {
+async function processUpdates(supabase: any, updates: SecurityUpdate[], startTime: number): Promise<Response> {
   console.log(`Starting to process ${updates.length} updates...`);
-
-  let newUpdates = 0;
-  let totalUpdates = updates.length;
-
-  // Check existing updates and insert new ones
+  
+  let newUpdatesCount = 0;
+  
   for (const update of updates) {
-    const { data: existing } = await supabase
-      .from('security_updates')
-      .select('id')
-      .eq('name', update.name)
-      .eq('version', update.version)
-      .eq('platform', update.platform)
-      .eq('type', update.type)
-      .single();
-
-    if (!existing) {
-      // Prepare the insert data with all fields
-      const insertData = {
-        name: update.name,
-        type: update.type,
-        platform: update.platform,
-        version: update.version,
-        release_date: update.release_date,
-        file_size: update.file_size,
-        file_name: update.file_name,
-        sha256: update.sha256,
-        description: update.description,
-        is_recommended: update.is_recommended,
-        download_url: update.download_url,
-        changelog: update.changelog,
-        update_category: update.update_category,
-        criticality_level: update.criticality_level,
-        target_systems: update.target_systems,
-        dependencies: update.dependencies,
-        compatibility_info: update.compatibility_info,
-        threat_coverage: update.threat_coverage,
-        deployment_notes: update.deployment_notes
-      };
-
-      const { error } = await supabase
+    try {
+      // Check if update already exists
+      const { data: existing } = await supabase
         .from('security_updates')
-        .insert([insertData]);
+        .select('id')
+        .eq('name', update.name)
+        .eq('version', update.version)
+        .single();
 
-      if (error) {
-        console.error('Error inserting update:', error);
-      } else {
-        newUpdates++;
-        console.log(`Inserted new update: ${update.name} (${update.type}) v${update.version}`);
+      if (!existing) {
+        // Insert new update
+        const { error } = await supabase
+          .from('security_updates')
+          .insert({
+            name: update.name,
+            type: update.type,
+            platform: update.platform,
+            version: update.version,
+            release_date: update.release_date,
+            file_size: update.file_size,
+            file_name: update.file_name,
+            sha256: update.sha256,
+            description: update.description,
+            is_recommended: update.is_recommended,
+            update_category: update.update_category,
+            criticality_level: update.criticality_level,
+            download_url: update.download_url,
+            changelog: update.changelog
+          });
+
+        if (error) {
+          console.error('Error inserting update:', error);
+        } else {
+          newUpdatesCount++;
+        }
       }
+    } catch (error) {
+      console.error('Error processing update:', update.name, error);
     }
   }
-
-  const endTime = Date.now();
-  const responseTime = endTime - startTime;
 
   // Log the fetch operation
   await supabase
     .from('update_logs')
-    .insert([{
-      updates_found: totalUpdates,
-      new_updates: newUpdates,
-      status: 'success',
-      api_response_time: responseTime
-    }]);
+    .insert({
+      fetch_timestamp: new Date().toISOString(),
+      updates_found: updates.length,
+      new_updates: newUpdatesCount,
+      api_response_time: Date.now() - startTime,
+      status: 'success'
+    });
 
-  console.log(`Fetch completed: ${newUpdates} new updates out of ${totalUpdates} total`);
+  console.log(`Fetch completed: ${newUpdatesCount} new updates out of ${updates.length} total`);
 
   return new Response(
     JSON.stringify({
       success: true,
-      updates_found: totalUpdates,
-      new_updates: newUpdates,
-      response_time_ms: responseTime
+      message: `Successfully processed ${updates.length} updates, ${newUpdatesCount} new ones added`,
+      totalUpdates: updates.length,
+      newUpdates: newUpdatesCount
     }),
     {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     }
   );

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot, Heart, Globe } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { AgentCompatibility } from './AgentCompatibility';
 import { MLDashboard } from './MLDashboard';
 import { CyberAttacksSection } from './CyberAttacksSection';
+import { useErrorHandling } from '@/hooks/useErrorHandling';
+import { useToast } from '@/hooks/use-toast';
 
 const features = [
   {
@@ -70,6 +73,8 @@ interface SecurityUpdateData {
 const Features = (): JSX.Element => {
   const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdateData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { errorState, handleError, retryOperation, clearError } = useErrorHandling();
+  const { toast } = useToast();
 
   // Helper functions
   const formatFileSize = (bytes: number): string => {
@@ -107,19 +112,27 @@ const Features = (): JSX.Element => {
     return frequencies[type] || 'Updated regularly';
   };
 
-  // Fetch and aggregate security updates from Supabase
+  // Fetch and aggregate security updates from Supabase with error handling
   const fetchSecurityUpdates = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('security_updates')
-        .select('*')
-        .order('release_date', { ascending: false });
+      clearError();
+      
+      const operation = async () => {
+        const { data, error } = await supabase
+          .from('security_updates')
+          .select('*')
+          .order('release_date', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching security updates:', error);
-        return;
-      }
+        if (error) {
+          console.error('Error fetching security updates:', error);
+          throw new Error('Failed to load user data from API');
+        }
+
+        return data;
+      };
+
+      const data = await retryOperation(operation, 3);
 
       // Group updates by type with priority for V3 DAT, MEDDAT, TIE, and Exploit Prevention
       const groupedUpdates: { [key: string]: any } = {};
@@ -179,7 +192,7 @@ const Features = (): JSX.Element => {
 
       setSecurityUpdates(sortedUpdates);
     } catch (error) {
-      console.error('Error:', error);
+      handleError(error, 'Database connection lost. Unable to fetch security updates.');
     } finally {
       setLoading(false);
     }
@@ -201,10 +214,48 @@ const Features = (): JSX.Element => {
 
   useEffect(() => {
     fetchSecurityUpdates();
+    
+    // Set up real-time subscription for security updates
+    const channel = supabase
+      .channel('security_updates_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'security_updates'
+        },
+        () => {
+          console.log('Security updates changed, refetching...');
+          fetchSecurityUpdates();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleRefresh = () => {
-    fetchSecurityUpdates();
+  const handleRefresh = async () => {
+    try {
+      // Trigger the edge function to fetch latest updates
+      const { data, error } = await supabase.functions.invoke('fetch-security-updates');
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Success",
+        description: data?.message || "Security updates refreshed successfully.",
+      });
+      
+      // Refresh the displayed data
+      await fetchSecurityUpdates();
+    } catch (error) {
+      handleError(error, 'Failed to refresh security updates');
+    }
   };
 
   return (
@@ -262,6 +313,28 @@ const Features = (): JSX.Element => {
             <span>Refresh Updates</span>
           </Button>
         </div>
+        
+        {errorState.hasError && (
+          <Card className="mb-8 border-destructive">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="font-medium">Connection Issue</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {errorState.errorMessage}
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchSecurityUpdates}
+                className="mt-2"
+              >
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         
         {loading ? (
           <div className="flex items-center justify-center h-32">

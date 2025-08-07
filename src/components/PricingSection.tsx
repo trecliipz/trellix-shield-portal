@@ -26,7 +26,6 @@ export const PricingSection = () => {
         'Automatic updates',
         'Windows & Mac support'
       ],
-      ctaText: 'Start Free Trial',
       gradient: 'from-blue-500/10 to-cyan-500/10'
     },
     {
@@ -46,7 +45,6 @@ export const PricingSection = () => {
         'Custom policy management',
         'Multi-platform support'
       ],
-      ctaText: 'Start Free Trial',
       gradient: 'from-primary/20 to-orange-500/20'
     },
     {
@@ -65,7 +63,6 @@ export const PricingSection = () => {
         'Compliance reporting (SOX, HIPAA)',
         'Dedicated security analyst'
       ],
-      ctaText: 'Contact Sales',
       gradient: 'from-purple-500/10 to-pink-500/10'
     }
   ];
@@ -74,6 +71,21 @@ export const PricingSection = () => {
     const monthlyCost = monthly * 12;
     const savings = monthlyCost - yearly;
     return Math.round((savings / monthlyCost) * 100);
+  };
+
+  const handleSignUp = (planName: string) => {
+    // Trigger the authentication modal with signup mode and plan data
+    const signupEvent = new CustomEvent('openAuthModal', { 
+      detail: { 
+        mode: 'register',
+        planName: planName.toLowerCase(),
+        planPrice: isYearly ? 
+          plans.find(p => p.name === planName)?.yearlyPrice : 
+          plans.find(p => p.name === planName)?.monthlyPrice,
+        billingCycle: isYearly ? 'yearly' : 'monthly'
+      }
+    });
+    window.dispatchEvent(signupEvent);
   };
 
   return (
@@ -161,11 +173,6 @@ export const PricingSection = () => {
                         Save {savings}% vs monthly
                       </div>
                     )}
-                    {!isYearly && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        or ${plan.yearlyPrice}/year
-                      </div>
-                    )}
                   </div>
                 </CardHeader>
 
@@ -178,8 +185,9 @@ export const PricingSection = () => {
                     }`}
                     variant={plan.popular ? 'default' : 'outline'}
                     size="lg"
+                    onClick={() => handleSignUp(plan.name)}
                   >
-                    {plan.ctaText}
+                    Sign Up
                   </Button>
 
                   <div className="space-y-3">

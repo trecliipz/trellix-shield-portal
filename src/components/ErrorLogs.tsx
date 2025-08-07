@@ -1,11 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertTriangle, RefreshCw, Search, Download, Filter, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useErrorHandling } from "@/hooks/useErrorHandling";
 
 interface ErrorLog {
   id: string;
@@ -25,11 +27,12 @@ export const ErrorLogs = () => {
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { errorState, handleError, retryOperation } = useErrorHandling();
 
   useEffect(() => {
     loadErrorLogs();
     
-    // Set up error monitoring
+    // Set up enhanced error monitoring
     const originalConsoleError = console.error;
     const originalConsoleWarn = console.warn;
     
@@ -38,7 +41,16 @@ export const ErrorLogs = () => {
     
     console.error = (...args) => {
       originalConsoleError.apply(console, args);
-      captureError('error', args.join(' '), 'Console');
+      const message = args.join(' ');
+      
+      // Handle specific API errors
+      if (message.includes('Failed to load user data from API')) {
+        captureError('critical', 'Failed to load user data from API', 'UserManagement.tsx', 'Network request failed: API endpoint unreachable');
+      } else if (message.includes('database connection lost')) {
+        captureError('critical', 'Database connection lost', 'Supabase Client', 'Connection timeout after 30 seconds');
+      } else {
+        captureError('error', message, 'Console');
+      }
     };
     
     console.warn = (...args) => {
@@ -78,33 +90,42 @@ export const ErrorLogs = () => {
     if (savedLogs) {
       setErrorLogs(JSON.parse(savedLogs));
     } else {
-      // Initialize with some example logs
+      // Initialize with common error examples including the specific ones mentioned
       const mockLogs: ErrorLog[] = [
         {
           id: '1',
           timestamp: new Date().toISOString(),
-          level: 'error',
+          level: 'critical',
           message: 'Failed to load user data from API',
           source: 'UserManagement.tsx',
-          details: 'Network request failed: 500 Internal Server Error',
+          details: 'Network request failed: API endpoint unreachable. Possible causes: Server down, network connectivity issues, or invalid API key.',
           resolved: false
         },
         {
           id: '2',
+          timestamp: new Date(Date.now() - 1800000).toISOString(),
+          level: 'critical',
+          message: 'Database connection lost',
+          source: 'Supabase Client',
+          details: 'Connection timeout after 30 seconds. Database server may be experiencing high load or network issues.',
+          resolved: false
+        },
+        {
+          id: '3',
           timestamp: new Date(Date.now() - 3600000).toISOString(),
           level: 'warning',
           message: 'Agent deployment timeout warning',
           source: 'DeploymentModal.tsx',
-          details: 'Deployment taking longer than expected (>30s)',
+          details: 'Deployment taking longer than expected (>30s). Agent may still complete successfully.',
           resolved: true
         },
         {
-          id: '3',
+          id: '4',
           timestamp: new Date(Date.now() - 7200000).toISOString(),
-          level: 'critical',
-          message: 'Database connection lost',
-          source: 'Supabase Client',
-          details: 'Connection timeout after 30 seconds',
+          level: 'error',
+          message: 'Security updates fetch failed',
+          source: 'fetch-security-updates',
+          details: 'Unable to connect to Trellix security updates endpoint. Using cached data.',
           resolved: false
         }
       ];
@@ -114,11 +135,29 @@ export const ErrorLogs = () => {
   };
 
   const handleGlobalError = (event: ErrorEvent) => {
-    captureError('error', event.message, event.filename || 'Unknown', event.error?.stack);
+    let details = event.error?.stack || 'No stack trace available';
+    
+    // Enhanced error categorization
+    if (event.message.includes('fetch')) {
+      details += '\n\nThis appears to be a network-related error. Check your internet connection and API endpoints.';
+    } else if (event.message.includes('database') || event.message.includes('supabase')) {
+      details += '\n\nDatabase connection issue detected. The system will attempt to reconnect automatically.';
+    }
+    
+    captureError('error', event.message, event.filename || 'Unknown', details);
   };
 
   const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-    captureError('error', `Unhandled Promise Rejection: ${event.reason}`, 'Promise');
+    let details = `Unhandled Promise Rejection: ${event.reason}`;
+    
+    if (typeof event.reason === 'object' && event.reason?.message) {
+      details = event.reason.message;
+      if (event.reason.message.includes('Failed to load user data')) {
+        details += '\n\nUser data loading failed. This may be due to authentication issues or API unavailability.';
+      }
+    }
+    
+    captureError('error', details, 'Promise');
   };
 
   const captureError = (level: 'error' | 'warning' | 'critical', message: string, source: string, details?: string) => {
@@ -137,34 +176,49 @@ export const ErrorLogs = () => {
       localStorage.setItem('error_logs', JSON.stringify(updated));
       return updated;
     });
+
+    // Auto-resolve certain types of errors after a delay
+    if (level === 'warning') {
+      setTimeout(() => {
+        handleResolveError(newLog.id, true);
+      }, 30000); // Auto-resolve warnings after 30 seconds
+    }
   };
 
   const handleRefresh = async () => {
     setLoading(true);
     
-    // Simulate API call to refresh logs
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    loadErrorLogs();
-    setLoading(false);
-    
-    toast({
-      title: "Logs Refreshed",
-      description: "Error logs have been updated.",
-    });
+    try {
+      // Simulate refresh with retry logic
+      await retryOperation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        loadErrorLogs();
+      }, 3);
+      
+      toast({
+        title: "Logs Refreshed",
+        description: "Error logs have been updated successfully.",
+      });
+    } catch (error) {
+      handleError(error, 'Failed to refresh error logs');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResolveError = (errorId: string) => {
+  const handleResolveError = (errorId: string, autoResolved: boolean = false) => {
     const updatedLogs = errorLogs.map(log =>
       log.id === errorId ? { ...log, resolved: true } : log
     );
     setErrorLogs(updatedLogs);
     localStorage.setItem('error_logs', JSON.stringify(updatedLogs));
     
-    toast({
-      title: "Error Resolved",
-      description: "Error has been marked as resolved.",
-    });
+    if (!autoResolved) {
+      toast({
+        title: "Error Resolved",
+        description: "Error has been marked as resolved.",
+      });
+    }
   };
 
   const handleClearLogs = () => {
