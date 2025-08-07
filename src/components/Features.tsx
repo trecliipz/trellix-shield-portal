@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot, Heart, Globe } from 'lucide-react';
+import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot, Heart, Globe, Cpu, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,7 @@ const features = [
 interface SecurityUpdateData {
   type: string;
   urgency: string;
+  category?: string;
   platforms: Array<{
     name: string;
     version: string;
@@ -144,14 +145,17 @@ const Features = (): JSX.Element => {
                        update.type === 'tie' ? 'TIE Intelligence Updates' :
                        update.type === 'exploit_prevention' ? 'Exploit Prevention Content' :
                        update.type === 'amcore_dat' ? 'AMCore Content' :
-                       update.type === 'engine' ? 'Security Engine' :
-                       update.type === 'content' ? 'Content Updates' : 
+                       update.type === 'epo_dat' ? 'EPO DAT Package' :
+                       update.type === 'epo_policy' ? 'EPO Security Policies' :
+                       update.type === 'security_engine' ? 'Security Engine' :
+                       update.type === 'content_package' ? 'Content Updates' : 
                        'Security Updates';
         
         if (!groupedUpdates[typeKey]) {
           groupedUpdates[typeKey] = {
             type: typeKey,
             urgency: update.is_recommended ? 'critical' : 'important',
+            category: update.update_category,
             platforms: [],
             description: update.description || getUpdateDescription(update.type),
             frequency: getUpdateFrequency(update.type)
@@ -350,17 +354,26 @@ const Features = (): JSX.Element => {
                       <h3 className="text-xl font-semibold text-card-foreground">
                         {update.type}
                       </h3>
-                      {update.type === 'V3 Virus Definition Files' && (
+                      {update.category === 'dat_file' && (
                         <Zap className="h-5 w-5 text-primary" />
                       )}
-                      {update.type === 'Medical Device DAT Files' && (
+                      {update.category === 'medical' && (
                         <Heart className="h-5 w-5 text-destructive" />
                       )}
-                      {update.type === 'TIE Intelligence Updates' && (
+                      {update.category === 'intelligence' && (
                         <Globe className="h-5 w-5 text-blue-600" />
                       )}
-                      {update.type === 'Exploit Prevention Content' && (
+                      {update.category === 'protection' && (
                         <Lock className="h-5 w-5 text-orange-600" />
+                      )}
+                      {update.category === 'epo' && (
+                        <Shield className="h-5 w-5 text-green-600" />
+                      )}
+                      {update.category === 'amcore' && (
+                        <Cpu className="h-5 w-5 text-purple-600" />
+                      )}
+                      {update.category === 'engine' && (
+                        <Settings className="h-5 w-5 text-indigo-600" />
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
@@ -374,6 +387,12 @@ const Features = (): JSX.Element => {
                         <Badge variant="default" className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />
                           <span>Important</span>
+                        </Badge>
+                      )}
+                      {update.category === 'epo' && (
+                        <Badge variant="secondary" className="flex items-center space-x-1">
+                          <Shield className="h-3 w-3" />
+                          <span>EPO Ready</span>
                         </Badge>
                       )}
                     </div>
