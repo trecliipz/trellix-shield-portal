@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, Users, UserCheck, AlertCircle, Rocket } from "lucide-react";
+import { Search, Users, UserCheck, AlertCircle, Rocket, UserPlus, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/useConfirm";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +38,11 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
   const [searchQuery, setSearchQuery] = useState("");
   const [deploymentType, setDeploymentType] = useState<"single" | "multiple" | "all">("single");
   const [loading, setLoading] = useState(false);
+const [showAddSync, setShowAddSync] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
   const { confirm, ConfirmDialog } = useConfirm();
 
@@ -59,7 +64,27 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
       (user.department && user.department.toLowerCase().includes(searchQuery.toLowerCase()))
     );
     setFilteredUsers(filtered);
-  }, [users, searchQuery]);
+}, [users, searchQuery]);
+
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const cached = localStorage.getItem('synced_users');
+        if (cached) {
+          const parsed = JSON.parse(cached) as Array<{ id: string; name: string; email: string; department?: string }>;
+          setUsers(parsed.map(u => ({ id: u.id, name: u.name, email: u.email, department: u.department, is_online: false })));
+        }
+      } catch {}
+    };
+    window.addEventListener('usersSynced', handler as unknown as EventListener);
+    return () => window.removeEventListener('usersSynced', handler as unknown as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (showAddSync) {
+      syncUsersFromDatabase();
+    }
+  }, [showAddSync]);
 
   const loadUsers = async () => {
     try {
@@ -142,6 +167,100 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
   const canDeploy = () => {
     if (deploymentType === "all") return true;
     return selectedUsers.length > 0;
+  };
+
+  const syncUsersFromDatabase = async () => {
+    setIsSyncing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Authentication required');
+
+      const [adminUsersResponse, profilesResponse] = await Promise.all([
+        supabase.from('admin_users').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id, name, email, department, is_online, created_at').order('created_at', { ascending: false })
+      ]);
+
+      let combined: Array<{ id: string; name: string; email: string; department?: string; is_online?: boolean }> = [];
+
+      if (!adminUsersResponse.error && adminUsersResponse.data) {
+        combined = combined.concat(
+          adminUsersResponse.data.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            department: undefined,
+            is_online: false,
+          }))
+        );
+      }
+
+      if (!profilesResponse.error && profilesResponse.data) {
+        combined = combined.concat(
+          profilesResponse.data.map((p: any) => ({
+            id: p.id,
+            name: p.name || 'Unknown User',
+            email: p.email || 'unknown@email.com',
+            department: p.department,
+            is_online: p.is_online,
+          }))
+        );
+      }
+
+      const dedupMap = new Map<string, any>();
+      combined.forEach(u => dedupMap.set(u.id, u));
+      const deduped = Array.from(dedupMap.values());
+
+      localStorage.setItem('synced_users', JSON.stringify(deduped));
+      setUsers(deduped);
+      window.dispatchEvent(new CustomEvent('usersSynced', { detail: { count: deduped.length } }));
+      toast({ title: "Users Synced", description: `Loaded ${deduped.length} users from database.` });
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({ title: "Sync Failed", description: "Unable to sync users from database.", variant: "destructive" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleAddUser = async () => {
+    if (!newUserEmail || !newUserName) {
+      toast({ title: "Missing fields", description: "Name and email are required.", variant: "destructive" });
+      return;
+    }
+    if (users.some(u => u.email.toLowerCase() === newUserEmail.toLowerCase())) {
+      toast({ title: "Duplicate email", description: "A user with this email already exists.", variant: "destructive" });
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Authentication required');
+
+      const tempPassword = Math.random().toString(36).slice(-8);
+      const { error } = await supabase.from('admin_users').insert([{ 
+        email: newUserEmail,
+        name: newUserName,
+        role: 'user',
+        temp_password: tempPassword,
+        created_by: user.id
+      }]);
+
+      if (error) throw error;
+
+      navigator.clipboard?.writeText?.(tempPassword);
+      toast({ title: "User Added", description: `Temporary password copied to clipboard.` });
+
+      await syncUsersFromDatabase();
+      setShowAddSync(false);
+      setNewUserEmail("");
+      setNewUserName("");
+    } catch (error) {
+      console.error('Add user error:', error);
+      toast({ title: "Add User Failed", description: "Could not add user.", variant: "destructive" });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleDeploy = async () => {
@@ -269,10 +388,59 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
 
             {/* User List */}
             <div className="space-y-2">
-              <Label className="text-base font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                User List ({filteredUsers.length} users)
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  User List ({filteredUsers.length} users)
+                </Label>
+                <Button variant="outline" size="sm" onClick={() => setShowAddSync(true)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Add & Sync User
+                </Button>
+              </div>
+
+              <Dialog open={showAddSync} onOpenChange={setShowAddSync}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Add and Sync User</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="add-email">Email *</Label>
+                      <Input
+                        id="add-email"
+                        type="email"
+                        placeholder="user@company.com"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        onKeyDown={(e) => { if ((e as React.KeyboardEvent<HTMLInputElement>).key === 'Enter') handleAddUser(); }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="add-name">Full Name *</Label>
+                      <Input
+                        id="add-name"
+                        placeholder="John Doe"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                        onKeyDown={(e) => { if ((e as React.KeyboardEvent<HTMLInputElement>).key === 'Enter') handleAddUser(); }}
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button onClick={handleAddUser} disabled={isAdding} className="flex-1">
+                        {isAdding ? 'Adding...' : 'Add User'}
+                      </Button>
+                      <Button variant="outline" onClick={syncUsersFromDatabase} disabled={isSyncing} className="flex-1">
+                        {isSyncing ? 'Syncing...' : (
+                          <span className="inline-flex items-center"><RefreshCw className="h-4 w-4 mr-2" />Sync Users</span>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
               
               <div className="border rounded-lg max-h-64 overflow-y-auto">
                 {filteredUsers.length === 0 ? (
