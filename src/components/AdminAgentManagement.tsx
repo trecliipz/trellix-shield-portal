@@ -90,6 +90,27 @@ export const AdminAgentManagement = () => {
     file: null as File | null
   });
 
+  // Prefer synced users from User Management when agent configurations are empty
+  const assignableUsers = userConfigurations.length > 0
+    ? userConfigurations
+    : ((): any[] => {
+        try {
+          const cached = localStorage.getItem('synced_users');
+          if (!cached) return [];
+          const parsed = JSON.parse(cached) as Array<{ id: string; name: string; email: string }>;
+          return parsed.map(u => ({
+            id: u.id,
+            userId: u.id,
+            userName: u.name,
+            userEmail: u.email,
+            agentVersion: 'N/A',
+            organizationName: undefined
+          }));
+        } catch {
+          return [];
+        }
+      })();
+
   useEffect(() => {
     loadData();
     setupRealtimeSubscription();
@@ -719,10 +740,10 @@ export const AdminAgentManagement = () => {
                         <div className="max-h-64 overflow-y-auto border rounded-md p-3 space-y-3">
                           <div className="flex items-center space-x-2 pb-2 border-b">
                             <Checkbox
-                              checked={selectedUsers.length === userConfigurations.length}
+                              checked={assignableUsers.length > 0 && selectedUsers.length === assignableUsers.length}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setSelectedUsers(userConfigurations.map(config => config.userId));
+                                  setSelectedUsers(assignableUsers.map(config => config.userId));
                                 } else {
                                   setSelectedUsers([]);
                                 }
@@ -730,8 +751,8 @@ export const AdminAgentManagement = () => {
                             />
                             <span className="text-sm font-medium">Select All Users</span>
                           </div>
-                          {userConfigurations.map(config => (
-                            <div key={config.id} className="flex items-center space-x-3 p-2 rounded hover:bg-muted/50">
+                          {assignableUsers.map(config => (
+                            <div key={config.userId || config.id} className="flex items-center space-x-3 p-2 rounded hover:bg-muted/50">
                               <Checkbox
                                 checked={selectedUsers.includes(config.userId)}
                                 onCheckedChange={(checked) => {
@@ -746,7 +767,7 @@ export const AdminAgentManagement = () => {
                                 <div className="font-medium">{config.userName}</div>
                                 <div className="text-sm text-muted-foreground">{config.userEmail}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  Current Agent: {config.agentVersion} • Org: {config.organizationName || 'Not configured'}
+                                  Current Agent: {config.agentVersion || 'N/A'} • Org: {config.organizationName || 'Not configured'}
                                 </div>
                               </div>
                             </div>

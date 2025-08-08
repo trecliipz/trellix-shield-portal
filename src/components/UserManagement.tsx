@@ -42,6 +42,14 @@ export default function UserManagement() {
   const { handleError, retryOperation } = useErrorHandling();
 
   useEffect(() => {
+    // Preload from cache to keep users visible while syncing
+    const cached = localStorage.getItem('synced_users');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setUsers(parsed);
+      } catch {}
+    }
     loadUsers();
   }, []);
 
@@ -53,12 +61,16 @@ export default function UserManagement() {
         
         // Check authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          throw new Error('Failed to load user data from API');
-        }
-        
-        if (!user) {
-          throw new Error('Authentication required to load users');
+        if (authError || !user) {
+          console.warn('No authenticated user - using local cache for users');
+          const cached = localStorage.getItem('synced_users');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            setUsers(parsed);
+            toast.info(`Loaded ${parsed.length} users from local cache`);
+            return parsed;
+          }
+          throw new Error('No authenticated session');
         }
 
         console.log('Current user:', user.email);
@@ -72,6 +84,13 @@ export default function UserManagement() {
 
         if (profileError) {
           console.error('Profile error:', profileError);
+          const cached = localStorage.getItem('synced_users');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            setUsers(parsed);
+            toast.info('Using cached users while database reconnects');
+            return parsed;
+          }
           throw new Error('database connection lost');
         }
 
@@ -152,6 +171,8 @@ export default function UserManagement() {
 
         console.log('Total users loaded:', allUsers.length);
         setUsers(allUsers);
+        localStorage.setItem('synced_users', JSON.stringify(allUsers));
+        window.dispatchEvent(new CustomEvent('usersSynced', { detail: { count: allUsers.length } }));
         toast.success(`Synced ${allUsers.length} users from database`);
         
         return allUsers;
@@ -159,8 +180,21 @@ export default function UserManagement() {
     } catch (error) {
       console.error('Error loading users after retries:', error);
       handleError(error);
+      // Fallback to local cache first
+      const cachedSynced = localStorage.getItem('synced_users');
+      if (cachedSynced) {
+        try {
+          const localUsers = JSON.parse(cachedSynced);
+          setUsers(localUsers);
+          console.log('Loaded from local cache fallback:', localUsers.length);
+          toast.info(`Loaded ${localUsers.length} users from local cache (offline mode)`);
+          return;
+        } catch (parseError) {
+          console.error('Error parsing cached synced users:', parseError);
+        }
+      }
       
-      // Fallback to localStorage for admin users only
+      // Fallback to legacy admin_users storage
       const savedUsers = localStorage.getItem('admin_users');
       if (savedUsers) {
         try {

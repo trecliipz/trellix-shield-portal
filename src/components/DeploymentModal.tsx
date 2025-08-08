@@ -63,6 +63,21 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
 
   const loadUsers = async () => {
     try {
+      // Prefer users synced from the User Management page
+      const cached = localStorage.getItem('synced_users');
+      if (cached) {
+        const parsed = JSON.parse(cached) as Array<{ id: string; name: string; email: string; department?: string }>;
+        const mapped = parsed.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          department: u.department,
+          is_online: false,
+        }));
+        setUsers(mapped);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name, email, department, is_online')
