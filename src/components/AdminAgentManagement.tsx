@@ -79,7 +79,8 @@ export const AdminAgentManagement = () => {
   const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<AgentPackage | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
+   const [uploadProgress, setUploadProgress] = useState(0);
+   const [syncedUsers, setSyncedUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [newPackage, setNewPackage] = useState({
     name: '',
     version: '',
@@ -90,30 +91,35 @@ export const AdminAgentManagement = () => {
     file: null as File | null
   });
 
-  // Prefer synced users from User Management when agent configurations are empty
   const assignableUsers = userConfigurations.length > 0
     ? userConfigurations
-    : ((): any[] => {
-        try {
-          const cached = localStorage.getItem('synced_users');
-          if (!cached) return [];
-          const parsed = JSON.parse(cached) as Array<{ id: string; name: string; email: string }>;
-          return parsed.map(u => ({
-            id: u.id,
-            userId: u.id,
-            userName: u.name,
-            userEmail: u.email,
-            agentVersion: 'N/A',
-            organizationName: undefined
-          }));
-        } catch {
-          return [];
-        }
-      })();
+    : syncedUsers.map(u => ({
+        id: u.id,
+        userId: u.id,
+        userName: u.name,
+        userEmail: u.email,
+        agentVersion: 'N/A',
+        organizationName: undefined
+      }));
 
   useEffect(() => {
     loadData();
     setupRealtimeSubscription();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('synced_users');
+      if (cached) setSyncedUsers(JSON.parse(cached));
+    } catch {}
+    const handler = () => {
+      try {
+        const cached = localStorage.getItem('synced_users');
+        if (cached) setSyncedUsers(JSON.parse(cached));
+      } catch {}
+    };
+    window.addEventListener('usersSynced', handler as unknown as EventListener);
+    return () => window.removeEventListener('usersSynced', handler as unknown as EventListener);
   }, []);
 
   const setupRealtimeSubscription = () => {

@@ -93,10 +93,8 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
         return;
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email, department, is_online')
-        .order('name');
+      const { data, error } = await (supabase as any)
+        .rpc('get_all_profiles_public');
 
       if (error) {
         // Fallback to mock data if database fails
@@ -110,7 +108,14 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
         ];
         setUsers(mockUsers);
       } else {
-        setUsers(data || []);
+        const mapped = (data || []).map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          department: u.department,
+          is_online: false,
+        }));
+        setUsers(mapped);
       }
     } catch (error) {
       console.error('Error loading users:', error);
