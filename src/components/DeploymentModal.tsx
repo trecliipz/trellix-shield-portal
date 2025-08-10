@@ -93,8 +93,7 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
         return;
       }
 
-      const { data, error } = await (supabase as any)
-        .rpc('get_all_profiles_public');
+      const { data, error } = await supabase.functions.invoke('list-profiles');
 
       if (error) {
         // Fallback to mock data if database fails
@@ -113,7 +112,7 @@ export const DeploymentModal = ({ open, onOpenChange, agent }: DeploymentModalPr
           name: u.name,
           email: u.email,
           department: u.department,
-          is_online: false,
+          is_online: u.is_online ?? false,
         }));
         setUsers(mapped);
       }

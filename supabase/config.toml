@@ -35,6 +35,9 @@ verify_jwt = false
 [functions.fetch-security-updates]
 verify_jwt = false
 
+[functions.list-profiles]
+verify_jwt = false
+
 [db]
 port = 54322
 

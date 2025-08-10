@@ -59,18 +59,39 @@ export default function UserManagement() {
       await retryOperation(async () => {
         console.log('Loading users...');
         
-        // Check authentication
+        // Check authentication; if not available, use public edge function
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
-          console.warn('No authenticated user - using local cache for users');
-          const cached = localStorage.getItem('synced_users');
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            setUsers(parsed);
-            toast.info(`Loaded ${parsed.length} users from local cache`);
-            return parsed;
+          console.warn('No authenticated user - fetching via public endpoint');
+          try {
+            const { data, error } = await supabase.functions.invoke('list-profiles');
+            if (error) throw error;
+            const publicUsers: User[] = (data || []).map((p: any) => ({
+              id: p.id,
+              email: p.email || 'unknown@email.com',
+              name: p.name || 'Unknown User',
+              role: p.email?.includes('admin') ? 'admin' : 'user',
+              status: 'active',
+              registrationDate: new Date().toISOString().split('T')[0],
+              lastLogin: 'Unknown',
+              source: 'registered',
+            }));
+            setUsers(publicUsers);
+            localStorage.setItem('synced_users', JSON.stringify(publicUsers));
+            window.dispatchEvent(new CustomEvent('usersSynced', { detail: { count: publicUsers.length } }));
+            toast.success(`Synced ${publicUsers.length} users (public)`);
+            return publicUsers;
+          } catch (e) {
+            console.warn('Public fetch failed, using cache', e);
+            const cached = localStorage.getItem('synced_users');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              setUsers(parsed);
+              toast.info(`Loaded ${parsed.length} users from local cache`);
+              return parsed;
+            }
+            throw new Error('Failed to fetch users');
           }
-          throw new Error('No authenticated session');
         }
 
         console.log('Current user:', user.email);
@@ -491,6 +512,7 @@ export default function UserManagement() {
                 <TableHead>Status</TableHead>
                 <TableHead>Registration</TableHead>
                 <TableHead>Source</TableHead>
+                <TableHead>Agent Download</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -541,6 +563,22 @@ export default function UserManagement() {
                     <Badge variant={user.source === 'registered' ? 'default' : 'outline'}>
                       {user.source === 'registered' ? 'Registered' : 'Admin Created'}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      try {
+                        const aa = localStorage.getItem('admin_agents');
+                        const arr = JSON.parse(aa || '[]');
+                        const available = Array.isArray(arr) && arr.length > 0;
+                        return (
+                          <Badge variant={available ? 'default' : 'secondary'}>
+                            {available ? 'Available' : 'Unavailable'}
+                          </Badge>
+                        );
+                      } catch {
+                        return <Badge variant="secondary">Unavailable</Badge>;
+                      }
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Dialog>
