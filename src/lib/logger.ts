@@ -41,6 +41,10 @@ declare global {
 const UI_STORAGE_KEY = 'error_logs';
 const QUEUE_STORAGE_KEY = 'error_log_queue';
 const SESSION_KEY = 'error_session_id';
+const IGNORE_PATTERNS = [/\[vite\]\s*failed to connect to websocket/i];
+const DEMOTE_INFO_PATTERNS = [/No authenticated user - fetching via public endpoint/i];
+const recentLogs = new Map<string, number>();
+const DEDUPE_WINDOW_MS = 5000;
 
 function getSessionId() {
   let id = localStorage.getItem(SESSION_KEY);
@@ -123,11 +127,21 @@ function toUILevel(dbLevel: DBLogLevel, message: string): UILogLevel {
 
 export async function logClientError(level: DBLogLevel, message: string, source = 'app', details?: any) {
   const now = new Date();
+  const text = String(message ?? '');
+  // Ignore noisy patterns
+  if (IGNORE_PATTERNS.some((re) => re.test(text))) return;
+  // Dedupe recent identical logs
+  const key = `${level}|${text}`;
+  const nowMs = now.getTime();
+  const last = recentLogs.get(key);
+  if (last && nowMs - last < DEDUPE_WINDOW_MS) return;
+  recentLogs.set(key, nowMs);
+
   const uiLog: UILogItem = {
     id: `${now.getTime()}-${Math.random().toString(36).slice(2, 6)}`,
     timestamp: now.toISOString(),
-    level: toUILevel(level, message),
-    message,
+    level: toUILevel(level, text),
+    message: text,
     source,
     details: typeof details === 'string' ? details : JSON.stringify(details ?? {}),
     resolved: false,
@@ -137,7 +151,7 @@ export async function logClientError(level: DBLogLevel, message: string, source 
   const queueItem: QueueItem = {
     created_at: now.toISOString(),
     level,
-    message,
+    message: text,
     source,
     url: location.href,
     user_agent: navigator.userAgent,
@@ -166,12 +180,15 @@ function installGlobalHandlers() {
   } as const;
 
   console.error = (...args: any[]) => {
-    try { logClientError('error', args.map(String).join(' '), 'console.error'); } catch {}
+    const msg = args.map(String).join(' ');
+    try { logClientError('error', msg, 'console.error'); } catch {}
     originals.error.apply(console, args as any);
   };
   console.warn = (...args: any[]) => {
-    try { logClientError('warn', args.map(String).join(' '), 'console.warn'); } catch {}
-    originals.warn.apply(console, args as any);
+    const msg = args.map(String).join(' ');
+    const demote = DEMOTE_INFO_PATTERNS.some((re) => re.test(msg));
+    try { logClientError(demote ? 'info' : 'warn', msg, 'console.warn'); } catch {}
+    (demote ? originals.info : originals.warn).apply(console, args as any);
   };
 
   // Global JS errors (includes resource errors via non-ErrorEvent)

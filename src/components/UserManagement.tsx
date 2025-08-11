@@ -63,7 +63,7 @@ export default function UserManagement() {
         // Check authentication; if not available, use public edge function
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
-          console.warn('No authenticated user - fetching via public endpoint');
+          console.info('No authenticated user - fetching via public endpoint');
           try {
             const { data, error } = await supabase.functions.invoke('list-profiles');
             if (error) throw error;
@@ -458,7 +458,7 @@ export default function UserManagement() {
                     Add User
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent aria-describedby={undefined}>
                   <DialogHeader>
                     <DialogTitle>Add New User</DialogTitle>
                   </DialogHeader>
@@ -602,7 +602,7 @@ export default function UserManagement() {
                           Edit
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent aria-describedby={undefined}>
                         <DialogHeader>
                           <DialogTitle>Edit User: {selectedUser?.email}</DialogTitle>
                         </DialogHeader>

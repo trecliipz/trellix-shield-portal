@@ -407,7 +407,7 @@ export const AdminMessages = () => {
 
       {/* Reply Dialog */}
       <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Reply to Message</DialogTitle>
           </DialogHeader>

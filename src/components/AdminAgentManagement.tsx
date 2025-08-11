@@ -436,7 +436,7 @@ export const AdminAgentManagement = () => {
               Upload Agent Package
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Upload New Agent Package</DialogTitle>
             </DialogHeader>
@@ -583,7 +583,7 @@ export const AdminAgentManagement = () => {
                                 Deploy
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent aria-describedby={undefined}>
                               <DialogHeader>
                                 <DialogTitle>Deploy Agent Package</DialogTitle>
                               </DialogHeader>
@@ -694,7 +694,7 @@ export const AdminAgentManagement = () => {
                       Assign Agents to Users
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-2xl" aria-describedby={undefined}>
                     <DialogHeader>
                       <DialogTitle>Assign Agent Package to Users</DialogTitle>
                       <p className="text-muted-foreground text-sm">

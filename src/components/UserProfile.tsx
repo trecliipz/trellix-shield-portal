@@ -918,7 +918,7 @@ export default function UserProfile() {
                                     Customize
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent aria-describedby={undefined}>
                                   <DialogHeader>
                                     <DialogTitle>Create Custom Package</DialogTitle>
                                     <DialogDescription>
@@ -1064,7 +1064,7 @@ export default function UserProfile() {
                         Add Endpoint
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>Add New Endpoint</DialogTitle>
                         <DialogDescription>

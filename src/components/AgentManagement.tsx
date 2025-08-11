@@ -266,7 +266,7 @@ export const AgentManagement = () => {
                   Add Agent
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md" aria-describedby={undefined}>
                 <DialogHeader>
                   <DialogTitle>Upload New Agent</DialogTitle>
                 </DialogHeader>
@@ -369,7 +369,7 @@ export const AgentManagement = () => {
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent aria-describedby={undefined}>
                           <DialogHeader>
                             <DialogTitle>Edit Agent: {editingAgent?.name}</DialogTitle>
                           </DialogHeader>

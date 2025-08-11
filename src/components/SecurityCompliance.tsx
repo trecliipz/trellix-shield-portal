@@ -172,9 +172,9 @@ export const SecurityCompliance = () => {
     }
   };
 
-  const overallScore = Math.round(
-    complianceData.reduce((sum, item) => sum + item.score, 0) / complianceData.length
-  );
+  const overallScore = complianceData.length > 0
+    ? Math.round(complianceData.reduce((sum, item) => sum + item.score, 0) / complianceData.length)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -338,7 +338,7 @@ export const SecurityCompliance = () => {
                       View Privacy Policy
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden" aria-describedby={undefined}>
                     <DialogHeader>
                       <DialogTitle>Data Privacy Policy</DialogTitle>
                     </DialogHeader>
@@ -363,7 +363,7 @@ export const SecurityCompliance = () => {
                       View Response Plan
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden" aria-describedby={undefined}>
                     <DialogHeader>
                       <DialogTitle>Security Incident Response Plan</DialogTitle>
                     </DialogHeader>
@@ -388,7 +388,7 @@ export const SecurityCompliance = () => {
                       View Access Policy
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden" aria-describedby={undefined}>
                     <DialogHeader>
                       <DialogTitle>Access Control Policy</DialogTitle>
                     </DialogHeader>
@@ -413,7 +413,7 @@ export const SecurityCompliance = () => {
                       View Disclosure Policy
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden" aria-describedby={undefined}>
                     <DialogHeader>
                       <DialogTitle>Vulnerability Disclosure Policy</DialogTitle>
                     </DialogHeader>

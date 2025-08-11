@@ -124,7 +124,7 @@ export const AuthModal = ({ type, onClose, onLogin }: AuthModalProps) => {
 
   return (
     <Dialog open={type !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[400px] bg-card border-border">
+      <DialogContent className="sm:max-w-[400px] bg-card border-border" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="text-primary">
             {type === 'login' ? 'Login' : 'Create Account'}

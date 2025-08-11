@@ -107,7 +107,7 @@ WORKSTATION-DEV-01,windows,Development Workstation`;
           Bulk Import Endpoints
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Monitor className="h-5 w-5" />

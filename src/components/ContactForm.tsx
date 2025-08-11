@@ -157,7 +157,7 @@ export const ContactForm = ({ isOpen, onClose, currentUser }: ContactFormProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Send className="h-5 w-5 text-primary" />

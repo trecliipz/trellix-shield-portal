@@ -772,7 +772,7 @@ export const EnhancedAuthModal = ({ type, onClose, onLogin }: EnhancedAuthModalP
 
   return (
     <Dialog open={type !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] bg-card border-border max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] bg-card border-border max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="text-primary">
             {type === 'login' ? 'Login to Your Account' : 'Create Your Account'}
