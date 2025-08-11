@@ -571,6 +571,59 @@ export type Database = {
           },
         ]
       }
+      error_logs: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          level: string
+          message: string
+          resolved: boolean
+          session_id: string | null
+          source: string | null
+          tags: string[]
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          level: string
+          message: string
+          resolved?: boolean
+          session_id?: string | null
+          source?: string | null
+          tags?: string[]
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          level?: string
+          message?: string
+          resolved?: boolean
+          session_id?: string | null
+          source?: string | null
+          tags?: string[]
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ml_metrics: {
         Row: {
           id: string

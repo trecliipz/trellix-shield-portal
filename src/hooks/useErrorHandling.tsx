@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { logClientError } from '@/lib/logger';
 
 interface ErrorState {
   hasError: boolean;
@@ -21,6 +22,16 @@ export const useErrorHandling = () => {
       (error instanceof Error ? error.message : 'An unexpected error occurred');
     
     console.error('Error occurred:', error);
+
+    // Persist to centralized logger
+    try {
+      const details = {
+        name: error?.name,
+        stack: error?.stack,
+        raw: String(error)
+      };
+      logClientError('error', errorMessage, 'useErrorHandling', details);
+    } catch {}
     
     setErrorState(prev => ({
       hasError: true,
