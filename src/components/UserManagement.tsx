@@ -39,6 +39,7 @@ export default function UserManagement() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "user" as 'admin' | 'user' });
   const [isLoading, setIsLoading] = useState(false);
+  const [agentAvailability, setAgentAvailability] = useState<Record<string, boolean>>({});
   const { handleError, retryOperation } = useErrorHandling();
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export default function UserManagement() {
               source: 'registered',
             }));
             setUsers(publicUsers);
+            await updateAgentAvailability(publicUsers);
             localStorage.setItem('synced_users', JSON.stringify(publicUsers));
             window.dispatchEvent(new CustomEvent('usersSynced', { detail: { count: publicUsers.length } }));
             toast.success(`Synced ${publicUsers.length} users (public)`);
@@ -192,6 +194,7 @@ export default function UserManagement() {
 
         console.log('Total users loaded:', allUsers.length);
         setUsers(allUsers);
+        await updateAgentAvailability(allUsers);
         localStorage.setItem('synced_users', JSON.stringify(allUsers));
         window.dispatchEvent(new CustomEvent('usersSynced', { detail: { count: allUsers.length } }));
         toast.success(`Synced ${allUsers.length} users from database`);
@@ -200,13 +203,14 @@ export default function UserManagement() {
       });
     } catch (error) {
       console.error('Error loading users after retries:', error);
-      handleError(error);
+      handleError(error, 'Failed to sync users; showing cached data if available');
       // Fallback to local cache first
       const cachedSynced = localStorage.getItem('synced_users');
       if (cachedSynced) {
         try {
           const localUsers = JSON.parse(cachedSynced);
           setUsers(localUsers);
+          await updateAgentAvailability(localUsers);
           console.log('Loaded from local cache fallback:', localUsers.length);
           toast.info(`Loaded ${localUsers.length} users from local cache (offline mode)`);
           return;
@@ -221,6 +225,7 @@ export default function UserManagement() {
         try {
           const localUsers = JSON.parse(savedUsers);
           setUsers(localUsers);
+          await updateAgentAvailability(localUsers);
           console.log('Loaded from localStorage fallback:', localUsers.length);
           toast.info(`Loaded ${localUsers.length} users from local storage (offline mode)`);
         } catch (parseError) {
@@ -230,6 +235,27 @@ export default function UserManagement() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const updateAgentAvailability = async (userList: User[]) => {
+    try {
+      const ids = userList.map((u) => u.id);
+      if (ids.length === 0) return;
+      const { data, error } = await supabase.functions.invoke('agent-download-status', {
+        body: { user_ids: ids }
+      });
+      if (error) {
+        console.warn('Agent availability fetch error:', error);
+        return;
+      }
+      const map: Record<string, boolean> = {};
+      (data || []).forEach((row: any) => {
+        map[row.user_id] = !!row.available;
+      });
+      setAgentAvailability(map);
+    } catch (e) {
+      console.warn('Agent availability failed, skipping', e);
     }
   };
 
@@ -565,20 +591,9 @@ export default function UserManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      try {
-                        const aa = localStorage.getItem('admin_agents');
-                        const arr = JSON.parse(aa || '[]');
-                        const available = Array.isArray(arr) && arr.length > 0;
-                        return (
-                          <Badge variant={available ? 'default' : 'secondary'}>
-                            {available ? 'Available' : 'Unavailable'}
-                          </Badge>
-                        );
-                      } catch {
-                        return <Badge variant="secondary">Unavailable</Badge>;
-                      }
-                    })()}
+                    <Badge variant={agentAvailability[user.id] ? 'default' : 'secondary'}>
+                      {agentAvailability[user.id] ? 'Available' : 'Unavailable'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Dialog>
