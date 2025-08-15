@@ -211,6 +211,56 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_installers: {
+        Row: {
+          config_data: Json | null
+          created_at: string
+          customer_id: string
+          download_count: number | null
+          download_url: string | null
+          expires_at: string | null
+          id: string
+          installer_name: string
+          platform: string
+          site_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          config_data?: Json | null
+          created_at?: string
+          customer_id: string
+          download_count?: number | null
+          download_url?: string | null
+          expires_at?: string | null
+          id?: string
+          installer_name: string
+          platform: string
+          site_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config_data?: Json | null
+          created_at?: string
+          customer_id?: string
+          download_count?: number | null
+          download_url?: string | null
+          expires_at?: string | null
+          id?: string
+          installer_name?: string
+          platform?: string
+          site_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_installers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulk_operations: {
         Row: {
           completed_items: number | null
@@ -250,6 +300,305 @@ export type Database = {
           total_items?: number | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      customer_api_keys: {
+        Row: {
+          created_at: string
+          customer_id: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_name: string
+          last_used: string | null
+          permissions: Json
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_name: string
+          last_used?: string | null
+          permissions?: Json
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_name?: string
+          last_used?: string | null
+          permissions?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_api_keys_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          customer_id: string
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          customer_id: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          customer_id?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_audit_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_endpoints: {
+        Row: {
+          agent_version: string | null
+          created_at: string
+          customer_id: string
+          epo_system_id: string | null
+          hostname: string
+          id: string
+          ip_address: unknown | null
+          last_seen: string | null
+          mac_address: string | null
+          os_type: string | null
+          os_version: string | null
+          policy_compliance: Json | null
+          status: string
+          threat_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_version?: string | null
+          created_at?: string
+          customer_id: string
+          epo_system_id?: string | null
+          hostname: string
+          id?: string
+          ip_address?: unknown | null
+          last_seen?: string | null
+          mac_address?: string | null
+          os_type?: string | null
+          os_version?: string | null
+          policy_compliance?: Json | null
+          status?: string
+          threat_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_version?: string | null
+          created_at?: string
+          customer_id?: string
+          epo_system_id?: string | null
+          hostname?: string
+          id?: string
+          ip_address?: unknown | null
+          last_seen?: string | null
+          mac_address?: string | null
+          os_type?: string | null
+          os_version?: string | null
+          policy_compliance?: Json | null
+          status?: string
+          threat_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_endpoints_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_subscriptions: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          customer_id: string
+          endpoint_count: number
+          id: string
+          plan_id: string
+          status: string
+          stripe_subscription_id: string | null
+          trial_end: string | null
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_id: string
+          endpoint_count?: number
+          id?: string
+          plan_id: string
+          status?: string
+          stripe_subscription_id?: string | null
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_id?: string
+          endpoint_count?: number
+          id?: string
+          plan_id?: string
+          status?: string
+          stripe_subscription_id?: string | null
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_subscriptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans_epo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_users: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          is_primary: boolean
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_primary?: boolean
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_primary?: boolean
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_users_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: Json | null
+          billing_email: string | null
+          company_name: string
+          contact_email: string
+          contact_name: string
+          created_at: string
+          epo_ou_id: string | null
+          id: string
+          ou_group_name: string
+          phone: string | null
+          status: string
+          stripe_customer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: Json | null
+          billing_email?: string | null
+          company_name: string
+          contact_email: string
+          contact_name: string
+          created_at?: string
+          epo_ou_id?: string | null
+          id?: string
+          ou_group_name: string
+          phone?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: Json | null
+          billing_email?: string | null
+          company_name?: string
+          contact_email?: string
+          contact_name?: string
+          created_at?: string
+          epo_ou_id?: string | null
+          id?: string
+          ou_group_name?: string
+          phone?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1236,6 +1585,45 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans_epo: {
+        Row: {
+          created_at: string
+          display_name: string
+          features: Json
+          id: string
+          is_active: boolean
+          max_endpoints: number
+          plan_name: string
+          price_per_endpoint_monthly: number
+          price_per_endpoint_yearly: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          max_endpoints?: number
+          plan_name: string
+          price_per_endpoint_monthly: number
+          price_per_endpoint_yearly: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          max_endpoints?: number
+          plan_name?: string
+          price_per_endpoint_monthly?: number
+          price_per_endpoint_yearly?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       threat_classifications: {
         Row: {
           classification: string
@@ -1306,6 +1694,57 @@ export type Database = {
           updates_found?: number
         }
         Relationships: []
+      }
+      usage_records: {
+        Row: {
+          created_at: string
+          customer_id: string
+          endpoint_count: number
+          id: string
+          period_end: string
+          period_start: string
+          stripe_invoice_id: string | null
+          subscription_id: string
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          endpoint_count: number
+          id?: string
+          period_end: string
+          period_start: string
+          stripe_invoice_id?: string | null
+          subscription_id: string
+          total_amount: number
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          endpoint_count?: number
+          id?: string
+          period_end?: string
+          period_start?: string
+          stripe_invoice_id?: string | null
+          subscription_id?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_records_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_records_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_custom_packages: {
         Row: {
@@ -1631,6 +2070,13 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_customer_for_user: {
+        Args: { user_uuid: string }
+        Returns: {
+          customer_id: string
+          role: string
+        }[]
       }
       get_deployment_status: {
         Args: { p_deployment_id: string }
