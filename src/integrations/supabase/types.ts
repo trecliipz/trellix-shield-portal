@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -321,6 +321,110 @@ export type Database = {
           vendor_info?: Json | null
         }
         Relationships: []
+      }
+      date_posts: {
+        Row: {
+          created_at: string
+          facebook: string | null
+          id: string
+          instagram: string | null
+          is_public: boolean | null
+          location: string | null
+          person_name: string
+          photo_url: string | null
+          rating: number
+          review: string | null
+          tags: string[] | null
+          twitter: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          is_public?: boolean | null
+          location?: string | null
+          person_name: string
+          photo_url?: string | null
+          rating: number
+          review?: string | null
+          tags?: string[] | null
+          twitter?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          is_public?: boolean | null
+          location?: string | null
+          person_name?: string
+          photo_url?: string | null
+          rating?: number
+          review?: string | null
+          tags?: string[] | null
+          twitter?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "date_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      date_reviews: {
+        Row: {
+          created_at: string
+          date_post_id: string
+          id: string
+          is_verified: boolean | null
+          rating: number
+          review_text: string | null
+          reviewer_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_post_id: string
+          id?: string
+          is_verified?: boolean | null
+          rating: number
+          review_text?: string | null
+          reviewer_user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_post_id?: string
+          id?: string
+          is_verified?: boolean | null
+          rating?: number
+          review_text?: string | null
+          reviewer_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "date_reviews_date_post_id_fkey"
+            columns: ["date_post_id"]
+            isOneToOne: false
+            referencedRelation: "date_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "date_reviews_reviewer_user_id_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       driver_earnings: {
         Row: {
@@ -1313,6 +1417,72 @@ export type Database = {
         }
         Relationships: []
       }
+      user_pings: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          message: string | null
+          ping_type: string | null
+          to_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          message?: string | null
+          ping_type?: string | null
+          to_user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          message?: string | null
+          ping_type?: string | null
+          to_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_pings_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_pings_to_user_id_fkey"
+            columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           auto_renew: boolean | null
@@ -1398,11 +1568,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_admin_role: {
+        Args: { admin_email: string }
+        Returns: string
+      }
       assign_agent_to_users: {
         Args: {
           p_agent_id: string
-          p_user_ids: string[]
           p_assigned_by: string
+          p_user_ids: string[]
         }
         Returns: number
       }
@@ -1411,7 +1585,7 @@ export type Database = {
         Returns: string
       }
       calculate_driver_earnings: {
-        Args: { p_ride_id: string; p_platform_fee_rate?: number }
+        Args: { p_platform_fee_rate?: number; p_ride_id: string }
         Returns: string
       }
       can_user_download: {
@@ -1420,10 +1594,10 @@ export type Database = {
       }
       create_custom_package: {
         Args: {
-          p_user_id: string
           p_base_package_id: string
-          p_package_name: string
           p_custom_config?: Json
+          p_package_name: string
+          p_user_id: string
         }
         Returns: string
       }
@@ -1435,8 +1609,8 @@ export type Database = {
         }
         Returns: {
           deployment_id: string
-          target_count: number
           message: string
+          target_count: number
         }[]
       }
       find_nearby_drivers: {
@@ -1446,38 +1620,49 @@ export type Database = {
           p_radius_km?: number
         }
         Returns: {
-          driver_id: string
+          current_location: Json
           distance_km: number
+          driver_id: string
           driver_name: string
           driver_rating: number
           vehicle_info: string
-          current_location: Json
         }[]
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["app_role"]
       }
       get_deployment_status: {
         Args: { p_deployment_id: string }
         Returns: {
-          deployment_id: string
-          status: string
-          total_users: number
           completed_users: number
+          created_at: string
+          deployment_id: string
           failed_users: number
           progress_percentage: number
-          created_at: string
+          status: string
+          total_users: number
         }[]
       }
       get_driver_weekly_earnings: {
         Args: { p_driver_id: string; p_week_start?: string }
         Returns: {
-          total_earnings: number
-          total_rides: number
           total_bonus: number
+          total_earnings: number
           total_platform_fees: number
+          total_rides: number
         }[]
       }
       get_wallet_balance: {
         Args: { user_uuid: string }
         Returns: number
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       increment_download_count: {
         Args: { p_user_id: string }
@@ -1486,44 +1671,44 @@ export type Database = {
       process_weekly_payout: {
         Args: {
           p_driver_id: string
-          p_payout_period_start: string
           p_payout_period_end: string
+          p_payout_period_start: string
         }
         Returns: string
       }
       sync_user_agent_config: {
         Args: {
-          p_user_id: string
           p_agent_version: string
           p_epo_config?: Json
+          p_user_id: string
         }
         Returns: string
       }
       update_driver_status: {
         Args: {
           p_driver_id: string
-          p_status: string
-          p_location?: Json
           p_heading?: number
+          p_location?: Json
+          p_status: string
         }
         Returns: string
       }
       upgrade_user_subscription: {
         Args: {
-          p_user_id: string
-          p_plan_name: string
           p_billing_cycle?: string
+          p_plan_name: string
+          p_user_id: string
         }
         Returns: string
       }
       upsert_user_location: {
         Args: {
-          p_user_id: string
+          p_heading?: number
+          p_is_online?: boolean
           p_latitude: number
           p_longitude: number
-          p_heading?: number
+          p_user_id: string
           p_user_type?: string
-          p_is_online?: boolean
         }
         Returns: string
       }
@@ -1533,7 +1718,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1660,6 +1845,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
