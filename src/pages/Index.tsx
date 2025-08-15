@@ -116,7 +116,7 @@ const Index = () => {
       />
       
       <main className="pt-20">
-        {isLoggedIn && hasCustomerProfile ? (
+        {isLoggedIn && (hasCustomerProfile || currentUser?.role === 'admin') ? (
           <CustomerPortal onLogout={handleLogout} />
         ) : isLoggedIn ? (
           <div className="container mx-auto px-6 py-12 text-center">
