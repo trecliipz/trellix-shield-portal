@@ -39,11 +39,6 @@ export const Hero = ({ onGetStarted }: HeroProps) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-center">
-          <Button size="lg" onClick={onGetStarted} className="glow-button text-lg px-8 py-6 hover:scale-105 transition-all duration-300">
-            Start Free Trial - From $9.99/month
-          </Button>
-        </div>
 
         <p className="text-sm text-muted-foreground mt-4">
           No credit card required • 14-day free trial • Cancel anytime
