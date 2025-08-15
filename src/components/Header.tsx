@@ -184,11 +184,10 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
         </nav>
       </header>
 
-      <EnhancedAuthModal 
-        type={authModalType}
-        onClose={() => setAuthModalType(null)}
-        onLogin={onLogin}
-      />
+        <EnhancedAuthModal 
+          type={authModalType}
+          onClose={() => setAuthModalType(null)}
+        />
       
       <ContactForm
         isOpen={isContactFormOpen}

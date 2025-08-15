@@ -1,0 +1,206 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[EPO-INTEGRATION] ${step}${detailsStr}`);
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Use service role key for admin operations
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
+  );
+
+  try {
+    logStep("Function started");
+
+    const epoServerUrl = Deno.env.get("EPO_SERVER_URL");
+    const epoUsername = Deno.env.get("EPO_API_USERNAME");
+    const epoPassword = Deno.env.get("EPO_API_PASSWORD");
+
+    if (!epoServerUrl || !epoUsername || !epoPassword) {
+      throw new Error("ePO credentials not configured");
+    }
+
+    const { action, customerId, ouGroupName, companyName } = await req.json();
+    
+    logStep("Processing ePO action", { action, customerId, ouGroupName });
+
+    if (action === 'create-customer-ou') {
+      // Create System Tree OU for customer
+      const createOuResponse = await fetch(`${epoServerUrl}/remote/core.createSystemTreeNode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(`${epoUsername}:${epoPassword}`)}`
+        },
+        body: JSON.stringify({
+          parentId: 3, // Assuming 3 is the SaaS-Customers OU ID
+          name: ouGroupName,
+          description: `Automated OU for ${companyName}`
+        })
+      });
+
+      if (!createOuResponse.ok) {
+        const errorText = await createOuResponse.text();
+        logStep("Failed to create OU", { status: createOuResponse.status, error: errorText });
+        throw new Error(`Failed to create OU: ${errorText}`);
+      }
+
+      const ouData = await createOuResponse.json();
+      logStep("OU created successfully", ouData);
+
+      // Generate site key for customer
+      const siteKeyResponse = await fetch(`${epoServerUrl}/remote/system.createSiteKey`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(`${epoUsername}:${epoPassword}`)}`
+        },
+        body: JSON.stringify({
+          name: `${ouGroupName}-SiteKey`,
+          description: `Site key for ${companyName}`,
+          expiration: new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)).toISOString() // 1 year from now
+        })
+      });
+
+      let siteKey = null;
+      if (siteKeyResponse.ok) {
+        const siteKeyData = await siteKeyResponse.json();
+        siteKey = siteKeyData.siteKey;
+        logStep("Site key generated", { siteKey: siteKey?.substring(0, 10) + "..." });
+      } else {
+        logStep("Site key generation failed", { status: siteKeyResponse.status });
+      }
+
+      // Create agent installer record
+      const { data: installerData, error: installerError } = await supabaseAdmin
+        .from("agent_installers")
+        .insert({
+          customer_id: customerId,
+          installer_name: `${ouGroupName}-Installer`,
+          platform: 'windows',
+          site_key: siteKey,
+          config_data: {
+            ou_group_name: ouGroupName,
+            company_name: companyName,
+            epo_server: epoServerUrl,
+            created_at: new Date().toISOString()
+          }
+        })
+        .select()
+        .single();
+
+      if (installerError) {
+        logStep("Failed to create installer record", installerError);
+        throw new Error(`Failed to create installer record: ${installerError.message}`);
+      }
+
+      logStep("Installer record created", { installerId: installerData.id });
+
+      // Apply default policies based on subscription tier
+      try {
+        const applyPolicyResponse = await fetch(`${epoServerUrl}/remote/policy.assign`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${btoa(`${epoUsername}:${epoPassword}`)}`
+          },
+          body: JSON.stringify({
+            systemId: ouData.systemId,
+            policyName: 'Starter-Policy-Template' // Default to starter policies
+          })
+        });
+
+        if (applyPolicyResponse.ok) {
+          logStep("Default policies applied successfully");
+        } else {
+          logStep("Policy application failed", { status: applyPolicyResponse.status });
+        }
+      } catch (policyError) {
+        logStep("Policy application error", policyError);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        ouId: ouData.systemId,
+        siteKey: siteKey,
+        installer: {
+          id: installerData.id,
+          name: installerData.installer_name
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    if (action === 'generate-installer') {
+      // Generate a new installer for existing customer
+      const { data: customerData, error: customerError } = await supabaseAdmin
+        .from("customers")
+        .select("*")
+        .eq("id", customerId)
+        .single();
+
+      if (customerError || !customerData) {
+        throw new Error("Customer not found");
+      }
+
+      // Create new installer record
+      const { data: installerData, error: installerError } = await supabaseAdmin
+        .from("agent_installers")
+        .insert({
+          customer_id: customerId,
+          installer_name: `${customerData.ou_group_name}-Installer-${Date.now()}`,
+          platform: 'windows',
+          config_data: {
+            ou_group_name: customerData.ou_group_name,
+            company_name: customerData.company_name,
+            epo_server: epoServerUrl,
+            created_at: new Date().toISOString()
+          }
+        })
+        .select()
+        .single();
+
+      if (installerError) {
+        throw new Error(`Failed to create installer: ${installerError.message}`);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        installer: installerData
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    throw new Error(`Unknown action: ${action}`);
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStep("ERROR in ePO integration", { message: errorMessage });
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      success: false 
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+});
