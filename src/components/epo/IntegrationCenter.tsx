@@ -144,6 +144,17 @@ export const IntegrationCenter = () => {
     }, 2000);
   };
 
+  const handleDeleteConnection = async (connectionId: string) => {
+    const connection = connections.find(c => c.id === connectionId);
+    if (!connection) return;
+
+    if (window.confirm(`Are you sure you want to delete the connection "${connection.name}"? This action cannot be undone.`)) {
+      const updatedConnections = connections.filter(c => c.id !== connectionId);
+      setConnections(updatedConnections);
+      toast.success("Connection deleted successfully");
+    }
+  };
+
   const handleExecuteCommand = async () => {
     if (!selectedConnection || !selectedCommand) {
       toast.error("Please select a connection and command");
@@ -341,7 +352,11 @@ export const IntegrationCenter = () => {
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteConnection(connection.id)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
