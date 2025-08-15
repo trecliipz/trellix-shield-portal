@@ -92,6 +92,11 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 ${sanitizedPrefix} [data-chart=${sanitizedId}] {
 ${sanitizedColorConfig
   .map(([key, itemConfig]) => {
+    // Type guard to ensure itemConfig is an object
+    if (typeof itemConfig !== 'object' || itemConfig === null) {
+      return null;
+    }
+    
     const color =
       itemConfig.theme?.[sanitizedTheme as keyof typeof itemConfig.theme] ||
       itemConfig.color;
