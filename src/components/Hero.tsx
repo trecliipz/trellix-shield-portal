@@ -40,9 +40,6 @@ export const Hero = ({ onGetStarted }: HeroProps) => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button size="lg" onClick={onGetStarted} className="glow-button text-lg px-8 py-6 hover:scale-105 transition-all duration-300">
-            Start Free Trial - From $9.99/month
-          </Button>
           <Button variant="outline" size="lg" className="text-lg px-8 py-6 hover:scale-105 transition-all duration-300">
             See Live Demo
           </Button>
