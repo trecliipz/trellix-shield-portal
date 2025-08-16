@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +9,7 @@ import { Check, Zap, Shield, Crown } from 'lucide-react';
 
 export const PricingSection = () => {
   const [isYearly, setIsYearly] = useState(false);
+  const navigate = useNavigate();
 
   const plans = [
     {
@@ -74,18 +76,8 @@ export const PricingSection = () => {
   };
 
   const handleSignUp = (planName: string) => {
-    // Trigger the authentication modal with signup mode and plan data
-    const signupEvent = new CustomEvent('openAuthModal', { 
-      detail: { 
-        mode: 'register',
-        planName: planName.toLowerCase(),
-        planPrice: isYearly ? 
-          plans.find(p => p.name === planName)?.yearlyPrice : 
-          plans.find(p => p.name === planName)?.monthlyPrice,
-        billingCycle: isYearly ? 'yearly' : 'monthly'
-      }
-    });
-    window.dispatchEvent(signupEvent);
+    // Navigate to the setup page for the selected plan
+    navigate(`/setup/${planName.toLowerCase()}`);
   };
 
   return (
