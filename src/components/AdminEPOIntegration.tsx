@@ -24,6 +24,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const AdminEPOIntegration = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected');
@@ -72,43 +73,41 @@ export const AdminEPOIntegration = () => {
       }
 
       // Test connection using EPO integration function
-      const response = await fetch('https://enwjspegjxkqrcmzlzqg.supabase.co/functions/v1/epo-integration', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud2pzcGVnanhrcXJjbXpsenFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxODEwNDksImV4cCI6MjA2NTc1NzA0OX0.EIAEdQQk2H2xkMrX1EAO3iFzf3BrpC6vuww6PAHbqDQ'}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('epo-integration', {
+        body: {
           action: 'test-connection',
           serverUrl: serverUrl,
           username: epoConfig.username,
           password: epoConfig.password
-        })
+        }
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setConnectionStatus('connected');
-          toast.success("Successfully connected to Trellix EPO server!");
-        } else {
-          setConnectionStatus('disconnected');
-          toast.error(result.error || "Connection test failed");
-        }
-      } else {
-        const errorText = await response.text();
+      if (error) {
         setConnectionStatus('disconnected');
-        toast.error(`Connection failed: ${response.status} - ${errorText}`);
+        toast.error(`Connection test failed: ${error.message}`);
+      } else if (data?.success) {
+        setConnectionStatus('connected');
+        toast.success("Successfully connected to Trellix EPO server!");
+      } else {
+        setConnectionStatus('disconnected');
+        toast.error(data?.error || "Connection test failed");
       }
     } catch (error) {
       setConnectionStatus('disconnected');
       console.error('EPO connection test error:', error);
       
-      if (error.message?.includes('fetch')) {
-        toast.error("Network error: Unable to reach EPO server. Please check the server URL and network connectivity.");
+      let errorMessage = "Connection test failed";
+      
+      // Provide specific guidance for common issues
+      if (epoConfig.serverUrl.includes('trellixepo2025:8443')) {
+        errorMessage = "Cannot reach trellixepo2025:8443. This appears to be a private server address. Consider: 1) Using the public IP address, 2) Setting up port forwarding, 3) Using a VPN, or 4) Making the server publicly accessible.";
+      } else if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        errorMessage = "Network error: Unable to reach EPO server. Please check the server URL and network connectivity.";
       } else {
-        toast.error(`Connection test failed: ${error.message || 'Unknown error'}`);
+        errorMessage = `Connection test failed: ${error.message || 'Unknown error'}`;
       }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -413,6 +412,8 @@ export const AdminEPOIntegration = () => {
               <AlertDescription>
                 <strong>Common Connection Issues</strong>
                 <div className="mt-2 space-y-2">
+                  <div>• <strong>Private Server Address:</strong> Cloud apps cannot reach private URLs like trellixepo2025:8443. Use public IP or DNS name instead.</div>
+                  <div>• <strong>Network Access:</strong> Ensure the EPO server is accessible from the internet or configure proper network routing.</div>
                   <div>• <strong>SSL Certificate Error:</strong> Add EPO certificate to trusted store or disable SSL verification for testing</div>
                   <div>• <strong>Port 8443 Blocked:</strong> Check firewall rules and ensure port 8443 is accessible</div>
                   <div>• <strong>Authentication Failed:</strong> Verify admin credentials have API access permissions</div>

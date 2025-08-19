@@ -62,7 +62,24 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Admin ping request - Target: ${target}, Method: ${method}, Attempts: ${attempts}`)
+    // Parse target if it's a full URL
+    let parsedTarget = target
+    let parsedMethod = method
+    let parsedPort = port
+    
+    try {
+      if (target.startsWith('http://') || target.startsWith('https://')) {
+        const url = new URL(target)
+        parsedTarget = url.hostname
+        parsedMethod = url.protocol === 'https:' ? 'https' : 'http'
+        parsedPort = url.port ? parseInt(url.port) : (url.protocol === 'https:' ? 443 : 80)
+        console.log(`Parsed URL - Target: ${parsedTarget}, Method: ${parsedMethod}, Port: ${parsedPort}`)
+      }
+    } catch (error) {
+      console.log(`Failed to parse as URL, treating as hostname: ${target}`)
+    }
+
+    console.log(`Admin ping request - Target: ${parsedTarget}, Method: ${parsedMethod}, Attempts: ${attempts}, Port: ${parsedPort}`)
 
     const results = []
 
@@ -74,10 +91,10 @@ serve(async (req) => {
       let resolved_ip = null
 
       try {
-        if (method === 'http' || method === 'https') {
-          const protocol = method === 'https' ? 'https' : 'http'
-          const targetPort = port || (protocol === 'https' ? 443 : 80)
-          const url = `${protocol}://${target}${targetPort !== (protocol === 'https' ? 443 : 80) ? `:${targetPort}` : ''}`
+        if (parsedMethod === 'http' || parsedMethod === 'https') {
+          const protocol = parsedMethod === 'https' ? 'https' : 'http'
+          const targetPort = parsedPort || (protocol === 'https' ? 443 : 80)
+          const url = `${protocol}://${parsedTarget}${targetPort !== (protocol === 'https' ? 443 : 80) ? `:${targetPort}` : ''}`
           
           console.log(`Attempt ${i}: Pinging ${url}`)
           
@@ -97,19 +114,19 @@ serve(async (req) => {
           status = response.ok ? 'success' : 'unreachable'
           
           // Try to resolve IP (simplified - just use the target for now)
-          resolved_ip = target.match(/^\d+\.\d+\.\d+\.\d+$/) ? target : null
+          resolved_ip = parsedTarget.match(/^\d+\.\d+\.\d+\.\d+$/) ? parsedTarget : null
 
-        } else if (method === 'tcp') {
+        } else if (parsedMethod === 'tcp') {
           // For TCP, we'll do a basic connection test
-          const targetPort = port || 80
-          console.log(`Attempt ${i}: TCP ping to ${target}:${targetPort}`)
+          const targetPort = parsedPort || 80
+          console.log(`Attempt ${i}: TCP ping to ${parsedTarget}:${targetPort}`)
           
           // Since Deno doesn't have a direct TCP ping, we'll use fetch with a very short timeout
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 3000)
           
           try {
-            await fetch(`http://${target}:${targetPort}`, {
+            await fetch(`http://${parsedTarget}:${targetPort}`, {
               method: 'HEAD',
               signal: controller.signal
             })
@@ -123,7 +140,7 @@ serve(async (req) => {
             error_message = 'Connection timeout or refused'
           }
 
-          resolved_ip = target.match(/^\d+\.\d+\.\d+\.\d+$/) ? target : null
+          resolved_ip = parsedTarget.match(/^\d+\.\d+\.\d+\.\d+$/) ? parsedTarget : null
         }
 
       } catch (error) {
@@ -141,10 +158,10 @@ serve(async (req) => {
       // Log the result to database
       const logResult = {
         user_id: user.id,
-        target,
+        target: parsedTarget,
         resolved_ip,
-        method,
-        port: port || null,
+        method: parsedMethod,
+        port: parsedPort || null,
         status,
         latency_ms,
         attempts,
@@ -177,8 +194,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        target,
-        method,
+        target: parsedTarget,
+        method: parsedMethod,
+        port: parsedPort,
         total_attempts: attempts,
         results 
       }),

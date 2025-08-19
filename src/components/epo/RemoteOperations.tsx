@@ -302,12 +302,15 @@ Execution completed at: ${new Date().toLocaleString()}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Target Host/IP</Label>
+                  <Label>Target Host/IP/URL</Label>
                   <Input
-                    placeholder="e.g., google.com, 192.168.1.1"
+                    placeholder="e.g., google.com, 192.168.1.1, https://trellixepo2025:8443"
                     value={pingTarget}
                     onChange={(e) => setPingTarget(e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Can be hostname, IP address, or full URL. Port will be auto-detected from URL.
+                  </p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
