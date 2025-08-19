@@ -143,16 +143,6 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
             <div className="flex items-center space-x-4">
               {isLoggedIn ? (
                 <>
-                  {currentUser?.role === 'admin' && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => window.location.href = '/admin/dat'}
-                      className="hidden sm:flex"
-                    >
-                      Admin DAT
-                    </Button>
-                  )}
                   <Button
                     variant="outline"
                     size="sm"

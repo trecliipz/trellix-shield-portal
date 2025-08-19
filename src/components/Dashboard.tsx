@@ -8,7 +8,7 @@ import { Download, Shield, Lock, BarChart } from "lucide-react";
 import UserManagement from "@/components/UserManagement";
 import { AgentManagement } from "@/components/AgentManagement";
 import { AdminAnalytics } from "@/components/AdminAnalytics";
-import { DATManagement } from "@/components/DATManagement";
+
 import { EPOManagement } from "@/components/EPOManagement";
 import { AdminMessages } from "@/components/AdminMessages";
 import { SecurityCompliance } from "@/components/SecurityCompliance";
@@ -169,7 +169,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <TabsTrigger value="downloads" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Downloads</TabsTrigger>
             <TabsTrigger value="users" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Users</TabsTrigger>
             <TabsTrigger value="agents" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Agents</TabsTrigger>
-            <TabsTrigger value="dat" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Updates</TabsTrigger>
+            
             <TabsTrigger value="epo" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Trellix ePO</TabsTrigger>
             <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Messages</TabsTrigger>
             <TabsTrigger value="security" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Security</TabsTrigger>
@@ -222,9 +222,6 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <AgentManagement />
           </TabsContent>
 
-        <TabsContent value="dat">
-          <DATManagement />
-        </TabsContent>
 
         <TabsContent value="epo">
           <EPOManagement />
