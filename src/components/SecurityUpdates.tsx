@@ -111,11 +111,38 @@ const SecurityUpdates = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const handleDownload = (updateId: string) => {
+  const handleDownload = async (updateId: string) => {
     const update = updates.find(u => u.id === updateId);
-    if (update) {
-      toast.success(`Downloaded ${update.name}`, {
-        description: `${update.name} has been downloaded successfully.`,
+    if (!update) return;
+
+    try {
+      toast.loading(`Preparing download for ${update.name}...`);
+      
+      // Call backend function to get download URL
+      const response = await fetch('/api/security-updates/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updateId: update.id, name: update.name })
+      });
+
+      if (!response.ok) throw new Error('Download failed');
+      
+      const { downloadUrl, filename } = await response.json();
+      
+      // Create and trigger download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename || update.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Download started for ${update.name}`, {
+        description: `${update.name} (${formatFileSize(update.file_size)}) is downloading...`,
+      });
+    } catch (error) {
+      toast.error(`Failed to download ${update.name}`, {
+        description: 'Please try again or contact support.',
       });
     }
   };
