@@ -1024,6 +1024,48 @@ export type Database = {
           },
         ]
       }
+      epo_connections: {
+        Row: {
+          created_at: string
+          id: string
+          last_sync: string | null
+          name: string
+          port: number | null
+          server_url: string
+          status: string | null
+          updated_at: string
+          user_id: string
+          username: string
+          version: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sync?: string | null
+          name: string
+          port?: number | null
+          server_url: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          username: string
+          version?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sync?: string | null
+          name?: string
+          port?: number | null
+          server_url?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
       error_logs: {
         Row: {
           created_at: string

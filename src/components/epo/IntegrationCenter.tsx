@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,49 +26,32 @@ import {
   Play,
   FileText,
   Users,
-  Activity
+  Activity,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EPOConnection {
   id: string;
   name: string;
-  type: string;
-  serverUrl: string;
+  server_url: string;
   username: string;
+  port: number;
   status: 'connected' | 'disconnected' | 'error';
-  lastSync: string;
-  version: string;
+  last_sync: string | null;
+  version: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export const IntegrationCenter = () => {
-  const [connections, setConnections] = useState<EPOConnection[]>([
-    {
-      id: '1',
-      name: 'Primary EPO Server',
-      type: 'Type EPO',
-      serverUrl: 'https://epo.company.com:8443',
-      username: 'admin',
-      status: 'connected',
-      lastSync: '2024-08-03 14:30:00',
-      version: '5.10.0'
-    },
-    {
-      id: '2',
-      name: 'Secondary EPO Server',
-      type: 'Type EPO',
-      serverUrl: 'https://epo-backup.company.com:8443',
-      username: 'admin',
-      status: 'disconnected',
-      lastSync: '2024-08-02 09:15:00',
-      version: '5.9.1'
-    }
-  ]);
+  const [connections, setConnections] = useState<EPOConnection[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [showAddConnection, setShowAddConnection] = useState(false);
   const [newConnection, setNewConnection] = useState({
     name: '',
-    type: 'Type EPO',
     serverUrl: '',
     username: '',
     password: '',
@@ -81,6 +64,38 @@ export const IntegrationCenter = () => {
   const [commandParameters, setCommandParameters] = useState<string>('');
   const [commandResults, setCommandResults] = useState<string>('');
   const [isExecuting, setIsExecuting] = useState(false);
+
+  // Load connections from Supabase
+  useEffect(() => {
+    loadConnections();
+  }, []);
+
+  const loadConnections = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('epo_connections')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading connections:', error);
+        toast.error('Failed to load connections');
+      } else {
+        setConnections((data || []) as EPOConnection[]);
+      }
+    } catch (error) {
+      console.error('Error loading connections:', error);
+      toast.error('Failed to load connections');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const epoCommands = [
     { value: 'system.find', label: 'Get Agent/System Info', description: 'Retrieve agent and system information' },
@@ -101,29 +116,47 @@ export const IntegrationCenter = () => {
       return;
     }
 
-    const connection: EPOConnection = {
-      id: Date.now().toString(),
-      name: newConnection.name,
-      type: newConnection.type,
-      serverUrl: newConnection.serverUrl,
-      username: newConnection.username,
-      status: 'disconnected',
-      lastSync: 'Never',
-      version: 'Unknown'
-    };
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to add connections");
+        return;
+      }
 
-    setConnections([...connections, connection]);
-    setShowAddConnection(false);
-    setNewConnection({
-      name: '',
-      type: 'Type EPO',
-      serverUrl: '',
-      username: '',
-      password: '',
-      port: '8443'
-    });
+      const { error } = await supabase
+        .from('epo_connections')
+        .insert({
+          user_id: user.id,
+          name: newConnection.name,
+          server_url: newConnection.serverUrl,
+          username: newConnection.username,
+          port: parseInt(newConnection.port),
+          status: 'disconnected'
+        });
 
-    toast.success("EPO connection added successfully");
+      if (error) {
+        console.error('Error adding connection:', error);
+        toast.error("Failed to add connection");
+        return;
+      }
+
+      // Reload connections
+      await loadConnections();
+      
+      setShowAddConnection(false);
+      setNewConnection({
+        name: '',
+        serverUrl: '',
+        username: '',
+        password: '',
+        port: '8443'
+      });
+
+      toast.success("EPO connection added successfully");
+    } catch (error) {
+      console.error('Error adding connection:', error);
+      toast.error("Failed to add connection");
+    }
   };
 
   const handleTestConnection = async (connectionId: string) => {
@@ -132,16 +165,30 @@ export const IntegrationCenter = () => {
 
     toast.info("Testing connection...");
     
-    // Simulate connection test
-    setTimeout(() => {
-      const updatedConnections = connections.map(c => 
-        c.id === connectionId 
-          ? { ...c, status: 'connected' as const, lastSync: new Date().toLocaleString() }
-          : c
-      );
-      setConnections(updatedConnections);
-      toast.success("Connection test successful");
-    }, 2000);
+    try {
+      // Simulate connection test
+      setTimeout(async () => {
+        const { error } = await supabase
+          .from('epo_connections')
+          .update({
+            status: 'connected',
+            last_sync: new Date().toISOString(),
+            version: '5.10.0'
+          })
+          .eq('id', connectionId);
+
+        if (error) {
+          console.error('Error updating connection:', error);
+          toast.error("Failed to update connection status");
+        } else {
+          await loadConnections();
+          toast.success("Connection test successful");
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      toast.error("Failed to test connection");
+    }
   };
 
   const handleDeleteConnection = async (connectionId: string) => {
@@ -149,9 +196,23 @@ export const IntegrationCenter = () => {
     if (!connection) return;
 
     if (window.confirm(`Are you sure you want to delete the connection "${connection.name}"? This action cannot be undone.`)) {
-      const updatedConnections = connections.filter(c => c.id !== connectionId);
-      setConnections(updatedConnections);
-      toast.success("Connection deleted successfully");
+      try {
+        const { error } = await supabase
+          .from('epo_connections')
+          .delete()
+          .eq('id', connectionId);
+
+        if (error) {
+          console.error('Error deleting connection:', error);
+          toast.error("Failed to delete connection");
+        } else {
+          await loadConnections();
+          toast.success("Connection deleted successfully");
+        }
+      } catch (error) {
+        console.error('Error deleting connection:', error);
+        toast.error("Failed to delete connection");
+      }
     }
   };
 
@@ -312,7 +373,12 @@ export const IntegrationCenter = () => {
                 <Database className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">2h ago</div>
+                <div className="text-2xl font-bold">
+                  {connections.length > 0 && connections.some(c => c.last_sync) 
+                    ? new Date(Math.max(...connections.filter(c => c.last_sync).map(c => new Date(c.last_sync!).getTime()))).toLocaleTimeString()
+                    : 'Never'
+                  }
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -322,47 +388,62 @@ export const IntegrationCenter = () => {
               <CardTitle>EPO Server Connections</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {connections.map((connection) => (
-                  <div key={connection.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Shield className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{connection.name}</h3>
-                        <p className="text-sm text-muted-foreground">{connection.serverUrl}</p>
-                        <div className="flex items-center space-x-4 mt-1">
-                          <span className="text-xs text-muted-foreground">Type: {connection.type}</span>
-                          <span className="text-xs text-muted-foreground">Version: {connection.version}</span>
-                          <span className="text-xs text-muted-foreground">Last Sync: {connection.lastSync}</span>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                  Loading connections...
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {connections.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No EPO connections configured. Click "Add Connection" to get started.
+                    </div>
+                  ) : (
+                    connections.map((connection) => (
+                      <div key={connection.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-2 bg-primary/10 rounded-lg">
+                            <Shield className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">{connection.name}</h3>
+                            <p className="text-sm text-muted-foreground">{connection.server_url}:{connection.port}</p>
+                            <div className="flex items-center space-x-4 mt-1">
+                              <span className="text-xs text-muted-foreground">Username: {connection.username}</span>
+                              <span className="text-xs text-muted-foreground">Version: {connection.version || 'Unknown'}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Last Sync: {connection.last_sync ? new Date(connection.last_sync).toLocaleString() : 'Never'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {getStatusBadge(connection.status)}
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleTestConnection(connection.id)}
+                          >
+                            <Network className="h-4 w-4 mr-1" />
+                            Test
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteConnection(connection.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(connection.status)}
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleTestConnection(connection.id)}
-                      >
-                        <Network className="h-4 w-4 mr-1" />
-                        Test
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeleteConnection(connection.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -536,11 +617,11 @@ export const IntegrationCenter = () => {
                         <SelectValue placeholder="Choose EPO connection" />
                       </SelectTrigger>
                       <SelectContent>
-                        {connections.filter(c => c.status === 'connected').map((connection) => (
-                          <SelectItem key={connection.id} value={connection.id}>
-                            {connection.name} ({connection.serverUrl})
-                          </SelectItem>
-                        ))}
+                         {connections.filter(c => c.status === 'connected').map((connection) => (
+                           <SelectItem key={connection.id} value={connection.id}>
+                             {connection.name} ({connection.server_url})
+                           </SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -752,19 +833,6 @@ export const IntegrationCenter = () => {
                   value={newConnection.name}
                   onChange={(e) => setNewConnection({ ...newConnection, name: e.target.value })}
                 />
-              </div>
-              <div>
-                <Label htmlFor="type">Server Type</Label>
-                <Select value={newConnection.type} onValueChange={(value) => setNewConnection({ ...newConnection, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select server type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Type EPO">Type EPO</SelectItem>
-                    <SelectItem value="McAfee ePO">McAfee ePO</SelectItem>
-                    <SelectItem value="Trellix ePO">Trellix ePO</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label htmlFor="serverUrl">Server URL</Label>
