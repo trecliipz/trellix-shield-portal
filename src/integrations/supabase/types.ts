@@ -2121,6 +2121,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      cleanup_old_error_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_custom_package: {
         Args: {
           p_base_package_id: string
