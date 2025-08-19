@@ -87,7 +87,7 @@ const SecurityUpdates = () => {
   const getCriticalityColor = (criticality: string) => {
     switch (criticality?.toLowerCase()) {
       case 'critical':
-        return 'bg-red-500/15 text-red-300 border border-red-500/30';
+        return 'bg-red-600 text-white border border-red-600 font-bold';
       case 'high':
         return 'bg-orange-500/15 text-orange-300 border border-orange-500/30';
       case 'medium':
