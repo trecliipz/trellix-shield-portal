@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Download, RefreshCw, Shield, Zap, Database, Settings, AlertTriangle, ChevronDown, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSecurityUpdates } from "@/hooks/useSecurityUpdates";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SecurityUpdate {
   id: string;
@@ -118,21 +119,20 @@ const SecurityUpdates = () => {
     try {
       toast.loading(`Preparing download for ${update.name}...`);
       
-      // Call backend function to get download URL
-      const response = await fetch('/api/security-updates/download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updateId: update.id, name: update.name })
+      // Call Supabase edge function
+      const { data, error } = await supabase.functions.invoke('security-update-download', {
+        body: { updateId: update.id, name: update.name }
       });
 
-      if (!response.ok) throw new Error('Download failed');
+      if (error) throw error;
       
-      const { downloadUrl, filename } = await response.json();
+      const { downloadUrl, filename } = data;
       
       // Create and trigger download
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = filename || update.name;
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -141,6 +141,7 @@ const SecurityUpdates = () => {
         description: `${update.name} (${formatFileSize(update.file_size)}) is downloading...`,
       });
     } catch (error) {
+      console.error('Download error:', error);
       toast.error(`Failed to download ${update.name}`, {
         description: 'Please try again or contact support.',
       });
