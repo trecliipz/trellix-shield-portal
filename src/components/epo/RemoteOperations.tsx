@@ -37,7 +37,7 @@ interface PingResult {
 interface PingLog {
   id: string;
   target: string;
-  resolved_ip: string | null;
+  resolved_ip: unknown;
   method: string;
   port: number | null;
   status: string;
