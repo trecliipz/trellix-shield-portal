@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { Portal } from "./pages/Portal";
 import { PlanSetup } from "./pages/PlanSetup";
+import { OnlinePresenceProvider } from "@/components/OnlinePresenceProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,17 +33,19 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/setup/:plan" element={<PlanSetup />} />
-            <Route path="/portal" element={<Portal />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <OnlinePresenceProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/setup/:plan" element={<PlanSetup />} />
+              <Route path="/portal" element={<Portal />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </OnlinePresenceProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>

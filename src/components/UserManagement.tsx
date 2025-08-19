@@ -30,6 +30,8 @@ interface User {
   trialEndsAt?: string;
   downloadsUsed?: number;
   maxDownloads?: number;
+  isOnline?: boolean;
+  lastSeen?: string;
 }
 
 export default function UserManagement() {
@@ -40,6 +42,7 @@ export default function UserManagement() {
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "user" as 'admin' | 'user' });
   const [isLoading, setIsLoading] = useState(false);
   const [agentAvailability, setAgentAvailability] = useState<Record<string, boolean>>({});
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const { handleError, retryOperation } = useErrorHandling();
 
   useEffect(() => {
@@ -52,6 +55,52 @@ export default function UserManagement() {
       } catch {}
     }
     loadUsers();
+  }, []);
+
+  // Set up presence channel to track online users
+  useEffect(() => {
+    const channel = supabase.channel('online_users');
+
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      const onlineUserIds = new Set<string>();
+      
+      Object.values(state).forEach((presences: any) => {
+        presences.forEach((presence: any) => {
+          if (presence.user_id) {
+            onlineUserIds.add(presence.user_id);
+          }
+        });
+      });
+      
+      setOnlineUsers(onlineUserIds);
+    });
+
+    channel.on('presence', { event: 'join' }, ({ newPresences }) => {
+      newPresences.forEach((presence: any) => {
+        if (presence.user_id) {
+          setOnlineUsers(prev => new Set([...prev, presence.user_id]));
+        }
+      });
+    });
+
+    channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
+      leftPresences.forEach((presence: any) => {
+        if (presence.user_id) {
+          setOnlineUsers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(presence.user_id);
+            return newSet;
+          });
+        }
+      });
+    });
+
+    channel.subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   const loadUsers = async () => {
@@ -124,7 +173,7 @@ export default function UserManagement() {
         // Load all users from admin_users table AND real registered users with error handling
         const [adminUsersResponse, profilesResponse, subscriptionsResponse] = await Promise.all([
           supabase.from('admin_users').select('*').order('created_at', { ascending: false }),
-          supabase.from('profiles').select('id, name, email, created_at').order('created_at', { ascending: false }),
+          supabase.from('profiles').select('id, name, email, created_at, is_online, last_seen').order('created_at', { ascending: false }),
           supabase.from('user_subscriptions').select('user_id, plan_type, status, trial_ends_at, max_downloads, downloads_used')
         ]);
 
@@ -185,7 +234,9 @@ export default function UserManagement() {
               subscriptionStatus: subscription?.status,
               trialEndsAt: subscription?.trial_ends_at,
               downloadsUsed: subscription?.downloads_used,
-              maxDownloads: subscription?.max_downloads
+              maxDownloads: subscription?.max_downloads,
+              isOnline: profile.is_online,
+              lastSeen: profile.last_seen
             };
           });
           allUsers.push(...registeredUsers);
@@ -536,6 +587,7 @@ export default function UserManagement() {
                 <TableHead>Plan</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Presence</TableHead>
                 <TableHead>Registration</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Agent Download</TableHead>
@@ -543,58 +595,72 @@ export default function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">
-                    <div>
-                      <div>{user.email}</div>
-                      {user.trialEndsAt && (
-                        <div className="text-xs text-muted-foreground">
-                          Trial ends: {new Date(user.trialEndsAt).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col space-y-1">
-                      <Badge variant={user.planType === 'free' ? 'secondary' : 'default'}>
-                        {user.planType || 'No Plan'}
+              {filteredUsers.map((user) => {
+                // Check if user is online based on presence or recent activity
+                const isUserOnline = onlineUsers.has(user.id) || 
+                  (user.lastSeen && new Date(user.lastSeen).getTime() > Date.now() - 90000) || // Within 90 seconds
+                  user.isOnline;
+
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div>{user.email}</div>
+                        {user.trialEndsAt && (
+                          <div className="text-xs text-muted-foreground">
+                            Trial ends: {new Date(user.trialEndsAt).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col space-y-1">
+                        <Badge variant={user.planType === 'free' ? 'secondary' : 'default'}>
+                          {user.planType || 'No Plan'}
+                        </Badge>
+                        {user.downloadsUsed !== undefined && (
+                          <div className="text-xs text-muted-foreground">
+                            Downloads: {user.downloadsUsed}/{user.maxDownloads === -1 ? '∞' : user.maxDownloads}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        {user.role === 'admin' ? <Shield className="h-3 w-3" /> : <Settings className="h-3 w-3" />}
+                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                          {user.role}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        {user.status === 'active' ? <Activity className="h-3 w-3 text-green-500" /> : <UserX className="h-3 w-3 text-red-500" />}
+                        <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
+                          {user.status}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${isUserOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                        <Badge variant={isUserOnline ? 'default' : 'secondary'} className={isUserOnline ? 'bg-green-600 text-white hover:bg-green-700' : ''}>
+                          {isUserOnline ? 'Online' : 'Offline'}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.registrationDate}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.source === 'registered' ? 'default' : 'outline'}>
+                        {user.source === 'registered' ? 'Registered' : 'Admin Created'}
                       </Badge>
-                      {user.downloadsUsed !== undefined && (
-                        <div className="text-xs text-muted-foreground">
-                          Downloads: {user.downloadsUsed}/{user.maxDownloads === -1 ? '∞' : user.maxDownloads}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {user.role === 'admin' ? <Shield className="h-3 w-3" /> : <Settings className="h-3 w-3" />}
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {user.role}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={agentAvailability[user.id] ? 'default' : 'secondary'}>
+                        {agentAvailability[user.id] ? 'Available' : 'Unavailable'}
                       </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {user.status === 'active' ? <Activity className="h-3 w-3 text-green-500" /> : <UserX className="h-3 w-3 text-red-500" />}
-                      <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
-                        {user.status}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.registrationDate}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.source === 'registered' ? 'default' : 'outline'}>
-                      {user.source === 'registered' ? 'Registered' : 'Admin Created'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={agentAvailability[user.id] ? 'default' : 'secondary'}>
-                      {agentAvailability[user.id] ? 'Available' : 'Unavailable'}
-                    </Badge>
-                  </TableCell>
+                    </TableCell>
                   <TableCell>
                     <Dialog>
                       <DialogTrigger asChild>
@@ -661,10 +727,11 @@ export default function UserManagement() {
                       </DialogContent>
                     </Dialog>
                   </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                 </TableRow>
+                );
+                })}
+             </TableBody>
+           </Table>
         </CardContent>
       </Card>
     </div>
