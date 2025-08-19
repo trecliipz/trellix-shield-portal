@@ -424,30 +424,10 @@ const SecurityUpdates = () => {
         </Card>
       </div>
 
-      {/* Updates Tabs */}
-      <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full">
-        <TabsList className="modern-tabs grid w-full grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 h-auto p-1">
-          {filterTabs.map((tab) => (
-            <TabsTrigger 
-              key={tab.id} 
-              value={tab.id}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all hover:scale-105"
-            >
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {filterTabs.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id} className="mt-6 animate-fade-in">
-            {renderUpdatesTable(getUpdatesForTab(tab.id))}
-          </TabsContent>
-        ))}
-        
-        <TabsContent value="all" className="mt-6 animate-fade-in">
-          {renderUpdatesTable(getUpdatesForTab('all'))}
-        </TabsContent>
-      </Tabs>
+      {/* Show all updates without tabs */}
+      <div className="mt-6 animate-fade-in">
+        {renderUpdatesTable(getUpdatesForTab('all'))}
+      </div>
     </div>
   );
 };
