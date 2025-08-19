@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -170,6 +171,7 @@ const mockSecurityUpdates: SecurityUpdate[] = [
 ];
 
 const AdminDAT: React.FC = () => {
+  const navigate = useNavigate();
   const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdate[]>(mockSecurityUpdates);
   const [selectedUpdates, setSelectedUpdates] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
@@ -585,7 +587,12 @@ const AdminDAT: React.FC = () => {
         {/* Breadcrumb & Actions */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate(-1)}
+              className="hover:bg-muted"
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
