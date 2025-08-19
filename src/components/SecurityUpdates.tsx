@@ -71,31 +71,31 @@ const SecurityUpdates = () => {
       case 'dat':
       case 'datv3':
       case 'epo_dat':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        return 'bg-primary/10 text-primary border border-primary/20';
       case 'engine':
       case 'security_engine':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+        return 'bg-primary/10 text-primary border border-primary/20';
       case 'policy':
       case 'policy_template':
       case 'epo_policy':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'bg-primary/10 text-primary border border-primary/20';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-primary/10 text-primary border border-primary/20';
     }
   };
 
   const getCriticalityColor = (criticality: string) => {
     switch (criticality?.toLowerCase()) {
       case 'critical':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        return 'bg-red-500/15 text-red-300 border border-red-500/30';
       case 'high':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+        return 'bg-orange-500/15 text-orange-300 border border-orange-500/30';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'bg-yellow-500/15 text-yellow-200 border border-yellow-500/30';
       case 'low':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'bg-green-500/15 text-green-300 border border-green-500/30';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-primary/10 text-primary border border-primary/20';
     }
   };
 
@@ -205,10 +205,12 @@ const SecurityUpdates = () => {
     return sortedUpdates;
   };
 
+  const getCount = (key: string) => stats.byType?.[key] ?? 0;
+
   const renderUpdatesTable = (updates: SecurityUpdate[]) => {
     if (updates.length === 0) {
       return (
-        <Card>
+        <Card className="modern-card">
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">No security updates found for this category.</p>
           </CardContent>
@@ -221,22 +223,22 @@ const SecurityUpdates = () => {
     return (
       <div className="space-y-4">
         {selectedUpdates.length > 0 && (
-          <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border">
+          <div className="modern-card flex items-center justify-between p-4">
             <span className="text-sm font-medium">
               {selectedUpdates.length} update{selectedUpdates.length !== 1 ? 's' : ''} selected
             </span>
-            <Button onClick={handleBulkDownload} size="sm">
+            <Button onClick={handleBulkDownload} size="sm" className="glow-button">
               <Download className="h-4 w-4 mr-2" />
               Download Selected
             </Button>
           </div>
         )}
 
-        <Card>
+        <Card className="modern-card">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b bg-muted/50">
+                <thead className="sticky top-0 z-10 bg-card/70 backdrop-blur-sm border-b border-muted">
                   <tr>
                     <th className="w-12 text-left p-4">
                       <Checkbox
@@ -244,7 +246,7 @@ const SecurityUpdates = () => {
                         onCheckedChange={(checked) => handleSelectAll(updates, checked as boolean)}
                       />
                     </th>
-                    <th className="text-left p-4 cursor-pointer hover:bg-muted/80" onClick={() => handleSort('name')}>
+                    <th className="text-left p-4 cursor-pointer hover:bg-card/70 transition-colors" onClick={() => handleSort('name')}>
                       <div className="flex items-center gap-2">
                         Name
                         <ChevronDown className={`h-4 w-4 transition-transform ${sortBy === 'name' && sortOrder === 'asc' ? 'rotate-180' : ''}`} />
@@ -252,13 +254,13 @@ const SecurityUpdates = () => {
                     </th>
                     <th className="text-left p-4">Platform</th>
                     <th className="text-left p-4">Version</th>
-                    <th className="text-left p-4 cursor-pointer hover:bg-muted/80" onClick={() => handleSort('date')}>
+                    <th className="text-left p-4 cursor-pointer hover:bg-card/70 transition-colors" onClick={() => handleSort('date')}>
                       <div className="flex items-center gap-2">
                         Release Date
                         <ChevronDown className={`h-4 w-4 transition-transform ${sortBy === 'date' && sortOrder === 'asc' ? 'rotate-180' : ''}`} />
                       </div>
                     </th>
-                    <th className="text-left p-4 cursor-pointer hover:bg-muted/80" onClick={() => handleSort('size')}>
+                    <th className="text-left p-4 cursor-pointer hover:bg-card/70 transition-colors" onClick={() => handleSort('size')}>
                       <div className="flex items-center gap-2">
                         File Size
                         <ChevronDown className={`h-4 w-4 transition-transform ${sortBy === 'size' && sortOrder === 'asc' ? 'rotate-180' : ''}`} />
@@ -270,7 +272,7 @@ const SecurityUpdates = () => {
                 </thead>
                 <tbody>
                   {updates.map((update) => (
-                    <tr key={update.id} className="border-b hover:bg-muted/50">
+                    <tr key={update.id} className="border-b hover:bg-card/70 transition-colors">
                       <td className="p-4">
                         <Checkbox
                           checked={selectedUpdates.includes(update.id)}
@@ -299,8 +301,8 @@ const SecurityUpdates = () => {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <span>{getPlatformIcon(update.platform)}</span>
-                          <span>{update.platform}</span>
+                          <span className="text-sm">{getPlatformIcon(update.platform)}</span>
+                          <span className="text-muted-foreground">{update.platform}</span>
                         </div>
                       </td>
                       <td className="p-4 font-mono text-sm">{update.version}</td>
@@ -308,7 +310,7 @@ const SecurityUpdates = () => {
                       <td className="p-4">{formatFileSize(update.file_size)}</td>
                       <td className="p-4">
                         {update.is_recommended ? (
-                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          <Badge className="bg-green-500/15 text-green-300 border border-green-500/30">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Recommended
                           </Badge>
@@ -319,8 +321,9 @@ const SecurityUpdates = () => {
                       <td className="p-4 text-center">
                         <Button
                           size="sm"
+                          variant="outline"
                           onClick={() => handleDownload(update.id)}
-                          className="w-20"
+                          className="hover:bg-primary/10 hover:border-primary transition-all"
                         >
                           <Download className="h-4 w-4 mr-1" />
                           Download
@@ -339,7 +342,7 @@ const SecurityUpdates = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-lg font-medium">Loading security updates...</p>
@@ -350,135 +353,104 @@ const SecurityUpdates = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b sticky top-0 z-40">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Portal
-              </Button>
-              <div className="h-6 border-l border-border" />
-              <h1 className="text-xl font-semibold">Security Updates</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleRefresh}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Check Updates
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <Breadcrumb className="mb-8">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink onClick={() => navigate('/')}>Portal</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Security Updates</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        {/* Page Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold tracking-tight">Trellix Security Updates</h2>
-          <p className="text-muted-foreground mt-2">
-            Download the latest DAT files, security engines, and policy updates to keep your endpoints protected.
+    <div className="space-y-6 animate-fade-in">
+      {/* Section Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">DAT Files Management</h2>
+          <p className="text-muted-foreground">
+            Download and manage DAT files, MEDDAT, TIE Intelligence, and security updates
           </p>
         </div>
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+          className="glow-button"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Check Updates
+        </Button>
+      </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Updates</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">Available for download</p>
-            </CardContent>
-          </Card>
+      {/* Category Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in">
+        <Card className="modern-card">
+          <CardContent className="p-4 text-center">
+            <Database className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <div className="text-xl font-bold">{getCount('DAT') + getCount('DATV3')}</div>
+            <p className="text-xs text-muted-foreground">DAT Files</p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Critical</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
-              <p className="text-xs text-muted-foreground">High priority updates</p>
-            </CardContent>
-          </Card>
+        <Card className="modern-card">
+          <CardContent className="p-4 text-center">
+            <Shield className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <div className="text-xl font-bold">{getCount('MEDDAT')}</div>
+            <p className="text-xs text-muted-foreground">MEDDAT Files</p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recommended</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.recommended}</div>
-              <p className="text-xs text-muted-foreground">Suggested downloads</p>
-            </CardContent>
-          </Card>
+        <Card className="modern-card">
+          <CardContent className="p-4 text-center">
+            <Zap className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <div className="text-xl font-bold">{getCount('TIE Intelligence')}</div>
+            <p className="text-xs text-muted-foreground">TIE Intelligence</p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Week</CardTitle>
-              <Zap className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.recent}</div>
-              <p className="text-xs text-muted-foreground">Recent releases</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="modern-card">
+          <CardContent className="p-4 text-center">
+            <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <div className="text-xl font-bold">{getCount('Exploit Prevention')}</div>
+            <p className="text-xs text-muted-foreground">Exploit Prevention</p>
+          </CardContent>
+        </Card>
 
-        {/* Updates Tabs */}
-        <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 h-auto p-1 bg-muted/50">
-            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              All Updates ({stats.total})
-            </TabsTrigger>
-            {filterTabs.map((tab) => (
-              <TabsTrigger 
-                key={tab.id} 
-                value={tab.id}
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                {tab.label} ({tab.count})
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <Card className="modern-card">
+          <CardContent className="p-4 text-center">
+            <Settings className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <div className="text-xl font-bold">{getCount('Engine')}</div>
+            <p className="text-xs text-muted-foreground">Engines</p>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="all" className="mt-6">
-            {renderUpdatesTable(getUpdatesForTab('all'))}
-          </TabsContent>
+        <Card className="modern-card">
+          <CardContent className="p-4 text-center">
+            <Database className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <div className="text-xl font-bold">{getCount('Content')}</div>
+            <p className="text-xs text-muted-foreground">Content</p>
+          </CardContent>
+        </Card>
+      </div>
 
+      {/* Updates Tabs */}
+      <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full">
+        <TabsList className="modern-tabs grid w-full grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 h-auto p-1">
+          <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all hover:scale-105">
+            All Updates ({stats.total})
+          </TabsTrigger>
           {filterTabs.map((tab) => (
-            <TabsContent key={tab.id} value={tab.id} className="mt-6">
-              {renderUpdatesTable(getUpdatesForTab(tab.id))}
-            </TabsContent>
+            <TabsTrigger 
+              key={tab.id} 
+              value={tab.id}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all hover:scale-105"
+            >
+              {tab.label} ({tab.count})
+            </TabsTrigger>
           ))}
-        </Tabs>
-      </main>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-6 animate-fade-in">
+          {renderUpdatesTable(getUpdatesForTab('all'))}
+        </TabsContent>
+
+        {filterTabs.map((tab) => (
+          <TabsContent key={tab.id} value={tab.id} className="mt-6 animate-fade-in">
+            {renderUpdatesTable(getUpdatesForTab(tab.id))}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };
