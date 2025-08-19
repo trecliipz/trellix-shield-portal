@@ -428,7 +428,7 @@ const SecurityUpdates = () => {
       <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full">
         <TabsList className="modern-tabs grid w-full grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 h-auto p-1">
           <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all hover:scale-105">
-            All Updates ({stats.total})
+            All Updates
           </TabsTrigger>
           {filterTabs.map((tab) => (
             <TabsTrigger 
@@ -436,7 +436,7 @@ const SecurityUpdates = () => {
               value={tab.id}
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all hover:scale-105"
             >
-              {tab.label} ({tab.count})
+              {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
