@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,136 +7,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RefreshCw, Download, CheckCircle, AlertTriangle, Shield, Database, Zap, Globe, Mail, Lock, FileText, Heart, Activity, ArrowLeft, Calendar, Monitor, Package, Cog, HardDrive } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useSecurityUpdates, SecurityUpdate, normalizeUpdateType } from "@/hooks/useSecurityUpdates";
 import { useToast } from "@/hooks/use-toast";
-import { Json } from "@/integrations/supabase/types";
-
-interface SecurityUpdate {
-  id: string;
-  name: string;
-  type: string;
-  platform: string;
-  version: string;
-  release_date: string;
-  file_size: number;
-  file_name: string;
-  sha256?: string;
-  description?: string;
-  is_recommended: boolean;
-  update_category?: string;
-  criticality_level?: string;
-  target_systems?: string[];
-  dependencies?: string[];
-  compatibility_info?: any;
-  threat_coverage?: string[];
-  deployment_notes?: string;
-  download_url?: string;
-  changelog?: string;
-  created_at: string;
-  updated_at: string;
-  status?: string;
-}
-
-// Real-time data from database
 
 const AdminDAT: React.FC = () => {
   const navigate = useNavigate();
-  const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdate[]>([]);
+  const { updates, isLoading, stats, filterTabs, triggerUpdateFetch } = useSecurityUpdates();
   const [selectedUpdates, setSelectedUpdates] = useState<Set<string>>(new Set());
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const [activeFilter, setActiveFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
 
-  // Fetch security updates from database
-  const fetchSecurityUpdates = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('security_updates')
-        .select('*')
-        .order('release_date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching security updates:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch security updates",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const typedData = data?.map(update => ({
-        ...update,
-        target_systems: Array.isArray(update.target_systems) 
-          ? update.target_systems.map(item => typeof item === 'string' ? item : String(item))
-          : [],
-        dependencies: Array.isArray(update.dependencies)
-          ? update.dependencies.map(item => typeof item === 'string' ? item : String(item))
-          : [],
-        compatibility_info: update.compatibility_info || {},
-        threat_coverage: update.threat_coverage || []
-      })) || [];
-      
-      setSecurityUpdates(typedData as SecurityUpdate[]);
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch security updates",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSecurityUpdates();
-  }, []);
-
-  // Trigger update fetch from external APIs
-  const triggerUpdateFetch = async () => {
-    try {
-      setRefreshing(true);
-      const { data, error } = await supabase.functions.invoke('fetch-security-updates');
-      
-      if (error) {
-        console.error('Error triggering update fetch:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch latest updates from servers",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Updates Refreshed",
-        description: `Found ${data?.new_updates || 0} new updates out of ${data?.updates_found || 0} total`,
-      });
-
-      // Refresh the local data
-      await fetchSecurityUpdates();
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh updates",
-        variant: "destructive",
-      });
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   // Filter updates based on active filter
-  const filteredUpdates = securityUpdates.filter(update => {
-    if (activeFilter === "ALL") return true;
-    return update.type === activeFilter;
+  const filteredUpdates = updates.filter(update => {
+    if (activeFilter === "all") return true;
+    const normalizedType = normalizeUpdateType(update.type, update.update_category);
+    return normalizedType.toLowerCase().replace(/\s+/g, '_') === activeFilter;
   });
 
   // Sort updates
@@ -169,17 +55,22 @@ const AdminDAT: React.FC = () => {
     }
   };
 
-  const getTypeIcon = (type: string): React.ReactNode => {
-    const iconMap: Record<string, React.ReactNode> = {
-      DATV3: <Zap className="h-4 w-4" />,
-      AMCORE: <Activity className="h-4 w-4" />,
-      MEDDAT: <Heart className="h-4 w-4" />,
-      TIE: <Globe className="h-4 w-4" />,
-      EXPLOIT_PREVENTION: <Lock className="h-4 w-4" />,
-      ENGINES: <Cog className="h-4 w-4" />,
-      CONTENT: <Package className="h-4 w-4" />
-    };
-    return iconMap[type] || <Database className="h-4 w-4" />;
+  const getTypeIcon = (type: string, updateCategory?: string): React.ReactNode => {
+    const normalizedType = normalizeUpdateType(type, updateCategory);
+    switch (normalizedType.toLowerCase()) {
+      case 'datv3': return <Zap className="h-4 w-4" />;
+      case 'amcore': return <Activity className="h-4 w-4" />;
+      case 'meddat': return <Heart className="h-4 w-4" />;
+      case 'tie intelligence': return <Globe className="h-4 w-4" />;
+      case 'exploit prevention': return <Lock className="h-4 w-4" />;
+      case 'engine': return <Cog className="h-4 w-4" />;
+      case 'content': return <Package className="h-4 w-4" />;
+      case 'epo': return <Shield className="h-4 w-4" />;
+      case 'policy templates': return <FileText className="h-4 w-4" />;
+      case 'email dat': return <Mail className="h-4 w-4" />;
+      case 'gateway dat': return <Mail className="h-4 w-4" />;
+      default: return <Database className="h-4 w-4" />;
+    }
   };
 
   const getPlatformIcon = (platform: string): React.ReactNode => {
@@ -192,17 +83,20 @@ const AdminDAT: React.FC = () => {
     return iconMap[platform] || <Monitor className="h-4 w-4" />;
   };
 
-  const getTypeColor = (type: string): "default" | "secondary" | "destructive" | "outline" => {
-    const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      DATV3: "destructive", 
-      AMCORE: "default",
-      MEDDAT: "secondary",
-      TIE: "outline",
-      EXPLOIT_PREVENTION: "destructive",
-      ENGINES: "secondary",
-      CONTENT: "default"
-    };
-    return colorMap[type] || "default";
+  const getTypeColor = (type: string, updateCategory?: string): "default" | "secondary" | "destructive" | "outline" => {
+    const normalizedType = normalizeUpdateType(type, updateCategory);
+    switch (normalizedType.toLowerCase()) {
+      case 'datv3': return "destructive"; 
+      case 'amcore': return "default";
+      case 'meddat': return "secondary";
+      case 'tie intelligence': return "outline";
+      case 'exploit prevention': return "destructive";
+      case 'engine': return "secondary";
+      case 'content': return "default";
+      case 'epo': return "destructive";
+      case 'policy templates': return "outline";
+      default: return "default";
+    }
   };
 
   const getCriticalityColor = (level?: string): "default" | "secondary" | "destructive" | "outline" => {
@@ -269,7 +163,7 @@ const AdminDAT: React.FC = () => {
   };
 
   const handleBulkDownload = () => {
-    const selectedUpdatesList = securityUpdates.filter(update => 
+    const selectedUpdatesList = updates.filter(update => 
       selectedUpdates.has(update.id) && update.download_url
     );
     
@@ -288,19 +182,6 @@ const AdminDAT: React.FC = () => {
       description: `Started downloading ${selectedUpdatesList.length} security updates.`,
     });
   };
-
-  const getUpdateStats = () => {
-    return {
-      datFiles: securityUpdates.filter(u => u.type === 'DATV3').length,
-      meddatFiles: securityUpdates.filter(u => u.type === 'MEDDAT').length,
-      tieIntelligence: securityUpdates.filter(u => u.type === 'TIE').length,
-      exploitPrevention: securityUpdates.filter(u => u.type === 'EXPLOIT_PREVENTION').length,
-      engines: securityUpdates.filter(u => u.type === 'ENGINES').length,
-      content: securityUpdates.filter(u => u.type === 'CONTENT').length
-    };
-  };
-
-  const stats = getUpdateStats();
 
   const renderUpdatesTable = (updates: SecurityUpdate[]) => (
     <div className="overflow-x-auto">
@@ -353,8 +234,9 @@ const AdminDAT: React.FC = () => {
               </TableCell>
               <TableCell>
                 <div className="flex items-center space-x-3">
-                  <Badge variant={getTypeColor(update.type)} className="px-2 py-1">
-                    {update.type}
+                  <Badge variant={getTypeColor(update.type, update.update_category)} className="px-2 py-1">
+                    {getTypeIcon(update.type, update.update_category)}
+                    <span className="ml-1">{normalizeUpdateType(update.type, update.update_category)}</span>
                   </Badge>
                   <div>
                     <div className="font-medium text-sm">{update.name}</div>
@@ -423,7 +305,7 @@ const AdminDAT: React.FC = () => {
     </div>
   );
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -487,169 +369,106 @@ const AdminDAT: React.FC = () => {
                 </a>
               ))}
             </nav>
+            
+            {/* Breadcrumb */}
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <span>Home</span>
+              <span>/</span>
+              <span>Admin Portal</span>
+              <span>/</span>
+              <span className="text-foreground">Security Updates</span>
+            </div>
           </div>
-        </div>
-
-        {/* Breadcrumb & Actions */}
-        <div className="flex items-center justify-between mb-8">
+          
           <div className="flex items-center space-x-4">
             <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="hover:bg-muted"
+              onClick={triggerUpdateFetch} 
+              className="flex items-center gap-2"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              <RefreshCw className="h-4 w-4" />
+              Check Updates
             </Button>
-            <div>
-              <h3 className="text-2xl font-semibold">DAT Files Management</h3>
-              <p className="text-muted-foreground text-sm">
-                Download and manage DAT files, MEDDAT, TIE Intelligence, and security updates
-              </p>
-            </div>
-          </div>
-          <Button onClick={triggerUpdateFetch} disabled={refreshing} className="bg-primary hover:bg-primary/90">
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Check Updates
-          </Button>
-        </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Zap className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.datFiles}</p>
-                  <p className="text-sm text-muted-foreground">DAT & V3 definitions</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 rounded-lg bg-destructive/10">
-                  <Heart className="h-6 w-6 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.meddatFiles}</p>
-                  <p className="text-sm text-muted-foreground">Medical device security</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 rounded-lg bg-blue-500/10">
-                  <Globe className="h-6 w-6 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.tieIntelligence}</p>
-                  <p className="text-sm text-muted-foreground">Threat intelligence feeds</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 rounded-lg bg-orange-500/10">
-                  <Lock className="h-6 w-6 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.exploitPrevention}</p>
-                  <p className="text-sm text-muted-foreground">Zero-day protection</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 rounded-lg bg-green-500/10">
-                  <Cog className="h-6 w-6 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.engines}</p>
-                  <p className="text-sm text-muted-foreground">Security engines</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 rounded-lg bg-purple-500/10">
-                  <Package className="h-6 w-6 text-purple-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.content}</p>
-                  <p className="text-sm text-muted-foreground">Content packages</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {['ALL', 'DATV3', 'MEDDAT', 'TIE', 'EXPLOIT_PREVENTION', 'ENGINES', 'CONTENT'].map((filter) => (
-              <Button
-                key={filter}
-                variant={activeFilter === filter ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveFilter(filter)}
-                className="transition-all"
-              >
-                {filter === 'ALL' ? 'All Updates' : 
-                 filter === 'DATV3' ? 'DAT Files' :
-                 filter === 'MEDDAT' ? 'MEDDAT Files' :
-                 filter === 'TIE' ? 'TIE Intelligence' :
-                 filter === 'EXPLOIT_PREVENTION' ? 'Exploit Prevention' :
-                 filter === 'ENGINES' ? 'Engines' :
-                 'Content'}
-              </Button>
-            ))}
           </div>
         </div>
 
-        {/* Data Table */}
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">All Security Updates</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {selectedUpdates.size > 0 
-                    ? `${selectedUpdates.size} of ${filteredUpdates.length} selected`
-                    : `${filteredUpdates.length} updates available`
-                  }
-                </p>
-              </div>
+        <div className="space-y-6">
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Updates</p>
+                    <p className="text-2xl font-bold">{stats.total}</p>
+                  </div>
+                  <Database className="h-8 w-8 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Critical Updates</p>
+                    <p className="text-2xl font-bold text-destructive">{stats.critical}</p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-destructive" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Recommended</p>
+                    <p className="text-2xl font-bold text-green-600">{stats.recommended}</p>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">This Week</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats.recent}</p>
+                  </div>
+                  <Calendar className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filter Tabs */}
+          <Tabs value={activeFilter} onValueChange={setActiveFilter} className="mb-6">
+            <TabsList className="grid w-full grid-cols-6">
+              {filterTabs.slice(0, 6).map(tab => (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  {tab.label} ({tab.count})
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            <TabsContent value={activeFilter} className="space-y-4">
               {selectedUpdates.size > 0 && (
-                <Button onClick={handleBulkDownload} className="bg-primary hover:bg-primary/90">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Selected ({selectedUpdates.size})
-                </Button>
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium">
+                    {selectedUpdates.size} updates selected
+                  </span>
+                  <Button onClick={handleBulkDownload} size="sm">
+                    <Download className="h-4 w-4 mr-1" />
+                    Download Selected
+                  </Button>
+                </div>
               )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {renderUpdatesTable(sortedUpdates)}
-          </CardContent>
-        </Card>
+              {renderUpdatesTable(sortedUpdates)}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

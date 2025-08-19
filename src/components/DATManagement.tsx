@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,136 +6,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RefreshCw, Download, ArrowLeft, Calendar, HardDrive, Shield, Activity, AlertTriangle, CheckCircle, Smartphone, Monitor, Server, Database, FileCheck, DownloadCloud, Clock, Bell, Heart, Globe, Zap, Mail, Cog, Package, FileText, Lock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-
-interface SecurityUpdate {
-  id: string;
-  name: string;
-  type: string;
-  platform: string;
-  version: string;
-  release_date: string;
-  file_size: number;
-  file_name: string;
-  sha256?: string;
-  description?: string;
-  is_recommended: boolean;
-  update_category?: string;
-  criticality_level?: string;
-  target_systems?: string[];
-  dependencies?: string[];
-  compatibility_info?: any;
-  threat_coverage?: string[];
-  deployment_notes?: string;
-  download_url?: string;
-  changelog?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { useSecurityUpdates, SecurityUpdate, normalizeUpdateType } from '@/hooks/useSecurityUpdates';
+import { useToast } from '@/hooks/use-toast';
 
 export const DATManagement = () => {
-  const [refreshing, setRefreshing] = useState(false);
+  const { updates, isLoading, stats, filterTabs, triggerUpdateFetch } = useSecurityUpdates();
   const [selectedUpdates, setSelectedUpdates] = useState<string[]>([]);
-  const [notifications, setNotifications] = useState<number>(0);
-  const [securityUpdatesState, setSecurityUpdatesState] = useState<SecurityUpdate[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Fetch security updates from Supabase
-  const fetchSecurityUpdates = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('security_updates')
-        .select('*')
-        .order('release_date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching security updates:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch security updates",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const typedData = data?.map(update => ({
-        ...update,
-        target_systems: Array.isArray(update.target_systems) 
-          ? update.target_systems.map(item => typeof item === 'string' ? item : String(item))
-          : [],
-        dependencies: Array.isArray(update.dependencies)
-          ? update.dependencies.map(item => typeof item === 'string' ? item : String(item))
-          : [],
-        compatibility_info: update.compatibility_info || {},
-        threat_coverage: update.threat_coverage || []
-      })) || [];
-      
-      setSecurityUpdatesState(typedData as SecurityUpdate[]);
-      
-      // Count new updates (released within last 7 days)
-      const newUpdatesCount = data?.filter(update => {
-        const releaseDate = new Date(update.release_date);
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        return releaseDate > sevenDaysAgo;
-      }).length || 0;
-      
-      setNotifications(newUpdatesCount);
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch security updates",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Trigger update fetch from external APIs
-  const triggerUpdateFetch = async () => {
-    try {
-      setRefreshing(true);
-      const { data, error } = await supabase.functions.invoke('fetch-security-updates');
-      
-      if (error) {
-        console.error('Error triggering update fetch:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch latest updates from servers",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Updates Refreshed",
-        description: `Found ${data.new_updates} new updates out of ${data.updates_found} total`,
-      });
-
-      // Refresh the local data
-      await fetchSecurityUpdates();
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh updates",
-        variant: "destructive",
-      });
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  // Load data on component mount
-  useEffect(() => {
-    fetchSecurityUpdates();
-  }, []);
 
   const handleDownload = (update: SecurityUpdate) => {
     if (update.download_url) {
@@ -173,7 +51,7 @@ export const DATManagement = () => {
     );
 
     if (confirmDownload) {
-      const selectedUpdatesList = securityUpdatesState.filter(update => 
+      const selectedUpdatesList = updates.filter(update => 
         selectedUpdates.includes(update.id) && update.download_url
       );
       
@@ -210,68 +88,49 @@ export const DATManagement = () => {
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'dat':
-      case 'datv3':
-        return <Shield className="h-4 w-4" />;
-      case 'meddat':
-        return <Heart className="h-4 w-4" />;
-      case 'tie':
-        return <Globe className="h-4 w-4" />;
-      case 'exploit_prevention':
-        return <Lock className="h-4 w-4" />;
-      case 'amcore_dat':
-        return <Zap className="h-4 w-4" />;
-      case 'gateway_dat':
-      case 'email_dat':
-        return <Mail className="h-4 w-4" />;
-      case 'engine':
-        return <Cog className="h-4 w-4" />;
-      case 'content':
-        return <Package className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
+  const getTypeIcon = (type: string, updateCategory?: string) => {
+    const normalizedType = normalizeUpdateType(type, updateCategory);
+    switch (normalizedType.toLowerCase()) {
+      case 'datv3': return <Shield className="h-4 w-4" />;
+      case 'meddat': return <Heart className="h-4 w-4" />;
+      case 'tie intelligence': return <Globe className="h-4 w-4" />;
+      case 'exploit prevention': return <Lock className="h-4 w-4" />;
+      case 'amcore': return <Zap className="h-4 w-4" />;
+      case 'email dat':
+      case 'gateway dat': return <Mail className="h-4 w-4" />;
+      case 'engine': return <Cog className="h-4 w-4" />;
+      case 'content': return <Package className="h-4 w-4" />;
+      case 'epo': return <Shield className="h-4 w-4" />;
+      case 'policy templates': return <FileText className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'dat':
-      case 'datv3':
-        return 'destructive';
-      case 'meddat':
-        return 'secondary';
-      case 'tie':
-        return 'outline';
-      case 'exploit_prevention':
-        return 'destructive';
-      case 'amcore_dat':
-        return 'secondary';
-      case 'gateway_dat':
-      case 'email_dat':
-        return 'outline';
-      case 'engine':
-        return 'default';
-      case 'content':
-        return 'secondary';
-      default:
-        return 'outline';
+  const getTypeColor = (type: string, updateCategory?: string) => {
+    const normalizedType = normalizeUpdateType(type, updateCategory);
+    switch (normalizedType.toLowerCase()) {
+      case 'datv3': return 'destructive';
+      case 'meddat': return 'secondary';
+      case 'tie intelligence': return 'outline';
+      case 'exploit prevention': return 'destructive';
+      case 'amcore': return 'secondary';
+      case 'email dat':
+      case 'gateway dat': return 'outline';
+      case 'engine': return 'default';
+      case 'content': return 'secondary';
+      case 'epo': return 'destructive';
+      case 'policy templates': return 'outline';
+      default: return 'outline';
     }
   };
 
   const getCriticalityColor = (level?: string) => {
     switch (level?.toLowerCase()) {
-      case 'critical':
-        return 'destructive';
-      case 'high':
-        return 'secondary';
-      case 'medium':
-        return 'outline';
-      case 'low':
-        return 'default';
-      default:
-        return 'outline';
+      case 'critical': return 'destructive';
+      case 'high': return 'secondary';
+      case 'medium': return 'outline';
+      case 'low': return 'default';
+      default: return 'outline';
     }
   };
 
@@ -301,7 +160,7 @@ export const DATManagement = () => {
     });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center h-32">
@@ -311,16 +170,17 @@ export const DATManagement = () => {
     );
   }
 
-  const datUpdates = securityUpdatesState.filter(u => u.type === 'dat' || u.type === 'datv3');
-  const meddatUpdates = securityUpdatesState.filter(u => u.type === 'meddat');
-  const tieUpdates = securityUpdatesState.filter(u => u.type === 'tie');
-  const exploitPreventionUpdates = securityUpdatesState.filter(u => u.type === 'exploit_prevention');
-  const engineUpdates = securityUpdatesState.filter(u => u.type === 'engine');
-  const contentUpdates = securityUpdatesState.filter(u => u.type === 'content');
+  // Filter updates by normalized type
+  const getUpdatesForTab = (tabId: string) => {
+    if (tabId === 'all') return updates;
+    return updates.filter(update => {
+      const normalizedType = normalizeUpdateType(update.type, update.update_category);
+      return normalizedType.toLowerCase().replace(/\s+/g, '_') === tabId;
+    });
+  };
 
   const renderUpdatesTable = (updates: SecurityUpdate[]) => {
     const isAllSelected = updates.every(u => selectedUpdates.includes(u.id));
-    const isSomeSelected = updates.some(u => selectedUpdates.includes(u.id));
 
     return (
       <div className="space-y-4">
@@ -371,9 +231,9 @@ export const DATManagement = () => {
                 <TableCell>
                   <div className="flex flex-col space-y-1">
                     <div className="flex gap-2">
-                      <Badge variant={getTypeColor(update.type)} className="flex items-center gap-1">
-                        {getTypeIcon(update.type)}
-                        {update.type.toUpperCase().replace('_', ' ')}
+                      <Badge variant={getTypeColor(update.type, update.update_category)} className="flex items-center gap-1">
+                        {getTypeIcon(update.type, update.update_category)}
+                        {normalizeUpdateType(update.type, update.update_category)}
                       </Badge>
                       {update.criticality_level && (
                         <Badge variant={getCriticalityColor(update.criticality_level)}>
@@ -405,8 +265,8 @@ export const DATManagement = () => {
                   <div className="flex items-center space-x-2">
                     {update.is_recommended && (
                       <Badge variant="default" className="flex items-center space-x-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        <span>Critical</span>
+                        <CheckCircle className="h-3 w-3" />
+                        <span>Recommended</span>
                       </Badge>
                     )}
                   </div>
@@ -446,10 +306,10 @@ export const DATManagement = () => {
           <div>
             <h2 className="text-2xl font-bold text-primary flex items-center space-x-3">
               <span>DAT Files Management</span>
-              {notifications > 0 && (
+              {stats.recent > 0 && (
                 <Badge variant="destructive" className="flex items-center space-x-1">
                   <Bell className="h-3 w-3" />
-                  <span>{notifications} New</span>
+                  <span>{stats.recent} New</span>
                 </Badge>
               )}
             </h2>
@@ -457,9 +317,9 @@ export const DATManagement = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Checking...' : 'Check Updates'}
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Check Updates
           </Button>
           {selectedUpdates.length > 0 && (
             <Button onClick={handleBulkDownload}>
@@ -470,168 +330,93 @@ export const DATManagement = () => {
         </div>
       </div>
 
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">DAT Files</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Updates</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{datUpdates.length}</div>
-            <p className="text-xs text-muted-foreground">DAT & V3 definitions</p>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">All security updates</p>
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">MEDDAT Files</CardTitle>
-            <Heart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Critical</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{meddatUpdates.length}</div>
-            <p className="text-xs text-muted-foreground">Medical device security</p>
+            <div className="text-2xl font-bold text-destructive">{stats.critical}</div>
+            <p className="text-xs text-muted-foreground">High priority updates</p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">TIE Intelligence</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Recommended</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{tieUpdates.length}</div>
-            <p className="text-xs text-muted-foreground">Threat intelligence feeds</p>
+            <div className="text-2xl font-bold text-green-600">{stats.recommended}</div>
+            <p className="text-xs text-muted-foreground">Recommended installs</p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Exploit Prevention</CardTitle>
-            <Lock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">This Week</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{exploitPreventionUpdates.length}</div>
-            <p className="text-xs text-muted-foreground">Zero-day protection</p>
+            <div className="text-2xl font-bold text-blue-600">{stats.recent}</div>
+            <p className="text-xs text-muted-foreground">Recent releases</p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Engines</CardTitle>
+            <CardTitle className="text-sm font-medium">DATV3</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{engineUpdates.length}</div>
-            <p className="text-xs text-muted-foreground">Security engines</p>
+            <div className="text-2xl font-bold">{stats.byType.DATV3 || 0}</div>
+            <p className="text-xs text-muted-foreground">DAT & V3 definitions</p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Content</CardTitle>
-            <FileCheck className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">TIE Intel</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{contentUpdates.length}</div>
-            <p className="text-xs text-muted-foreground">Content packages</p>
+            <div className="text-2xl font-bold text-blue-600">{stats.byType['TIE Intelligence'] || 0}</div>
+            <p className="text-xs text-muted-foreground">Threat intelligence</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Security Updates Tabs */}
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="all">All Updates</TabsTrigger>
-          <TabsTrigger value="dat">DAT Files</TabsTrigger>
-          <TabsTrigger value="meddat">MEDDAT Files</TabsTrigger>
-          <TabsTrigger value="tie">TIE Intelligence</TabsTrigger>
-          <TabsTrigger value="exploit_prevention">Exploit Prevention</TabsTrigger>
-          <TabsTrigger value="engines">Engines</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6">
+          {filterTabs.slice(0, 6).map(tab => (
+            <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
+              {tab.label}
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {tab.count}
+              </Badge>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Security Updates</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {renderUpdatesTable(securityUpdatesState)}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="dat" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>DAT Files (Virus Definitions & V3)</CardTitle>
-              <CardDescription>
-                Traditional and next-generation virus definition files for comprehensive threat protection
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderUpdatesTable(datUpdates)}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="meddat" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>MEDDAT Files (Medical Device Security)</CardTitle>
-              <CardDescription>
-                Specialized threat definitions for medical device security and healthcare networks
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderUpdatesTable(meddatUpdates)}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tie" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>TIE Intelligence Updates</CardTitle>
-              <CardDescription>
-                Global threat intelligence feeds with real-time reputation data and file reputation scoring
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderUpdatesTable(tieUpdates)}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="exploit_prevention" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Exploit Prevention Content</CardTitle>
-              <CardDescription>
-                Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderUpdatesTable(exploitPreventionUpdates)}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="engines" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Security Engines</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {renderUpdatesTable(engineUpdates)}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="content" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Packages</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {renderUpdatesTable(contentUpdates)}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {filterTabs.slice(0, 6).map(tab => (
+          <TabsContent key={tab.id} value={tab.id} className="space-y-4">
+            {renderUpdatesTable(getUpdatesForTab(tab.id))}
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );
