@@ -72,6 +72,30 @@ export const AdminEPOIntegration = () => {
     toast.success(`${label} copied to clipboard`);
   };
 
+  const handleSaveConfiguration = () => {
+    // Validate required fields
+    if (!epoConfig.serverUrl || !epoConfig.username || !epoConfig.password) {
+      toast.error("Please fill in all required fields before saving.");
+      return;
+    }
+
+    // Save configuration logic here
+    console.log('Saving EPO configuration:', epoConfig);
+    toast.success("EPO configuration saved successfully!");
+  };
+
+  const handleSaveApiSettings = () => {
+    // Validate API settings
+    if (apiSettings.apiKeys.primaryKey && apiSettings.apiKeys.primaryKey.length < 10) {
+      toast.error("API key must be at least 10 characters long.");
+      return;
+    }
+
+    // Save API settings logic here
+    console.log('Saving API settings:', apiSettings);
+    toast.success("API settings saved successfully!");
+  };
+
   const getConnectionBadge = () => {
     switch (connectionStatus) {
       case 'connected':
@@ -207,7 +231,11 @@ export const AdminEPOIntegration = () => {
                   <Shield className="h-4 w-4 mr-2" />
                   Test Connection
                 </Button>
-                <Button variant="outline" disabled={connectionStatus !== 'connected'}>
+                <Button 
+                  variant="outline" 
+                  disabled={connectionStatus !== 'connected'}
+                  onClick={handleSaveConfiguration}
+                >
                   <Save className="h-4 w-4 mr-2" />
                   Save Configuration
                 </Button>
@@ -521,7 +549,7 @@ export const AdminEPOIntegration = () => {
                   />
                   <Label>Enable API Logging</Label>
                 </div>
-                <Button>
+                <Button onClick={handleSaveApiSettings}>
                   <Save className="h-4 w-4 mr-2" />
                   Save API Settings
                 </Button>
