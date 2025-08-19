@@ -38,189 +38,95 @@ interface SecurityUpdate {
   status?: string;
 }
 
-// Mock data for demonstration
-const mockSecurityUpdates: SecurityUpdate[] = [
-  {
-    id: "1",
-    name: "V3 Virus Definition Files",
-    type: "DATV3",
-    platform: "Windows",
-    version: "5950",
-    release_date: "2025-07-21T08:44:00Z",
-    file_size: 189746585,
-    file_name: "datv3_5950.zip",
-    is_recommended: true,
-    criticality_level: "Critical",
-    download_url: "https://download.trellix.com/datv3_5950.zip",
-    created_at: "2025-07-21T08:44:00Z",
-    updated_at: "2025-07-21T08:44:00Z",
-    status: "Available"
-  },
-  {
-    id: "2", 
-    name: "V3 Virus Definition Files",
-    type: "DATV3",
-    platform: "Linux",
-    version: "5950",
-    release_date: "2025-07-21T08:44:00Z", 
-    file_size: 178916966,
-    file_name: "datv3_linux_5950.tar.gz",
-    is_recommended: true,
-    criticality_level: "Critical",
-    download_url: "https://download.trellix.com/datv3_linux_5950.tar.gz",
-    created_at: "2025-07-21T08:44:00Z",
-    updated_at: "2025-07-21T08:44:00Z",
-    status: "Available"
-  },
-  {
-    id: "3",
-    name: "AmCore DAT Files", 
-    type: "AMCORE",
-    platform: "Windows",
-    version: "Latest",
-    release_date: "2025-07-21T08:30:00Z",
-    file_size: 47447194,
-    file_name: "amcore_latest.zip",
-    is_recommended: true,
-    criticality_level: "High", 
-    download_url: "https://download.trellix.com/amcore_latest.zip",
-    created_at: "2025-07-21T08:30:00Z",
-    updated_at: "2025-07-21T08:30:00Z",
-    status: "Available"
-  },
-  {
-    id: "4",
-    name: "Medical Device DAT",
-    type: "MEDDAT",
-    platform: "Windows",
-    version: "3.1.2", 
-    release_date: "2025-07-20T15:22:00Z",
-    file_size: 27030855,
-    file_name: "meddat_v3.1.2.zip",
-    is_recommended: false,
-    criticality_level: "Medium",
-    download_url: "https://download.trellix.com/meddat_v3.1.2.zip",
-    created_at: "2025-07-20T15:22:00Z",
-    updated_at: "2025-07-20T15:22:00Z",
-    status: "Available"
-  },
-  {
-    id: "5",
-    name: "TIE Intelligence Feed", 
-    type: "TIE",
-    platform: "Linux",
-    version: "2.4.1",
-    release_date: "2025-07-19T12:15:00Z",
-    file_size: 70643598,
-    file_name: "tie_intel_v2.4.1.tar.gz",
-    is_recommended: true,
-    criticality_level: "High",
-    download_url: "https://download.trellix.com/tie_intel_v2.4.1.tar.gz", 
-    created_at: "2025-07-19T12:15:00Z",
-    updated_at: "2025-07-19T12:15:00Z",
-    status: "Available"
-  },
-  {
-    id: "6",
-    name: "Exploit Prevention Rules",
-    type: "EXPLOIT_PREVENTION", 
-    platform: "Windows",
-    version: "4.2.8",
-    release_date: "2025-07-18T14:30:00Z",
-    file_size: 32450789,
-    file_name: "exploit_prev_v4.2.8.zip",
-    is_recommended: true,
-    criticality_level: "Critical",
-    download_url: "https://download.trellix.com/exploit_prev_v4.2.8.zip",
-    created_at: "2025-07-18T14:30:00Z", 
-    updated_at: "2025-07-18T14:30:00Z",
-    status: "Available"
-  },
-  {
-    id: "7",
-    name: "Security Engine Update",
-    type: "ENGINES",
-    platform: "Windows", 
-    version: "6.1.0",
-    release_date: "2025-07-17T10:00:00Z",
-    file_size: 15678932,
-    file_name: "engine_v6.1.0.zip",
-    is_recommended: false,
-    criticality_level: "Medium",
-    download_url: "https://download.trellix.com/engine_v6.1.0.zip",
-    created_at: "2025-07-17T10:00:00Z",
-    updated_at: "2025-07-17T10:00:00Z", 
-    status: "Available"
-  },
-  {
-    id: "8",
-    name: "Content Package Update",
-    type: "CONTENT",
-    platform: "Cross-Platform",
-    version: "2.3.1", 
-    release_date: "2025-07-16T09:15:00Z",
-    file_size: 23456789,
-    file_name: "content_v2.3.1.zip",
-    is_recommended: false,
-    criticality_level: "Low",
-    download_url: "https://download.trellix.com/content_v2.3.1.zip",
-    created_at: "2025-07-16T09:15:00Z",
-    updated_at: "2025-07-16T09:15:00Z",
-    status: "Available"
-  }
-];
+// Real-time data from database
 
 const AdminDAT: React.FC = () => {
   const navigate = useNavigate();
-  const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdate[]>(mockSecurityUpdates);
+  const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdate[]>([]);
   const [selectedUpdates, setSelectedUpdates] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
 
+  // Fetch security updates from database
+  const fetchSecurityUpdates = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('security_updates')
+        .select('*')
+        .order('release_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching security updates:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch security updates",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const typedData = data?.map(update => ({
+        ...update,
+        target_systems: Array.isArray(update.target_systems) 
+          ? update.target_systems.map(item => typeof item === 'string' ? item : String(item))
+          : [],
+        dependencies: Array.isArray(update.dependencies)
+          ? update.dependencies.map(item => typeof item === 'string' ? item : String(item))
+          : [],
+        compatibility_info: update.compatibility_info || {},
+        threat_coverage: update.threat_coverage || []
+      })) || [];
+      
+      setSecurityUpdates(typedData as SecurityUpdate[]);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch security updates",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Initially load mock data - could be replaced with real API call
-    setLoading(false);
+    fetchSecurityUpdates();
   }, []);
 
-  const mockFetchUpdates = async () => {
+  // Trigger update fetch from external APIs
+  const triggerUpdateFetch = async () => {
     try {
       setRefreshing(true);
+      const { data, error } = await supabase.functions.invoke('fetch-security-updates');
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate fetching new updates
-      const newUpdate: SecurityUpdate = {
-        id: `${Date.now()}`,
-        name: "Latest Security Patch",
-        type: "DATV3",
-        platform: "Windows",
-        version: `${5950 + Math.floor(Math.random() * 10)}`,
-        release_date: new Date().toISOString(),
-        file_size: Math.floor(Math.random() * 200000000) + 100000000,
-        file_name: `latest_patch_${Date.now()}.zip`,
-        is_recommended: true,
-        criticality_level: "Critical",
-        download_url: `https://download.trellix.com/patch_${Date.now()}.zip`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: "Available"
-      };
-      
-      setSecurityUpdates(prev => [newUpdate, ...prev]);
-      
+      if (error) {
+        console.error('Error triggering update fetch:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch latest updates from servers",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "Success",
-        description: "Security updates refreshed successfully. Found 1 new update.",
+        title: "Updates Refreshed",
+        description: `Found ${data?.new_updates || 0} new updates out of ${data?.updates_found || 0} total`,
       });
+
+      // Refresh the local data
+      await fetchSecurityUpdates();
     } catch (error) {
+      console.error('Error:', error);
       toast({
-        title: "Error", 
-        description: "Failed to refresh security updates. Please try again.",
+        title: "Error",
+        description: "Failed to refresh updates",
         variant: "destructive",
       });
     } finally {
@@ -603,7 +509,7 @@ const AdminDAT: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button onClick={mockFetchUpdates} disabled={refreshing} className="bg-primary hover:bg-primary/90">
+          <Button onClick={triggerUpdateFetch} disabled={refreshing} className="bg-primary hover:bg-primary/90">
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Check Updates
           </Button>
