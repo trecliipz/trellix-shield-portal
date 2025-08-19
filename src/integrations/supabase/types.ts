@@ -1243,6 +1243,54 @@ export type Database = {
           },
         ]
       }
+      network_ping_logs: {
+        Row: {
+          attempt_index: number
+          attempts: number
+          created_at: string
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          method: string
+          port: number | null
+          resolved_ip: unknown | null
+          status: string
+          target: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt_index?: number
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          method?: string
+          port?: number | null
+          resolved_ip?: unknown | null
+          status: string
+          target: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt_index?: number
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          method?: string
+          port?: number | null
+          resolved_ip?: unknown | null
+          status?: string
+          target?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
