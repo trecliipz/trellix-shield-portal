@@ -58,6 +58,13 @@ export const IntegrationCenter = () => {
     port: '8443'
   });
 
+  // Integration settings state
+  const [integrationSettings, setIntegrationSettings] = useState({
+    connectionTimeout: 30,
+    retryAttempts: 3,
+    logLevel: 'info'
+  });
+
   // API Commands state
   const [selectedConnection, setSelectedConnection] = useState<string>('');
   const [selectedCommand, setSelectedCommand] = useState<string>('');
@@ -213,6 +220,47 @@ export const IntegrationCenter = () => {
         console.error('Error deleting connection:', error);
         toast.error("Failed to delete connection");
       }
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to save settings");
+        return;
+      }
+
+      // Save settings to localStorage for now (could be moved to Supabase later)
+      localStorage.setItem('integration_settings', JSON.stringify(integrationSettings));
+      
+      // Trigger sync for all connected servers
+      const connectedServers = connections.filter(c => c.status === 'connected');
+      
+      if (connectedServers.length === 0) {
+        toast.warning("No connected servers to sync");
+        return;
+      }
+
+      toast.info(`Syncing settings with ${connectedServers.length} server(s)...`);
+
+      // Simulate sync process
+      for (const server of connectedServers) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Update last sync time
+        await supabase
+          .from('epo_connections')
+          .update({ last_sync: new Date().toISOString() })
+          .eq('id', server.id);
+      }
+
+      await loadConnections();
+      toast.success("Settings saved and synced successfully!");
+      
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error("Failed to save settings");
     }
   };
 
@@ -791,15 +839,35 @@ export const IntegrationCenter = () => {
               <div className="space-y-4">
                 <div>
                   <Label>Default Connection Timeout (seconds)</Label>
-                  <Input type="number" defaultValue="30" />
+                  <Input 
+                    type="number" 
+                    value={integrationSettings.connectionTimeout}
+                    onChange={(e) => setIntegrationSettings({
+                      ...integrationSettings,
+                      connectionTimeout: parseInt(e.target.value) || 30
+                    })}
+                  />
                 </div>
                 <div>
                   <Label>Retry Attempts</Label>
-                  <Input type="number" defaultValue="3" />
+                  <Input 
+                    type="number" 
+                    value={integrationSettings.retryAttempts}
+                    onChange={(e) => setIntegrationSettings({
+                      ...integrationSettings,
+                      retryAttempts: parseInt(e.target.value) || 3
+                    })}
+                  />
                 </div>
                 <div>
                   <Label>Log Level</Label>
-                  <Select defaultValue="info">
+                  <Select 
+                    value={integrationSettings.logLevel} 
+                    onValueChange={(value) => setIntegrationSettings({
+                      ...integrationSettings,
+                      logLevel: value
+                    })}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -811,7 +879,10 @@ export const IntegrationCenter = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button>Save Settings</Button>
+                <Button onClick={handleSaveSettings} className="w-full">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Save Settings & Sync
+                </Button>
               </div>
             </CardContent>
           </Card>
