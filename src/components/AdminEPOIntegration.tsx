@@ -55,16 +55,61 @@ export const AdminEPOIntegration = () => {
   const handleTestConnection = async () => {
     setConnectionStatus('testing');
     
-    // Simulate connection test
-    setTimeout(() => {
-      if (epoConfig.serverUrl && epoConfig.username && epoConfig.password) {
-        setConnectionStatus('connected');
-        toast.success("Successfully connected to Trellix EPO!");
-      } else {
+    try {
+      // Validate required fields
+      if (!epoConfig.serverUrl || !epoConfig.username || !epoConfig.password) {
         setConnectionStatus('disconnected');
-        toast.error("Connection failed. Please check your credentials.");
+        toast.error("Please fill in all required fields (Server URL, Username, Password)");
+        return;
       }
-    }, 2000);
+
+      // Update the server URL if it's using the old format
+      let serverUrl = epoConfig.serverUrl;
+      if (serverUrl === 'https://103-98-212-249.cloud-xip.com:8443') {
+        serverUrl = 'https://trellixepo2025:8443';
+        setEpoConfig({ ...epoConfig, serverUrl });
+        toast.info("Server URL updated to https://trellixepo2025:8443");
+      }
+
+      // Test connection using EPO integration function
+      const response = await fetch('https://enwjspegjxkqrcmzlzqg.supabase.co/functions/v1/epo-integration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVud2pzcGVnanhrcXJjbXpsenFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxODEwNDksImV4cCI6MjA2NTc1NzA0OX0.EIAEdQQk2H2xkMrX1EAO3iFzf3BrpC6vuww6PAHbqDQ'}`
+        },
+        body: JSON.stringify({
+          action: 'test-connection',
+          serverUrl: serverUrl,
+          username: epoConfig.username,
+          password: epoConfig.password
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setConnectionStatus('connected');
+          toast.success("Successfully connected to Trellix EPO server!");
+        } else {
+          setConnectionStatus('disconnected');
+          toast.error(result.error || "Connection test failed");
+        }
+      } else {
+        const errorText = await response.text();
+        setConnectionStatus('disconnected');
+        toast.error(`Connection failed: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      setConnectionStatus('disconnected');
+      console.error('EPO connection test error:', error);
+      
+      if (error.message?.includes('fetch')) {
+        toast.error("Network error: Unable to reach EPO server. Please check the server URL and network connectivity.");
+      } else {
+        toast.error(`Connection test failed: ${error.message || 'Unknown error'}`);
+      }
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {

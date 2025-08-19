@@ -34,9 +34,64 @@ serve(async (req) => {
       throw new Error("ePO credentials not configured");
     }
 
-    const { action, customerId, ouGroupName, companyName } = await req.json();
+    const requestBody = await req.json();
+    const { action, customerId, ouGroupName, companyName, serverUrl, username, password } = requestBody;
     
     logStep("Processing ePO action", { action, customerId, ouGroupName });
+
+    if (action === 'test-connection') {
+      // Test connection to EPO server
+      const testUrl = serverUrl || epoServerUrl;
+      const testUsername = username || epoUsername;
+      const testPassword = password || epoPassword;
+      
+      logStep("Testing EPO connection", { url: testUrl });
+      
+      try {
+        // Test basic connectivity with a simple API call
+        const testResponse = await fetch(`${testUrl}/remote/core.help`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${btoa(`${testUsername}:${testPassword}`)}`
+          },
+          body: JSON.stringify({})
+        });
+
+        if (testResponse.ok) {
+          logStep("EPO connection successful");
+          return new Response(JSON.stringify({
+            success: true,
+            message: "Successfully connected to EPO server",
+            serverUrl: testUrl
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        } else {
+          const errorText = await testResponse.text();
+          logStep("EPO connection failed", { status: testResponse.status, error: errorText });
+          
+          return new Response(JSON.stringify({
+            success: false,
+            error: `EPO server returned ${testResponse.status}: ${errorText}`
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+      } catch (connectionError) {
+        logStep("EPO connection error", connectionError);
+        
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Unable to connect to EPO server: ${connectionError.message}`
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+    }
 
     if (action === 'create-customer-ou') {
       // Create System Tree OU for customer
