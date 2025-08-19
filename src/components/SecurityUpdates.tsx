@@ -375,7 +375,7 @@ const SecurityUpdates = () => {
 
       {/* Category Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in">
-        <Card className="modern-card">
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('dat')}>
           <CardContent className="p-4 text-center">
             <Database className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('DAT') + getCount('DATV3')}</div>
@@ -383,7 +383,7 @@ const SecurityUpdates = () => {
           </CardContent>
         </Card>
 
-        <Card className="modern-card">
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('meddat')}>
           <CardContent className="p-4 text-center">
             <Shield className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('MEDDAT')}</div>
@@ -391,7 +391,7 @@ const SecurityUpdates = () => {
           </CardContent>
         </Card>
 
-        <Card className="modern-card">
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('tie')}>
           <CardContent className="p-4 text-center">
             <Zap className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('TIE Intelligence')}</div>
@@ -399,7 +399,7 @@ const SecurityUpdates = () => {
           </CardContent>
         </Card>
 
-        <Card className="modern-card">
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('exploit')}>
           <CardContent className="p-4 text-center">
             <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('Exploit Prevention')}</div>
@@ -407,7 +407,7 @@ const SecurityUpdates = () => {
           </CardContent>
         </Card>
 
-        <Card className="modern-card">
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('engine')}>
           <CardContent className="p-4 text-center">
             <Settings className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('Engine')}</div>
@@ -415,7 +415,7 @@ const SecurityUpdates = () => {
           </CardContent>
         </Card>
 
-        <Card className="modern-card">
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('content')}>
           <CardContent className="p-4 text-center">
             <Database className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('Content')}</div>
