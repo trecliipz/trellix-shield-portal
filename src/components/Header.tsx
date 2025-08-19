@@ -144,14 +144,6 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
               {isLoggedIn ? (
                 <>
                   <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => window.location.href = '/security-updates'}
-                    className="hidden sm:flex"
-                  >
-                    Security Updates
-                  </Button>
-                  <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsContactFormOpen(true)}
