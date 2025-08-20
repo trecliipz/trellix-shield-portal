@@ -276,6 +276,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
+  }
 });
 
 // New proxy function for general EPO API calls
