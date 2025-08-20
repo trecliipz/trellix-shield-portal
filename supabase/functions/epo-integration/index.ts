@@ -276,7 +276,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
-  }
+});
 
 // New proxy function for general EPO API calls
 async function proxyEPORequest(requestData: any) {
@@ -345,8 +345,8 @@ async function proxyEPORequest(requestData: any) {
       }
     );
     
-  } catch (error) {
+  } catch (error: any) {
     logStep('EPO Proxy Error', { error: error.message, endpoint });
     throw new Error(`EPO API call failed: ${error.message}`);
   }
-});
+}
