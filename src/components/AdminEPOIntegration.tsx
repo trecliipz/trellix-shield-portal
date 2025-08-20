@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { logIntegrationError } from "@/lib/logger";
 
 export const AdminEPOIntegration = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected');
@@ -94,6 +95,16 @@ export const AdminEPOIntegration = () => {
 
       if (error) {
         setConnectionStatus('disconnected');
+        logIntegrationError(
+          `EPO connection test failed: ${error.message}`,
+          'AdminEPOIntegration.tsx',
+          'epo',
+          {
+            serverUrl: epoConfig.serverUrl,
+            username: epoConfig.username,
+            error: error.message
+          }
+        );
         toast.error(`Connection test failed: ${error.message}`);
       } else if (data?.success) {
         setConnectionStatus('connected');
@@ -112,6 +123,17 @@ export const AdminEPOIntegration = () => {
           }
         }
         
+        logIntegrationError(
+          errorMessage,
+          'AdminEPOIntegration.tsx',
+          'epo',
+          {
+            serverUrl: epoConfig.serverUrl,
+            username: epoConfig.username,
+            responseData: data,
+            suggestions
+          }
+        );
         toast.error(errorMessage);
       }
     } catch (error: any) {
@@ -129,6 +151,17 @@ export const AdminEPOIntegration = () => {
         errorMessage = `Connection test failed: ${error.message || 'Unknown error'}`;
       }
       
+      logIntegrationError(
+        errorMessage,
+        'AdminEPOIntegration.tsx',
+        'epo',
+        {
+          serverUrl: epoConfig.serverUrl,
+          username: epoConfig.username,
+          error: error.message,
+          stack: error.stack
+        }
+      );
       toast.error(errorMessage);
     }
   };
@@ -162,6 +195,16 @@ export const AdminEPOIntegration = () => {
       });
 
       if (error) {
+        logIntegrationError(
+          `EPO API explorer error: ${error.message}`,
+          'AdminEPOIntegration.tsx',
+          'epo',
+          {
+            endpoint: apiExplorer.endpoint,
+            params: apiExplorer.params,
+            error: error.message
+          }
+        );
         throw new Error(error.message);
       }
 
@@ -180,6 +223,17 @@ export const AdminEPOIntegration = () => {
         ...prev,
         response: `Error: ${error.message}`
       }));
+      logIntegrationError(
+        `EPO API call failed: ${error.message}`,
+        'AdminEPOIntegration.tsx',
+        'epo',
+        {
+          endpoint: apiExplorer.endpoint,
+          params: apiExplorer.params,
+          error: error.message,
+          stack: error.stack
+        }
+      );
       toast.error(`API call failed: ${error.message}`);
     } finally {
       setApiExplorer(prev => ({ ...prev, loading: false }));

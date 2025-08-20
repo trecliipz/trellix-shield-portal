@@ -205,6 +205,33 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Admin ping error:', error)
+    
+    // Log error to database for monitoring (use service role for admin functions)
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      await supabaseAdmin.from('error_logs').insert({
+        level: 'error',
+        message: `Admin ping error: ${error instanceof Error ? error.message : String(error)}`,
+        source: 'admin-ping',
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          target: target || 'unknown',
+          method: method || 'unknown',
+          tags: ['integration', 'epo', 'ping', 'edge-function']
+        },
+        user_id: null,
+        session_id: `edge-${Date.now()}`,
+        url: req.url,
+        user_agent: req.headers.get('user-agent') || 'Edge Function'
+      });
+    } catch (logError) {
+      console.error('Failed to log ping error to database:', logError);
+    }
+    
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

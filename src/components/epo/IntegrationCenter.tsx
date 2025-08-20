@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { logIntegrationError } from "@/lib/logger";
 
 interface EPOConnection {
   id: string;
@@ -92,12 +93,24 @@ export const IntegrationCenter = () => {
 
       if (error) {
         console.error('Error loading connections:', error);
+        logIntegrationError(
+          'Failed to load EPO connections from database',
+          'IntegrationCenter.tsx',
+          'epo',
+          { error: error.message, code: error.code }
+        );
         toast.error('Failed to load connections');
       } else {
         setConnections((data || []) as EPOConnection[]);
       }
     } catch (error) {
       console.error('Error loading connections:', error);
+      logIntegrationError(
+        'Failed to load EPO connections - network error',
+        'IntegrationCenter.tsx',
+        'epo',
+        { error: error.message, stack: error.stack }
+      );
       toast.error('Failed to load connections');
     } finally {
       setLoading(false);
@@ -143,6 +156,17 @@ export const IntegrationCenter = () => {
 
       if (error) {
         console.error('Error adding connection:', error);
+        logIntegrationError(
+          'Failed to add new EPO connection',
+          'IntegrationCenter.tsx',
+          'epo',
+          {
+            connectionName: newConnection.name,
+            serverUrl: newConnection.serverUrl,
+            error: error.message,
+            code: error.code
+          }
+        );
         toast.error("Failed to add connection");
         return;
       }
@@ -162,6 +186,17 @@ export const IntegrationCenter = () => {
       toast.success("EPO connection added successfully");
     } catch (error) {
       console.error('Error adding connection:', error);
+      logIntegrationError(
+        'Network error while adding EPO connection',
+        'IntegrationCenter.tsx',
+        'epo',
+        {
+          connectionName: newConnection.name,
+          serverUrl: newConnection.serverUrl,
+          error: error.message,
+          stack: error.stack
+        }
+      );
       toast.error("Failed to add connection");
     }
   };
@@ -186,6 +221,17 @@ export const IntegrationCenter = () => {
 
         if (error) {
           console.error('Error updating connection:', error);
+          logIntegrationError(
+            'Failed to update EPO connection status after test',
+            'IntegrationCenter.tsx',
+            'epo',
+            {
+              connectionId,
+              connectionName: connection.name,
+              error: error.message,
+              code: error.code
+            }
+          );
           toast.error("Failed to update connection status");
         } else {
           await loadConnections();
@@ -194,6 +240,17 @@ export const IntegrationCenter = () => {
       }, 2000);
     } catch (error) {
       console.error('Error testing connection:', error);
+      logIntegrationError(
+        'Network error during EPO connection test',
+        'IntegrationCenter.tsx',
+        'epo',
+        {
+          connectionId,
+          connectionName: connection.name,
+          error: error.message,
+          stack: error.stack
+        }
+      );
       toast.error("Failed to test connection");
     }
   };

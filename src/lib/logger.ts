@@ -158,7 +158,7 @@ export async function logClientError(level: DBLogLevel, message: string, source 
     session_id: getSessionId(),
     user_id: await ensureUserId(),
     details,
-    tags: [],
+    tags: details?.tags || [],
   };
   const q = readQueue();
   q.push(queueItem);
@@ -241,6 +241,19 @@ function installGlobalHandlers() {
 
   // Periodic flush
   setTimeout(flushQueue, nextDelay);
+}
+
+// Helper function for integration errors
+export function logIntegrationError(
+  message: string,
+  source: string,
+  integrationName: string = 'epo',
+  details?: any
+) {
+  logClientError('error', message, source, {
+    ...details,
+    tags: ['integration', integrationName]
+  });
 }
 
 // Initialize on import

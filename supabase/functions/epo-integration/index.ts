@@ -83,6 +83,27 @@ serve(async (req) => {
       } catch (connectionError) {
         logStep("EPO connection error", connectionError);
         
+        // Log connection error to database
+        try {
+          await supabaseAdmin.from('error_logs').insert({
+            level: 'error',
+            message: `EPO connection failed: ${connectionError.message}`,
+            source: 'epo-integration',
+            details: {
+              error: connectionError.message,
+              action: 'test-connection',
+              serverUrl: epoServerUrl,
+              tags: ['integration', 'epo', 'connection', 'edge-function']
+            },
+            user_id: null,
+            session_id: `edge-${Date.now()}`,
+            url: req.url,
+            user_agent: req.headers.get('user-agent') || 'Edge Function'
+          });
+        } catch (logError) {
+          console.error('Failed to log connection error:', logError);
+        }
+        
         return new Response(JSON.stringify({
           success: false,
           error: `Unable to connect to EPO server: ${connectionError.message}`
@@ -253,6 +274,26 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in ePO integration", { message: errorMessage });
+    
+    // Log error to database for monitoring
+    try {
+      await supabaseAdmin.from('error_logs').insert({
+        level: 'error',
+        message: `EPO integration error: ${errorMessage}`,
+        source: 'epo-integration',
+        details: {
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          tags: ['integration', 'epo', 'edge-function']
+        },
+        user_id: null,
+        session_id: `edge-${Date.now()}`,
+        url: req.url,
+        user_agent: req.headers.get('user-agent') || 'Edge Function'
+      });
+    } catch (logError) {
+      console.error('Failed to log error to database:', logError);
+    }
     
     // Check if it's a network connectivity issue
     const isNetworkError = errorMessage.includes('fetch') || 

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertTriangle, RefreshCw, Search, Download, Filter, X } from "lucide-react";
+import { AlertTriangle, RefreshCw, Search, Download, Filter, X, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useErrorHandling } from "@/hooks/useErrorHandling";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,7 @@ export const ErrorLogs = () => {
   const [filteredLogs, setFilteredLogs] = useState<UIErrorLog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [integrationFilter, setIntegrationFilter] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [realTimeEnabled, setRealTimeEnabled] = useState(true);
   const { toast } = useToast();
@@ -155,8 +156,18 @@ export const ErrorLogs = () => {
       filtered = filtered.filter(log => log.level === levelFilter);
     }
     
+    if (integrationFilter) {
+      filtered = filtered.filter(log => {
+        if (!log.details) return false;
+        if (typeof log.details === 'string') {
+          return log.details.includes('"tags":["integration"') || log.details.includes('"tags":["integration"');
+        }
+        return false;
+      });
+    }
+    
     setFilteredLogs(filtered);
-  }, [errorLogs, searchQuery, levelFilter]);
+  }, [errorLogs, searchQuery, levelFilter, integrationFilter]);
 
   const loadErrorLogs = async () => {
     setLoading(true);
@@ -551,6 +562,15 @@ export const ErrorLogs = () => {
                 <option value="warning">Warning</option>
               </select>
             </div>
+            <Button
+              variant={integrationFilter ? "default" : "outline"}
+              size="sm"
+              onClick={() => setIntegrationFilter(!integrationFilter)}
+              className="flex items-center gap-2"
+            >
+              <Link className="h-4 w-4" />
+              {integrationFilter ? "Show All" : "Integration Only"}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

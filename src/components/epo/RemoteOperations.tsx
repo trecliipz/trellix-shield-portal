@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { logIntegrationError } from "@/lib/logger";
 import { 
   Terminal, 
   Play, 
@@ -77,12 +78,24 @@ export const RemoteOperations = () => {
 
       if (error) {
         console.error('Error loading ping history:', error);
+        logIntegrationError(
+          'Failed to load ping history from database',
+          'RemoteOperations.tsx',
+          'epo',
+          { error: error.message, code: error.code }
+        );
         return;
       }
 
       setPingHistory(data || []);
     } catch (error) {
       console.error('Error loading ping history:', error);
+      logIntegrationError(
+        'Network error while loading ping history',
+        'RemoteOperations.tsx',
+        'epo',
+        { error: error.message, stack: error.stack }
+      );
     }
   };
 
@@ -136,6 +149,19 @@ export const RemoteOperations = () => {
 
     } catch (error) {
       console.error('Ping error:', error);
+      logIntegrationError(
+        'Network ping operation failed',
+        'RemoteOperations.tsx',
+        'epo',
+        {
+          target: pingTarget,
+          method: pingMethod,
+          port: pingPort,
+          attempts: pingAttempts,
+          error: error.message,
+          stack: error.stack
+        }
+      );
       toast({
         title: "Ping Failed",
         description: error.message || "Failed to execute ping",
@@ -184,6 +210,16 @@ Execution completed at: ${new Date().toLocaleString()}
       });
     } catch (error) {
       setCommandOutput(`Error: ${error.message}`);
+      logIntegrationError(
+        'Remote command execution failed',
+        'RemoteOperations.tsx',
+        'epo',
+        {
+          command: activeCommand,
+          error: error.message,
+          stack: error.stack
+        }
+      );
       toast({
         title: "Execution Failed",
         description: "Failed to execute remote command",
