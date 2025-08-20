@@ -1,0 +1,13 @@
+# humanstxt.org
+
+/* TEAM */
+  Developer: Trellix Shield Portal Team
+  Contact: support [at] your-domain.com
+  Location: Global
+
+/* SITE */
+  Last update: 2025/01/20
+  Language: English
+  Technology: React, TypeScript, Vite, Tailwind CSS, Supabase
+  Components: Radix UI, Lucide React
+  Security: Enterprise-grade endpoint protection
