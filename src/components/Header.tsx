@@ -14,7 +14,7 @@ import {
 interface HeaderProps {
   isLoggedIn: boolean;
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
-  onLogin: (email: string, password: string) => boolean;
+  onLogin: (email: string, password: string) => Promise<boolean>;
   onLogout: () => void;
 }
 

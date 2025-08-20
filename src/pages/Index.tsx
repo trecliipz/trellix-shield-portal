@@ -19,42 +19,53 @@ const Index = () => {
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   const navigate = useNavigate();
 
-  const handleLogin = (email: string, password: string): boolean => {
-    // Check for admin credentials
-    if (email === 'admin@trellix.com' && password === '12345678') {
-      setIsLoggedIn(true);
-      setCurrentUser({ 
-        email: email, 
-        name: 'Admin',
-        role: 'admin'
+  const handleLogin = async (email: string, password: string): Promise<boolean> => {
+    try {
+      // Check for admin credentials
+      if (email === 'admin@trellix.com' && password === '12345678') {
+        setIsLoggedIn(true);
+        setCurrentUser({ 
+          email: email, 
+          name: 'Admin',
+          role: 'admin'
+        });
+        return true;
+      }
+      
+      // Use Supabase auth for regular authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
-      return true;
+
+      if (error) {
+        console.error('Authentication error:', error);
+        return false;
+      }
+
+      if (data.user) {
+        // Check if user has admin role
+        const { data: userRoles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user.id);
+
+        const isAdmin = userRoles?.some(role => role.role === 'admin');
+
+        setIsLoggedIn(true);
+        setCurrentUser({ 
+          email: data.user.email || email, 
+          name: data.user.user_metadata?.name || email.split('@')[0],
+          role: isAdmin ? 'admin' : 'user'
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    
-    // Check for users with temp passwords
-    const users = JSON.parse(localStorage.getItem('admin_users') || '[]');
-    const user = users.find((u: any) => u.email === email);
-    if (user && user.tempPassword === password) {
-      setIsLoggedIn(true);
-      setCurrentUser({ 
-        email: email, 
-        name: user.name,
-        role: user.role
-      });
-      return true;
-    }
-    
-    // Regular user authentication
-    if (email && password) {
-      setIsLoggedIn(true);
-      setCurrentUser({ 
-        email: email, 
-        name: email.split('@')[0],
-        role: 'user'
-      });
-      return true;
-    }
-    return false;
   };
 
   const handleLogout = () => {

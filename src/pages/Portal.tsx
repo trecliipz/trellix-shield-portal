@@ -252,7 +252,7 @@ export const Portal = () => {
         <Header 
           isLoggedIn={true}
           currentUser={user}
-          onLogin={() => true}
+          onLogin={async () => true}
           onLogout={handleLogout}
         />
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -267,7 +267,7 @@ export const Portal = () => {
       <Header 
         isLoggedIn={true}
         currentUser={user}
-        onLogin={() => true}
+        onLogin={async () => true}
         onLogout={handleLogout}
       />
       

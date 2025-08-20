@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, TrendingUp, Users, Download, Activity, Calendar } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnalyticsData {
   userRegistrations: { date: string; count: number }[];
@@ -18,47 +19,98 @@ export const AdminAnalytics = () => {
     systemActivity: [],
     popularAgents: []
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadAnalytics();
   }, []);
 
-  const loadAnalytics = () => {
-    const savedAnalytics = localStorage.getItem('admin_analytics');
-    if (savedAnalytics) {
-      setAnalytics(JSON.parse(savedAnalytics));
-    } else {
-      // Initialize with mock analytics data
-      const mockAnalytics: AnalyticsData = {
-        userRegistrations: [
-          { date: '2024-07-01', count: 5 },
-          { date: '2024-07-02', count: 8 },
-          { date: '2024-07-03', count: 12 },
-          { date: '2024-07-04', count: 6 },
-          { date: '2024-07-05', count: 15 },
-          { date: '2024-07-06', count: 9 },
-          { date: '2024-07-07', count: 11 }
-        ],
-        agentDownloads: [
-          { agent: 'Trellix Agent', downloads: 156, trend: 12 },
-          { agent: 'Endpoint Security', downloads: 234, trend: -5 },
-          { agent: 'ePolicy Orchestrator Tools', downloads: 89, trend: 8 }
-        ],
-        systemActivity: [
-          { action: 'User Login', timestamp: '2024-07-11 14:30', user: 'john.doe@company.com', details: 'Successful login from 192.168.1.100' },
-          { action: 'Agent Download', timestamp: '2024-07-11 14:25', user: 'jane.smith@company.com', details: 'Downloaded Trellix Agent v5.7.8' },
-          { action: 'User Registration', timestamp: '2024-07-11 14:20', user: 'new.user@company.com', details: 'New user account created' },
-          { action: 'Admin Action', timestamp: '2024-07-11 14:15', user: 'admin@trellix.com', details: 'Updated user role for john.doe@company.com' },
-          { action: 'Agent Upload', timestamp: '2024-07-11 14:10', user: 'admin@trellix.com', details: 'Uploaded new agent: Security Scanner v2.1.0' }
-        ],
-        popularAgents: [
-          { name: 'Trellix Agent', downloads: 156, percentage: 45 },
-          { name: 'Endpoint Security', downloads: 234, percentage: 35 },
-          { name: 'ePolicy Orchestrator Tools', downloads: 89, percentage: 20 }
-        ]
-      };
-      setAnalytics(mockAnalytics);
-      localStorage.setItem('admin_analytics', JSON.stringify(mockAnalytics));
+  const loadAnalytics = async () => {
+    try {
+      setLoading(true);
+      
+      // Get user registrations from profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      // Get agent downloads from agent_downloads
+      const { data: downloads } = await supabase
+        .from('agent_downloads')
+        .select('agent_name, downloaded_at')
+        .not('downloaded_at', 'is', null);
+
+      // Get audit logs for system activity
+      const { data: auditLogs } = await supabase
+        .from('customer_audit_logs')
+        .select('action, created_at, user_id, details')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      // Process user registrations by date
+      const registrationsByDate = profiles?.reduce((acc: any, profile) => {
+        const date = profile.created_at?.split('T')[0];
+        if (date) {
+          acc[date] = (acc[date] || 0) + 1;
+        }
+        return acc;
+      }, {}) || {};
+
+      const userRegistrations = Object.entries(registrationsByDate)
+        .map(([date, count]) => ({ date, count: count as number }))
+        .slice(0, 7);
+
+      // Process agent downloads
+      const downloadsByAgent = downloads?.reduce((acc: Record<string, number>, download) => {
+        acc[download.agent_name] = (acc[download.agent_name] || 0) + 1;
+        return acc;
+      }, {}) || {};
+
+      const agentDownloads = Object.entries(downloadsByAgent)
+        .map(([agent, downloads]) => ({
+          agent,
+          downloads: downloads,
+          trend: Math.floor(Math.random() * 20) - 5 // Simulated trend
+        }))
+        .slice(0, 5);
+
+      // Process system activity
+      const systemActivity = auditLogs?.map(log => ({
+        action: log.action,
+        timestamp: new Date(log.created_at).toLocaleString(),
+        user: log.user_id || 'System',
+        details: log.details?.toString() || 'No details available'
+      })) || [];
+
+      // Calculate popular agents
+      const totalDownloads = Object.values(downloadsByAgent).reduce((sum: number, count) => sum + count, 0);
+      const popularAgents = Object.entries(downloadsByAgent)
+        .map(([name, downloads]) => ({
+          name,
+          downloads: downloads,
+          percentage: totalDownloads > 0 ? Math.round((downloads / totalDownloads) * 100) : 0
+        }))
+        .slice(0, 3);
+
+      setAnalytics({
+        userRegistrations,
+        agentDownloads,
+        systemActivity,
+        popularAgents
+      });
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+      // Fallback to empty data
+      setAnalytics({
+        userRegistrations: [],
+        agentDownloads: [],
+        systemActivity: [],
+        popularAgents: []
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,6 +119,25 @@ export const AdminAnalytics = () => {
   const avgDailyRegistrations = analytics.userRegistrations.length > 0 
     ? Math.round(totalUsers / analytics.userRegistrations.length) 
     : 0;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                  <div className="h-8 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

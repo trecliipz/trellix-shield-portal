@@ -65,6 +65,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_messages: {
+        Row: {
+          admin_response: string | null
+          attachments: Json | null
+          category: string
+          created_at: string
+          id: string
+          message: string
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_response?: string | null
+          attachments?: Json | null
+          category?: string
+          created_at?: string
+          id?: string
+          message: string
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_response?: string | null
+          attachments?: Json | null
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          priority?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_users: {
         Row: {
           created_at: string | null
@@ -771,6 +813,62 @@ export type Database = {
             columns: ["reviewer_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deployment_jobs: {
+        Row: {
+          admin_user_id: string
+          agent_id: string
+          completed_at: string | null
+          completed_users: number
+          created_at: string
+          deployment_target: string
+          failed_users: number
+          id: string
+          started_at: string | null
+          status: string
+          target_users: Json | null
+          total_users: number
+          updated_at: string
+        }
+        Insert: {
+          admin_user_id: string
+          agent_id: string
+          completed_at?: string | null
+          completed_users?: number
+          created_at?: string
+          deployment_target: string
+          failed_users?: number
+          id?: string
+          started_at?: string | null
+          status?: string
+          target_users?: Json | null
+          total_users?: number
+          updated_at?: string
+        }
+        Update: {
+          admin_user_id?: string
+          agent_id?: string
+          completed_at?: string | null
+          completed_users?: number
+          created_at?: string
+          deployment_target?: string
+          failed_users?: number
+          id?: string
+          started_at?: string | null
+          status?: string
+          target_users?: Json | null
+          total_users?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deployment_jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "admin_agent_packages"
             referencedColumns: ["id"]
           },
         ]

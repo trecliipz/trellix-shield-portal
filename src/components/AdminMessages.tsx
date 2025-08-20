@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   MessageSquare, 
   Reply, 
@@ -74,13 +75,39 @@ export const AdminMessages = () => {
     filterMessages();
   }, [messages, searchTerm, statusFilter, categoryFilter, priorityFilter]);
 
-  const loadMessages = () => {
-    const savedMessages = localStorage.getItem('admin_messages');
-    if (savedMessages) {
-      const parsedMessages = JSON.parse(savedMessages);
-      setMessages(parsedMessages.sort((a: Message, b: Message) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      ));
+  const loadMessages = async () => {
+    try {
+      const { data: adminMessages, error } = await supabase
+        .from('admin_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedMessages: Message[] = adminMessages?.map(msg => ({
+        id: msg.id,
+        userId: msg.user_id || 'unknown',
+        userEmail: msg.user_id || 'unknown@example.com',
+        userName: 'User', // Could be enhanced with profile lookup
+        subject: msg.subject,
+        message: msg.message,
+        category: msg.category as any,
+        priority: msg.priority as any,
+        status: msg.status as any,
+        attachments: Array.isArray(msg.attachments) ? msg.attachments.map((att: any) => ({
+          name: att.name || 'Unknown',
+          size: att.size || 0,
+          type: att.type || 'unknown'
+        })) : [],
+        createdAt: msg.created_at,
+        updatedAt: msg.updated_at,
+        adminResponse: msg.admin_response || undefined
+      })) || [];
+
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
     }
   };
 
@@ -111,40 +138,68 @@ export const AdminMessages = () => {
     setFilteredMessages(filtered);
   };
 
-  const updateMessageStatus = (messageId: string, newStatus: Message['status']) => {
-    const updatedMessages = messages.map(msg =>
-      msg.id === messageId
-        ? { ...msg, status: newStatus, updatedAt: new Date().toISOString() }
-        : msg
-    );
-    setMessages(updatedMessages);
-    localStorage.setItem('admin_messages', JSON.stringify(updatedMessages));
-    toast.success(`Message marked as ${newStatus}`);
+  const updateMessageStatus = async (messageId: string, newStatus: Message['status']) => {
+    try {
+      const { error } = await supabase
+        .from('admin_messages')
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      const updatedMessages = messages.map(msg =>
+        msg.id === messageId
+          ? { ...msg, status: newStatus, updatedAt: new Date().toISOString() }
+          : msg
+      );
+      setMessages(updatedMessages);
+      toast.success(`Message marked as ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating message status:', error);
+      toast.error('Failed to update message status');
+    }
   };
 
-  const sendReply = () => {
+  const sendReply = async () => {
     if (!selectedMessage || !replyText.trim()) return;
 
-    const updatedMessages = messages.map(msg =>
-      msg.id === selectedMessage.id
-        ? { 
-            ...msg, 
-            adminResponse: replyText,
-            adminId: 'admin@trellix.com',
-            status: 'resolved' as const,
-            updatedAt: new Date().toISOString()
-          }
-        : msg
-    );
-    
-    setMessages(updatedMessages);
-    localStorage.setItem('admin_messages', JSON.stringify(updatedMessages));
-    
-    setReplyText("");
-    setIsReplyDialogOpen(false);
-    setSelectedMessage(null);
-    
-    toast.success("Reply sent successfully!");
+    try {
+      const { error } = await supabase
+        .from('admin_messages')
+        .update({
+          admin_response: replyText,
+          status: 'resolved',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedMessage.id);
+
+      if (error) throw error;
+
+      const updatedMessages = messages.map(msg =>
+        msg.id === selectedMessage.id
+          ? { 
+              ...msg, 
+              adminResponse: replyText,
+              status: 'resolved' as const,
+              updatedAt: new Date().toISOString()
+            }
+          : msg
+      );
+      
+      setMessages(updatedMessages);
+      
+      setReplyText("");
+      setIsReplyDialogOpen(false);
+      setSelectedMessage(null);
+      
+      toast.success("Reply sent successfully!");
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      toast.error('Failed to send reply');
+    }
   };
 
   const categoryIcons = {

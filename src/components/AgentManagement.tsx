@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Edit, Trash2, Download, Package, List, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DeploymentModal } from "@/components/DeploymentModal";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Agent {
   id: string;
@@ -44,64 +45,55 @@ export const AgentManagement = () => {
     loadAgents();
   }, []);
 
-  const loadAgents = () => {
-    const savedAgents = localStorage.getItem('admin_agents');
-    if (savedAgents) {
-      setAgents(JSON.parse(savedAgents));
-    } else {
-      // Initialize with mock data matching the existing agents
-      const mockAgents: Agent[] = [
-        {
-          id: '1',
-          name: 'Trellix Agent',
-          version: '5.7.8',
-          size: '125 MB',
-          description: 'Advanced endpoint protection with real-time threat detection',
-          features: ['Real-time scanning', 'Behavioral analysis', 'Cloud intelligence', 'Automated response'],
-          fileName: 'trellix-agent-5.7.8.msi',
-          uploadDate: '2024-01-15',
-          downloads: 156,
-          status: 'active'
-        },
-        {
-          id: '2',
-          name: 'ePolicy Orchestrator Tools',
-          version: '5.10.0',
-          size: '89 MB',
-          description: 'Centralized management tools for enterprise security',
-          features: ['Centralized management', 'Policy deployment', 'Reporting dashboard', 'Agent deployment'],
-          fileName: 'epo-tools-5.10.0.exe',
-          uploadDate: '2024-02-01',
-          downloads: 89,
-          status: 'active'
-        },
-        {
-          id: '3',
-          name: 'Endpoint Security',
-          version: '10.7.0',
-          size: '67 MB',
-          description: 'Comprehensive endpoint security solution',
-          features: ['Anti-malware', 'Firewall protection', 'Web control', 'Device control'],
-          fileName: 'endpoint-security-10.7.0.msi',
-          uploadDate: '2024-02-15',
-          downloads: 234,
-          status: 'active'
+  const loadAgents = async () => {
+    try {
+      const { data: agentPackages, error } = await supabase
+        .from('admin_agent_packages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (agentPackages && agentPackages.length > 0) {
+        const formattedAgents: Agent[] = agentPackages.map(pkg => ({
+          id: pkg.id,
+          name: pkg.name,
+          version: pkg.version,
+          size: pkg.file_size ? `${Math.round(pkg.file_size / (1024 * 1024))} MB` : '0 MB',
+          description: pkg.description || '',
+          features: Array.isArray(pkg.features) ? pkg.features.map(f => String(f)) : [],
+          fileName: pkg.file_name,
+          uploadDate: pkg.created_at?.split('T')[0] || '',
+          downloads: 0, // We'll calculate this from agent_downloads table
+          status: pkg.is_active ? 'active' : 'inactive'
+        }));
+
+        // Get download counts
+        for (const agent of formattedAgents) {
+          const { count } = await supabase
+            .from('agent_downloads')
+            .select('*', { count: 'exact', head: true })
+            .eq('agent_name', agent.name);
+          agent.downloads = count || 0;
         }
-      ];
-      setAgents(mockAgents);
-      localStorage.setItem('admin_agents', JSON.stringify(mockAgents));
+
+        setAgents(formattedAgents);
+      } else {
+        setAgents([]);
+      }
+    } catch (error) {
+      console.error('Error loading agents:', error);
+      setAgents([]);
     }
   };
 
   const saveAgents = (updatedAgents: Agent[]) => {
     setAgents(updatedAgents);
-    localStorage.setItem('admin_agents', JSON.stringify(updatedAgents));
-    
     // Dispatch custom event to notify other components of the update
     window.dispatchEvent(new CustomEvent('agentsUpdated'));
   };
 
-  const handleAddAgent = () => {
+  const handleAddAgent = async () => {
     if (!newAgent.name || !newAgent.version || !newAgent.description || !newAgent.file) {
       toast({
         title: "Error",
@@ -111,29 +103,42 @@ export const AgentManagement = () => {
       return;
     }
 
-    const agent: Agent = {
-      id: Date.now().toString(),
-      name: newAgent.name,
-      version: newAgent.version,
-      size: `${Math.round(newAgent.file.size / (1024 * 1024))} MB`,
-      description: newAgent.description,
-      features: newAgent.features.split(',').map(f => f.trim()).filter(f => f),
-      fileName: newAgent.file.name,
-      uploadDate: new Date().toISOString().split('T')[0],
-      downloads: 0,
-      status: 'active'
-    };
+    try {
+      const { data, error } = await supabase
+        .from('admin_agent_packages')
+        .insert({
+          name: newAgent.name,
+          version: newAgent.version,
+          platform: 'windows', // Default platform
+          file_name: newAgent.file.name,
+          description: newAgent.description,
+          features: newAgent.features.split(',').map(f => f.trim()).filter(f => f),
+          file_size: newAgent.file.size,
+          is_active: true,
+          is_recommended: false
+        })
+        .select()
+        .single();
 
-    const updatedAgents = [...agents, agent];
-    saveAgents(updatedAgents);
-    
-    setNewAgent({ name: '', version: '', description: '', features: '', file: null });
-    setIsAddingAgent(false);
-    
-    toast({
-      title: "Success",
-      description: "Agent uploaded successfully",
-    });
+      if (error) throw error;
+
+      await loadAgents(); // Reload agents from database
+      
+      setNewAgent({ name: '', version: '', description: '', features: '', file: null });
+      setIsAddingAgent(false);
+      
+      toast({
+        title: "Success",
+        description: "Agent uploaded successfully",
+      });
+    } catch (error) {
+      console.error('Error adding agent:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload agent. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleEditAgent = (agent: Agent) => {

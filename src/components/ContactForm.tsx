@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Send, Paperclip, X, AlertTriangle, Bug, Lightbulb, HelpCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -97,10 +98,32 @@ export const ContactForm = ({ isOpen, onClose, currentUser }: ContactFormProps) 
     setIsSubmitting(true);
     
     try {
-      // Create message object
+      // Get current user ID from Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Save message to Supabase
+      const { error } = await supabase
+        .from('admin_messages')
+        .insert({
+          user_id: session?.user?.id || null,
+          subject: data.subject,
+          message: data.message,
+          category: data.category,
+          priority: data.priority,
+          status: 'new',
+          attachments: attachments.map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type
+          }))
+        });
+
+      if (error) throw error;
+
+      // Dispatch event for real-time updates
       const message = {
         id: Date.now().toString(),
-        userId: currentUser?.email || data.email,
+        userId: session?.user?.id || data.email,
         userEmail: data.email,
         userName: data.name,
         subject: data.subject,
@@ -117,28 +140,6 @@ export const ContactForm = ({ isOpen, onClose, currentUser }: ContactFormProps) 
         updatedAt: new Date().toISOString()
       };
 
-      // Save to localStorage (simulating backend)
-      const existingMessages = JSON.parse(localStorage.getItem('admin_messages') || '[]');
-      existingMessages.push(message);
-      localStorage.setItem('admin_messages', JSON.stringify(existingMessages));
-
-      // Log security event
-      const securityEvent = {
-        id: Date.now().toString(),
-        userId: currentUser?.email || data.email,
-        action: 'Contact Form Submission',
-        timestamp: new Date().toISOString(),
-        ipAddress: '192.168.1.100', // Simulated
-        userAgent: navigator.userAgent,
-        success: true,
-        details: `${categoryLabels[data.category]} - ${data.priority} priority`
-      };
-
-      const existingEvents = JSON.parse(localStorage.getItem('security_events') || '[]');
-      existingEvents.push(securityEvent);
-      localStorage.setItem('security_events', JSON.stringify(existingEvents));
-
-      // Dispatch event for real-time updates
       window.dispatchEvent(new CustomEvent('newMessage', { detail: message }));
 
       toast.success("Message sent successfully!", {
@@ -149,6 +150,7 @@ export const ContactForm = ({ isOpen, onClose, currentUser }: ContactFormProps) 
       setAttachments([]);
       onClose();
     } catch (error) {
+      console.error('Error sending message:', error);
       toast.error("Failed to send message. Please try again.");
     } finally {
       setIsSubmitting(false);

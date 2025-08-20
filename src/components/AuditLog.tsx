@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Activity, 
   Search, 
@@ -40,12 +41,6 @@ export const AuditLog = () => {
 
   useEffect(() => {
     loadEvents();
-    
-    // Add some sample events if none exist
-    const existingEvents = localStorage.getItem('security_events');
-    if (!existingEvents) {
-      generateSampleEvents();
-    }
   }, []);
 
   useEffect(() => {
