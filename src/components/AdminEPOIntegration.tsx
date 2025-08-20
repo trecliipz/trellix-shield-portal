@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,11 @@ import {
   Database,
   Save,
   Edit,
-  RefreshCw
+  RefreshCw,
+  Terminal,
+  Play,
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +55,12 @@ export const AdminEPOIntegration = () => {
     },
     webhookUrl: '',
     customHeaders: ''
+  });
+  const [apiExplorer, setApiExplorer] = useState({
+    endpoint: 'core.help',
+    params: '',
+    response: '',
+    loading: false
   });
 
   const handleTestConnection = async () => {
@@ -90,9 +100,21 @@ export const AdminEPOIntegration = () => {
         toast.success("Successfully connected to Trellix EPO server!");
       } else {
         setConnectionStatus('disconnected');
-        toast.error(data?.error || "Connection test failed");
+        
+        // Enhanced error messaging with suggestions
+        let errorMessage = data?.error || "Connection test failed";
+        const suggestions = data?.suggestions || [];
+        
+        if (data?.type === 'network_error') {
+          errorMessage = `Network connectivity issue: ${data.error}`;
+          if (suggestions.length > 0) {
+            errorMessage += `\n\nSuggestions:\n${suggestions.map((s: string) => `• ${s}`).join('\n')}`;
+          }
+        }
+        
+        toast.error(errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       setConnectionStatus('disconnected');
       console.error('EPO connection test error:', error);
       
@@ -111,9 +133,62 @@ export const AdminEPOIntegration = () => {
     }
   };
 
-  const copyToClipboard = (text: string, label: string) => {
+  const handleApiExplorer = async () => {
+    setApiExplorer(prev => ({ ...prev, loading: true, response: '' }));
+    
+    try {
+      let params = {};
+      if (apiExplorer.params.trim()) {
+        try {
+          params = JSON.parse(apiExplorer.params);
+        } catch {
+          // Try as key=value pairs
+          const pairs = apiExplorer.params.split('\n').filter(line => line.includes('='));
+          params = pairs.reduce((acc: any, line) => {
+            const [key, ...valueParts] = line.split('=');
+            acc[key.trim()] = valueParts.join('=').trim();
+            return acc;
+          }, {});
+        }
+      }
+
+      const { data, error } = await supabase.functions.invoke('epo-integration', {
+        body: {
+          action: 'proxy',
+          endpoint: apiExplorer.endpoint,
+          params: params,
+          useFormData: true
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setApiExplorer(prev => ({
+        ...prev,
+        response: JSON.stringify(data, null, 2)
+      }));
+
+      if (data?.success) {
+        toast.success('API call successful!');
+      } else {
+        toast.warning(`API returned status: ${data?.status}`);
+      }
+    } catch (error: any) {
+      setApiExplorer(prev => ({
+        ...prev,
+        response: `Error: ${error.message}`
+      }));
+      toast.error(`API call failed: ${error.message}`);
+    } finally {
+      setApiExplorer(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const copyToClipboard = (text: string, label?: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
+    toast.success(`${label || 'Text'} copied to clipboard`);
   };
 
   const handleSaveConfiguration = () => {
@@ -171,14 +246,37 @@ export const AdminEPOIntegration = () => {
       </div>
 
       <Tabs defaultValue="setup" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="setup">Setup & Configuration</TabsTrigger>
           <TabsTrigger value="templates">Configuration Templates</TabsTrigger>
+          <TabsTrigger value="explorer">API Explorer</TabsTrigger>
           <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
           <TabsTrigger value="api">API Documentation</TabsTrigger>
         </TabsList>
 
         <TabsContent value="setup" className="space-y-6">
+          {/* Connectivity Prerequisites Banner */}
+          <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
+                <AlertTriangle className="h-5 w-5" />
+                Connectivity Prerequisites
+              </CardTitle>
+              <CardDescription className="text-orange-700 dark:text-orange-300">
+                <strong>Important:</strong> Your EPO server must be accessible from the internet for this integration to work.
+                <br />
+                <br />
+                <strong>Common solutions:</strong>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Use <strong>Cloudflare Tunnel</strong> to securely expose your EPO server</li>
+                  <li>Configure your firewall to allow inbound HTTPS traffic on port 8443</li>
+                  <li>Ensure your EPO server has a valid SSL certificate (not self-signed)</li>
+                  <li>Use a public DNS name instead of internal hostnames like "trellixepo2025"</li>
+                </ul>
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -405,224 +503,148 @@ export const AdminEPOIntegration = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="troubleshooting" className="space-y-6">
-          <div className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Common Connection Issues</strong>
-                <div className="mt-2 space-y-2">
-                  <div>• <strong>Private Server Address:</strong> Cloud apps cannot reach private URLs like trellixepo2025:8443. Use public IP or DNS name instead.</div>
-                  <div>• <strong>Network Access:</strong> Ensure the EPO server is accessible from the internet or configure proper network routing.</div>
-                  <div>• <strong>SSL Certificate Error:</strong> Add EPO certificate to trusted store or disable SSL verification for testing</div>
-                  <div>• <strong>Port 8443 Blocked:</strong> Check firewall rules and ensure port 8443 is accessible</div>
-                  <div>• <strong>Authentication Failed:</strong> Verify admin credentials have API access permissions</div>
-                  <div>• <strong>Timeout Issues:</strong> Check network connectivity and EPO service status</div>
+        <TabsContent value="explorer" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Terminal className="h-5 w-5" />
+                EPO API Explorer
+              </CardTitle>
+              <CardDescription>
+                Test EPO API endpoints directly with custom parameters
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="endpoint">API Endpoint</Label>
+                  <Input
+                    id="endpoint"
+                    value={apiExplorer.endpoint}
+                    onChange={(e) => setApiExplorer(prev => ({ ...prev, endpoint: e.target.value }))}
+                    placeholder="core.help"
+                    className="font-mono"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Common endpoints: core.help, core.listUsers, system.findSystems
+                  </p>
                 </div>
-              </AlertDescription>
-            </Alert>
+                <div>
+                  <Label htmlFor="params">Parameters</Label>
+                  <Textarea
+                    id="params"
+                    value={apiExplorer.params}
+                    onChange={(e) => setApiExplorer(prev => ({ ...prev, params: e.target.value }))}
+                    placeholder={`JSON format:\n{"param1": "value1"}\n\nOr key=value pairs:\nparam1=value1\nparam2=value2`}
+                    className="font-mono h-20"
+                  />
+                </div>
+              </div>
+              <Button 
+                onClick={handleApiExplorer}
+                disabled={apiExplorer.loading || !apiExplorer.endpoint}
+                className="w-full"
+              >
+                {apiExplorer.loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Executing API Call...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Execute API Call
+                  </>
+                )}
+              </Button>
+              {apiExplorer.response && (
+                <div>
+                  <Label>Response</Label>
+                  <Textarea
+                    value={apiExplorer.response}
+                    readOnly
+                    className="font-mono h-40 mt-2"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(apiExplorer.response)}
+                    className="mt-2"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Response
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Diagnostic Commands</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label>Test EPO Server Connectivity</Label>
-                  <div className="bg-muted p-3 rounded font-mono text-sm flex justify-between items-center">
-                    <span>telnet epo.company.com 8443</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => copyToClipboard('telnet epo.company.com 8443', 'Command')}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
+        <TabsContent value="troubleshooting" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5" />
+                Common Connection Issues
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Private Server Address Issue:</strong> If your EPO server uses a private hostname like "trellixepo2025:8443", 
+                  it won't be accessible from our cloud service. Use the public IP address or set up proper DNS resolution.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="space-y-3">
+                <h4 className="font-medium">Quick Diagnostics</h4>
+                <div className="bg-muted p-3 rounded font-mono text-sm">
+                  <div>Test connectivity from command line:</div>
+                  <div className="mt-2">
+                    <code>telnet 103.98.212.249 8443</code>
+                  </div>
+                  <div className="mt-2">
+                    <code>curl -k https://103.98.212.249:8443/remote/core.help</code>
                   </div>
                 </div>
-                <div>
-                  <Label>Test HTTPS Connection</Label>
-                  <div className="bg-muted p-3 rounded font-mono text-sm flex justify-between items-center">
-                    <span>curl -k https://epo.company.com:8443/remote/core.executeTask</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => copyToClipboard('curl -k https://epo.company.com:8443/remote/core.executeTask', 'Command')}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="api" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>API Configuration & Settings</span>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Sync EPO
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Documentation
-                  </Button>
-                </div>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                API Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* API Settings */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Sync & Integration Settings</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="auto-sync">Auto Sync with EPO</Label>
-                      <p className="text-xs text-muted-foreground">Automatically sync data every interval</p>
-                    </div>
-                    <Switch
-                      id="auto-sync"
-                      checked={apiSettings.autoSync}
-                      onCheckedChange={(checked) => setApiSettings({ ...apiSettings, autoSync: checked })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="sync-interval">Sync Interval (minutes)</Label>
-                    <Input
-                      id="sync-interval"
-                      type="number"
-                      min="5"
-                      max="1440"
-                      value={apiSettings.syncInterval}
-                      onChange={(e) => setApiSettings({ ...apiSettings, syncInterval: parseInt(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="retry-attempts">Retry Attempts</Label>
-                    <Input
-                      id="retry-attempts"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={apiSettings.retryAttempts}
-                      onChange={(e) => setApiSettings({ ...apiSettings, retryAttempts: parseInt(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="timeout">Timeout (seconds)</Label>
-                    <Input
-                      id="timeout"
-                      type="number"
-                      min="10"
-                      max="300"
-                      value={apiSettings.timeout}
-                      onChange={(e) => setApiSettings({ ...apiSettings, timeout: parseInt(e.target.value) })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* API Keys */}
-              <div className="space-y-4">
-                <h4 className="font-medium">API Authentication</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="primary-key">Primary API Key</Label>
-                    <Input
-                      id="primary-key"
-                      type="password"
-                      placeholder="Enter primary API key"
-                      value={apiSettings.apiKeys.primaryKey}
-                      onChange={(e) => setApiSettings({
-                        ...apiSettings,
-                        apiKeys: { ...apiSettings.apiKeys, primaryKey: e.target.value }
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="secondary-key">Secondary API Key (Backup)</Label>
-                    <Input
-                      id="secondary-key"
-                      type="password"
-                      placeholder="Enter secondary API key"
-                      value={apiSettings.apiKeys.secondaryKey}
-                      onChange={(e) => setApiSettings({
-                        ...apiSettings,
-                        apiKeys: { ...apiSettings.apiKeys, secondaryKey: e.target.value }
-                      })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Webhook Configuration */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Webhook & Custom Settings</h4>
-                <div>
-                  <Label htmlFor="webhook-url">Webhook URL</Label>
-                  <Input
-                    id="webhook-url"
-                    placeholder="https://your-app.com/webhook/epo"
-                    value={apiSettings.webhookUrl}
-                    onChange={(e) => setApiSettings({ ...apiSettings, webhookUrl: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    URL to receive EPO event notifications
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="custom-headers">Custom Headers (JSON)</Label>
-                  <Textarea
-                    id="custom-headers"
-                    placeholder='{"X-Custom-Header": "value", "Authorization": "Bearer token"}'
-                    value={apiSettings.customHeaders}
-                    onChange={(e) => setApiSettings({ ...apiSettings, customHeaders: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4">
-                <div className="flex items-center space-x-2">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="auto-sync">Auto-sync enabled</Label>
                   <Switch
-                    checked={apiSettings.enableLogging}
-                    onCheckedChange={(checked) => setApiSettings({ ...apiSettings, enableLogging: checked })}
+                    id="auto-sync"
+                    checked={apiSettings.autoSync}
+                    onCheckedChange={(checked) => setApiSettings({ ...apiSettings, autoSync: checked })}
                   />
-                  <Label>Enable API Logging</Label>
                 </div>
-                <Button onClick={handleSaveApiSettings}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save API Settings
-                </Button>
-              </div>
-
-              {/* API Reference */}
-              <div className="border-t pt-6">
-                <h4 className="font-medium mb-2">EPO API Endpoints</h4>
-                <div className="space-y-2">
-                  <div className="bg-muted p-3 rounded">
-                    <div className="font-mono text-sm">POST /remote/core.executeTask</div>
-                    <div className="text-xs text-muted-foreground">Execute management tasks on EPO server</div>
-                  </div>
-                  <div className="bg-muted p-3 rounded">
-                    <div className="font-mono text-sm">GET /remote/core.listSystems</div>
-                    <div className="text-xs text-muted-foreground">Retrieve list of managed systems</div>
-                  </div>
-                  <div className="bg-muted p-3 rounded">
-                    <div className="font-mono text-sm">POST /remote/core.createGroup</div>
-                    <div className="text-xs text-muted-foreground">Create new system groups</div>
-                  </div>
-                  <div className="bg-muted p-3 rounded">
-                    <div className="font-mono text-sm">POST /remote/core.assignAgentTask</div>
-                    <div className="text-xs text-muted-foreground">Assign agent deployment tasks to groups</div>
-                  </div>
+                <div>
+                  <Label htmlFor="sync-interval">Sync interval (minutes)</Label>
+                  <Input
+                    id="sync-interval"
+                    type="number"
+                    value={apiSettings.syncInterval}
+                    onChange={(e) => setApiSettings({ ...apiSettings, syncInterval: parseInt(e.target.value) })}
+                  />
                 </div>
               </div>
+              <Button onClick={handleSaveApiSettings} className="w-full">
+                <Save className="h-4 w-4 mr-2" />
+                Save API Settings
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

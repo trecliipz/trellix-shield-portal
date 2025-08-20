@@ -244,18 +244,109 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'proxy') {
+      return await proxyEPORequest(requestBody);
+    }
+
     throw new Error(`Unknown action: ${action}`);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in ePO integration", { message: errorMessage });
     
+    // Check if it's a network connectivity issue
+    const isNetworkError = errorMessage.includes('fetch') || 
+                         errorMessage.includes('network') ||
+                         errorMessage.includes('ENOTFOUND') ||
+                         errorMessage.includes('certificate') ||
+                         errorMessage.includes('SSL') ||
+                         errorMessage.includes('timeout');
+    
     return new Response(JSON.stringify({ 
       error: errorMessage,
+      type: isNetworkError ? 'network_error' : 'general_error',
+      suggestions: isNetworkError ? [
+        'Verify EPO server is accessible from internet',
+        'Check if using private/internal hostname',
+        'Ensure valid SSL certificate is configured',
+        'Consider using Cloudflare Tunnel or public DNS'
+      ] : [],
       success: false 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
+  }
+
+// New proxy function for general EPO API calls
+async function proxyEPORequest(requestData: any) {
+  const epoServerUrl = Deno.env.get("EPO_SERVER_URL");
+  const epoUsername = Deno.env.get("EPO_API_USERNAME");
+  const epoPassword = Deno.env.get("EPO_API_PASSWORD");
+  
+  logStep('Proxy EPO Request', { endpoint: requestData.endpoint });
+  
+  const { endpoint, params = {}, useFormData = true } = requestData;
+  
+  if (!endpoint) {
+    throw new Error('Missing endpoint parameter');
+  }
+  
+  // Construct Basic Auth header
+  const auth = btoa(`${epoUsername}:${epoPassword}`);
+  
+  try {
+    let body: string;
+    let contentType: string;
+    
+    if (useFormData) {
+      // EPO API typically expects form-encoded data
+      const formData = new URLSearchParams();
+      Object.keys(params).forEach(key => {
+        formData.append(key, params[key]);
+      });
+      body = formData.toString();
+      contentType = 'application/x-www-form-urlencoded';
+    } else {
+      // Some endpoints might accept JSON
+      body = JSON.stringify(params);
+      contentType = 'application/json';
+    }
+    
+    const response = await fetch(`${epoServerUrl}/remote/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': contentType,
+      },
+      body: body
+    });
+    
+    const responseText = await response.text();
+    
+    logStep('EPO Response', { 
+      status: response.status, 
+      endpoint,
+      responseLength: responseText.length 
+    });
+    
+    return new Response(
+      JSON.stringify({
+        success: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        data: responseText,
+        endpoint: endpoint,
+        timestamp: new Date().toISOString()
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+    
+  } catch (error) {
+    logStep('EPO Proxy Error', { error: error.message, endpoint });
+    throw new Error(`EPO API call failed: ${error.message}`);
   }
 });
