@@ -32,6 +32,9 @@ enable_sms_confirmations = false
 enabled = true
 verify_jwt = false
 
+[functions.epo-integration]
+verify_jwt = true
+
 [functions.fetch-security-updates]
 verify_jwt = false
 

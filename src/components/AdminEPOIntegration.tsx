@@ -35,10 +35,10 @@ export const AdminEPOIntegration = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected');
   const [isEditing, setIsEditing] = useState(false);
   const [epoConfig, setEpoConfig] = useState({
-    serverUrl: 'https://103-98-212-249.cloud-xip.com:8443',
+    serverUrl: 'https://103.98.212.249:8443',
     serverName: 'trellixepo2025',
     publicIP: '103.98.212.249',
-    hostname: '103-98-212-249.cloud-xip.com',
+    hostname: '103.98.212.249',
     username: '',
     password: '',
     certificatePath: '/etc/ssl/certs/epo-cert.pem',
@@ -75,13 +75,8 @@ export const AdminEPOIntegration = () => {
         return;
       }
 
-      // Update the server URL if it's using the old format
-      let serverUrl = epoConfig.serverUrl;
-      if (serverUrl === 'https://103-98-212-249.cloud-xip.com:8443') {
-        serverUrl = 'https://trellixepo2025:8443';
-        setEpoConfig({ ...epoConfig, serverUrl });
-        toast.info("Server URL updated to https://trellixepo2025:8443");
-      }
+      // Use the server URL as is - no auto-rewrite
+      const serverUrl = epoConfig.serverUrl;
 
       // Test connection using EPO integration function
       const { data, error } = await supabase.functions.invoke('epo-integration', {
@@ -190,7 +185,10 @@ export const AdminEPOIntegration = () => {
           action: 'proxy',
           endpoint: apiExplorer.endpoint,
           params: params,
-          useFormData: true
+          useFormData: true,
+          serverUrl: epoConfig.serverUrl,
+          username: epoConfig.username,
+          password: epoConfig.password
         }
       });
 
@@ -367,18 +365,18 @@ export const AdminEPOIntegration = () => {
                     onChange={(e) => setEpoConfig({ ...epoConfig, hostname: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="server-url">EPO Server URL</Label>
-                  <Input
-                    id="server-url"
-                    placeholder="https://103-98-212-249.cloud-xip.com:8443"
-                    value={epoConfig.serverUrl}
-                    onChange={(e) => setEpoConfig({ ...epoConfig, serverUrl: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Include protocol (https://) and port number (typically 8443)
-                  </p>
-                </div>
+                 <div>
+                   <Label htmlFor="server-url">EPO Server URL</Label>
+                   <Input
+                     id="server-url"
+                     placeholder="https://103.98.212.249:8443"
+                     value={epoConfig.serverUrl}
+                     onChange={(e) => setEpoConfig({ ...epoConfig, serverUrl: e.target.value })}
+                   />
+                   <p className="text-xs text-muted-foreground mt-1">
+                     Include protocol (https://) and port number (typically 8443)
+                   </p>
+                 </div>
                 <div>
                   <Label htmlFor="api-endpoint">API Endpoint</Label>
                   <Input

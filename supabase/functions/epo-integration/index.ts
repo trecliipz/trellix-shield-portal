@@ -37,13 +37,18 @@ serve(async (req) => {
     const requestBody = await req.json();
     const { action, customerId, ouGroupName, companyName, serverUrl, username, password } = requestBody;
     
+    // Use provided server details or fall back to secrets
+    const effectiveServerUrl = serverUrl || epoServerUrl;
+    const effectiveUsername = username || epoUsername;
+    const effectivePassword = password || epoPassword;
+    
     logStep("Processing ePO action", { action, customerId, ouGroupName });
 
     if (action === 'test-connection') {
       // Test connection to EPO server
-      const testUrl = serverUrl || epoServerUrl;
-      const testUsername = username || epoUsername;
-      const testPassword = password || epoPassword;
+      const testUrl = effectiveServerUrl;
+      const testUsername = effectiveUsername;
+      const testPassword = effectivePassword;
       
       logStep("Testing EPO connection", { url: testUrl });
       
@@ -116,11 +121,11 @@ serve(async (req) => {
 
     if (action === 'create-customer-ou') {
       // Create System Tree OU for customer
-      const createOuResponse = await fetch(`${epoServerUrl}/remote/core.createSystemTreeNode`, {
+      const createOuResponse = await fetch(`${effectiveServerUrl}/remote/core.createSystemTreeNode`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(`${epoUsername}:${epoPassword}`)}`
+          'Authorization': `Basic ${btoa(`${effectiveUsername}:${effectivePassword}`)}`
         },
         body: JSON.stringify({
           parentId: 3, // Assuming 3 is the SaaS-Customers OU ID
@@ -139,11 +144,11 @@ serve(async (req) => {
       logStep("OU created successfully", ouData);
 
       // Generate site key for customer
-      const siteKeyResponse = await fetch(`${epoServerUrl}/remote/system.createSiteKey`, {
+      const siteKeyResponse = await fetch(`${effectiveServerUrl}/remote/system.createSiteKey`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(`${epoUsername}:${epoPassword}`)}`
+          'Authorization': `Basic ${btoa(`${effectiveUsername}:${effectivePassword}`)}`
         },
         body: JSON.stringify({
           name: `${ouGroupName}-SiteKey`,
@@ -172,7 +177,7 @@ serve(async (req) => {
           config_data: {
             ou_group_name: ouGroupName,
             company_name: companyName,
-            epo_server: epoServerUrl,
+            epo_server: effectiveServerUrl,
             created_at: new Date().toISOString()
           }
         })
@@ -188,11 +193,11 @@ serve(async (req) => {
 
       // Apply default policies based on subscription tier
       try {
-        const applyPolicyResponse = await fetch(`${epoServerUrl}/remote/policy.assign`, {
+        const applyPolicyResponse = await fetch(`${effectiveServerUrl}/remote/policy.assign`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Basic ${btoa(`${epoUsername}:${epoPassword}`)}`
+            'Authorization': `Basic ${btoa(`${effectiveUsername}:${effectivePassword}`)}`
           },
           body: JSON.stringify({
             systemId: ouData.systemId,
@@ -245,7 +250,7 @@ serve(async (req) => {
           config_data: {
             ou_group_name: customerData.ou_group_name,
             company_name: customerData.company_name,
-            epo_server: epoServerUrl,
+            epo_server: effectiveServerUrl,
             created_at: new Date().toISOString()
           }
         })
@@ -266,7 +271,7 @@ serve(async (req) => {
     }
 
     if (action === 'proxy') {
-      return await proxyEPORequest(requestBody);
+      return await proxyEPORequest(requestBody, effectiveServerUrl, effectiveUsername, effectivePassword);
     }
 
     throw new Error(`Unknown action: ${action}`);
@@ -321,10 +326,10 @@ serve(async (req) => {
 });
 
 // New proxy function for general EPO API calls
-async function proxyEPORequest(requestData: any) {
-  const epoServerUrl = Deno.env.get("EPO_SERVER_URL");
-  const epoUsername = Deno.env.get("EPO_API_USERNAME");
-  const epoPassword = Deno.env.get("EPO_API_PASSWORD");
+async function proxyEPORequest(requestData: any, serverUrl?: string, username?: string, password?: string) {
+  const epoServerUrl = serverUrl || Deno.env.get("EPO_SERVER_URL");
+  const epoUsername = username || Deno.env.get("EPO_API_USERNAME");
+  const epoPassword = password || Deno.env.get("EPO_API_PASSWORD");
   
   logStep('Proxy EPO Request', { endpoint: requestData.endpoint });
   
