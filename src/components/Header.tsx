@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { ExportProjectButton } from "./ExportProjectButton";
 
 interface HeaderProps {
   isLoggedIn: boolean;
@@ -152,6 +153,7 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Contact Admin
                   </Button>
+                  {currentUser?.role === 'admin' && <ExportProjectButton />}
                   <span className="text-primary mr-4 hidden sm:block">
                     Welcome, {currentUser?.name}!
                   </span>
