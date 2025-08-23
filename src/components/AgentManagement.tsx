@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit, Trash2, Download, Package, List, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Download, Package, List, Loader2, Users, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DeploymentModal } from "@/components/DeploymentModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +31,12 @@ export const AgentManagement = () => {
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [deployingAgent, setDeployingAgent] = useState<Agent | null>(null);
   const [downloadingAgents, setDownloadingAgents] = useState<Set<string>>(new Set());
+  const [syncingSubscriptions, setSyncingSubscriptions] = useState(false);
+  const [subscriptionStats, setSubscriptionStats] = useState({
+    totalSubscribed: 0,
+    totalWithAgents: 0,
+    lastSync: null as string | null
+  });
   const [newAgent, setNewAgent] = useState({
     name: '',
     version: '',
@@ -43,6 +49,7 @@ export const AgentManagement = () => {
 
   useEffect(() => {
     loadAgents();
+    loadSubscriptionStats();
   }, []);
 
   const loadAgents = async () => {
@@ -212,6 +219,63 @@ export const AgentManagement = () => {
     setDeployingAgent(agent);
   };
 
+  const loadSubscriptionStats = async () => {
+    try {
+      // Get total subscribed users
+      const { count: subscribedCount } = await supabase
+        .from('user_subscriptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+
+      // Get users with agent downloads
+      const { data: usersWithAgents } = await supabase
+        .from('agent_downloads')
+        .select('user_id')
+        .eq('status', 'available');
+
+      const uniqueUsersWithAgents = new Set(usersWithAgents?.map(d => d.user_id) || []);
+
+      setSubscriptionStats({
+        totalSubscribed: subscribedCount || 0,
+        totalWithAgents: uniqueUsersWithAgents.size,
+        lastSync: localStorage.getItem('lastAgentSync')
+      });
+    } catch (error) {
+      console.error('Error loading subscription stats:', error);
+    }
+  };
+
+  const handleSyncSubscriptions = async () => {
+    setSyncingSubscriptions(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('grant-latest-agent-bulk');
+      
+      if (error) throw error;
+
+      toast({
+        title: "Sync Complete",
+        description: data.message,
+      });
+
+      // Update last sync time
+      const now = new Date().toISOString();
+      localStorage.setItem('lastAgentSync', now);
+      
+      // Reload stats
+      await loadSubscriptionStats();
+      
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: "Sync Failed",
+        description: error instanceof Error ? error.message : "Failed to sync subscriptions",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncingSubscriptions(false);
+    }
+  };
+
   const stats = {
     total: agents.length,
     active: agents.filter(a => a.status === 'active').length,
@@ -259,6 +323,54 @@ export const AgentManagement = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Subscription Sync Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Subscription Sync
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{subscriptionStats.totalSubscribed}</div>
+              <div className="text-sm text-muted-foreground">Active Subscriptions</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{subscriptionStats.totalWithAgents}</div>
+              <div className="text-sm text-muted-foreground">Users with Agents</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-muted-foreground">Last Sync</div>
+              <div className="text-sm">
+                {subscriptionStats.lastSync 
+                  ? new Date(subscriptionStats.lastSync).toLocaleString()
+                  : 'Never'
+                }
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button 
+              onClick={handleSyncSubscriptions}
+              disabled={syncingSubscriptions}
+              className="flex items-center gap-2"
+            >
+              {syncingSubscriptions ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {syncingSubscriptions ? 'Syncing...' : 'Sync Latest Agent to All Subscribers'}
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Grant the latest active agent to all users with active subscriptions
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

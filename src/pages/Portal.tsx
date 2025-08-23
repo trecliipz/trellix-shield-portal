@@ -48,6 +48,8 @@ export const Portal = () => {
   const [subscription, setSubscription] = useState<Subscription>({ subscribed: false, subscription_tier: null, subscription_end: null });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [availableAgents, setAvailableAgents] = useState<any[]>([]);
+  const [grantingAgent, setGrantingAgent] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -96,6 +98,9 @@ export const Portal = () => {
 
       // Check subscription status
       await checkSubscription();
+      
+      // Load available agents for the user
+      await loadAvailableAgents();
     } catch (error) {
       console.error('Error loading customer data:', error);
       toast({
@@ -175,8 +180,74 @@ export const Portal = () => {
       const { data, error } = await supabase.functions.invoke('check-subscription');
       if (error) throw error;
       setSubscription(data);
+      
+      // If user is subscribed, try to grant latest agent
+      if (data.subscribed) {
+        await tryGrantLatestAgent();
+      }
     } catch (error) {
       console.error('Error checking subscription:', error);
+    }
+  };
+
+  const loadAvailableAgents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agent_downloads')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'available')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAvailableAgents(data || []);
+    } catch (error) {
+      console.error('Error loading available agents:', error);
+    }
+  };
+
+  const tryGrantLatestAgent = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('grant-latest-agent');
+      if (error) throw error;
+      
+      if (data.success) {
+        // Reload available agents
+        await loadAvailableAgents();
+      }
+    } catch (error) {
+      console.error('Error granting latest agent:', error);
+    }
+  };
+
+  const handleGrantLatestAgent = async () => {
+    setGrantingAgent(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('grant-latest-agent');
+      if (error) throw error;
+      
+      if (data.success) {
+        toast({
+          title: "Agent Granted",
+          description: data.message,
+        });
+        await loadAvailableAgents();
+      } else {
+        toast({
+          title: "Notice",
+          description: data.message,
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error('Error granting agent:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to grant agent",
+        variant: "destructive",
+      });
+    } finally {
+      setGrantingAgent(false);
     }
   };
 
@@ -187,6 +258,7 @@ export const Portal = () => {
       await loadInstallers(customer.id);
     }
     await checkSubscription();
+    await loadAvailableAgents();
     setRefreshing(false);
     toast({
       title: "Refreshed",
@@ -334,6 +406,62 @@ export const Portal = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Agent Downloads - Only show if subscribed */}
+        {subscription.subscribed && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Download className="h-5 w-5" />
+                  Available Agent Downloads
+                </span>
+                <Button 
+                  variant="outline" 
+                  onClick={handleGrantLatestAgent}
+                  disabled={grantingAgent}
+                >
+                  {grantingAgent ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Get Latest Agent
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {availableAgents.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">No agents available for download</p>
+                  <p className="text-sm text-muted-foreground">
+                    Click "Get Latest Agent" to access the newest agent package
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {availableAgents.map((agent) => (
+                    <div key={agent.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">{agent.agent_name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Version: {agent.agent_version} • Platform: {agent.platform}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          File: {agent.file_name} • Size: {agent.file_size ? Math.round(agent.file_size / (1024 * 1024)) : 0} MB
+                        </p>
+                      </div>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="endpoints" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">

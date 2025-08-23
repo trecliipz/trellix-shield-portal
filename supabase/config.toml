@@ -44,6 +44,12 @@ verify_jwt = false
 [functions.agent-download-status]
 verify_jwt = false
 
+[functions.grant-latest-agent]
+verify_jwt = true
+
+[functions.grant-latest-agent-bulk]
+verify_jwt = true
+
 [db]
 port = 54322
 
