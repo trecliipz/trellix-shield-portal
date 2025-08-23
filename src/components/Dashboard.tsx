@@ -16,6 +16,9 @@ import { SecurityCompliance } from "@/components/SecurityCompliance";
 import { AuditLog } from "@/components/AuditLog";
 import { ErrorLogs } from "@/components/ErrorLogs";
 import UserProfile from "@/components/UserProfile";
+import { AnimatedArchitecture } from "@/components/AnimatedArchitecture";
+import { Architecture } from "@/components/Architecture";
+import { Mermaid } from "@/components/Mermaid";
 
 interface DashboardProps {
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
@@ -177,6 +180,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <TabsTrigger value="audit" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Audit Log</TabsTrigger>
             <TabsTrigger value="errors" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Error Logs</TabsTrigger>
             <TabsTrigger value="analytics" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Analytics</TabsTrigger>
+            <TabsTrigger value="architecture" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Architecture</TabsTrigger>
           </TabsList>
 
           <TabsContent value="downloads" className="space-y-6">
@@ -249,6 +253,176 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
           <TabsContent value="analytics">
             <AdminAnalytics />
+          </TabsContent>
+
+          <TabsContent value="architecture" className="space-y-8">
+            <div className="space-y-8">
+              <AnimatedArchitecture />
+              <Architecture />
+              
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-primary mb-6">System Diagrams</h3>
+                <Tabs defaultValue="routing" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="routing">Routing Map</TabsTrigger>
+                    <TabsTrigger value="subscription">Subscription Flow</TabsTrigger>
+                    <TabsTrigger value="datamodel">Data Model</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="routing" className="mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Application Routing Structure</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Mermaid diagram={`graph LR
+    Start([User Access]) --> Index["/"]
+    Index --> |Anonymous| Landing[Landing Page]
+    Index --> |Authenticated| RoleCheck{Check Role}
+    
+    RoleCheck --> |Admin| AdminDash[Admin Dashboard]
+    RoleCheck --> |User| UserPortal[User Portal]
+    
+    Landing --> Auth[Authentication]
+    Auth --> Setup["/setup/:plan"]
+    Setup --> Portal["/portal"]
+    
+    Portal --> |Admin Actions| AdminTabs[Admin Tabs]
+    AdminTabs --> Downloads
+    AdminTabs --> Users
+    AdminTabs --> Agents
+    AdminTabs --> Security
+    AdminTabs --> EPO[Trellix ePO]
+    AdminTabs --> Messages
+    AdminTabs --> Audit
+    AdminTabs --> Errors
+    AdminTabs --> Analytics
+    AdminTabs --> Architecture
+    
+    Any[Any Page] --> |Navigation| ArchPage["/architecture"]
+    
+    Index --> |Direct Nav| ArchPage
+    Portal --> |Direct Nav| ArchPage
+    Setup --> |Direct Nav| ArchPage
+    
+    style Start fill:#e1f5fe
+    style AdminDash fill:#f3e5f5
+    style UserPortal fill:#e8f5e8
+    style ArchPage fill:#fff3e0`} />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="subscription" className="mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Subscription & Agent Grant Flow</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Mermaid diagram={`sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant CS as check-subscription
+    participant GLA as grant-latest-agent
+    participant GLB as grant-latest-agent-bulk
+    participant DB as Database
+    
+    U->>F: Access Portal
+    F->>CS: Check subscription status
+    CS->>DB: Query user_subscriptions
+    DB-->>CS: Subscription data
+    CS-->>F: Subscription status
+    
+    alt User has valid subscription
+        F->>GLA: Request latest agent
+        GLA->>DB: Query admin_agent_packages
+        DB-->>GLA: Available agents
+        GLA-->>F: Agent download info
+        F-->>U: Show download options
+    else No valid subscription
+        F-->>U: Show upgrade prompt
+    end
+    
+    alt Admin bulk operation
+        F->>GLB: Bulk grant request
+        GLB->>DB: Update multiple user grants
+        DB-->>GLB: Success confirmation
+        GLB-->>F: Bulk operation complete
+    end`} />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="datamodel" className="mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Core Database Schema</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Mermaid diagram={`erDiagram
+    profiles {
+        uuid id PK
+        uuid user_id FK
+        text display_name
+        text avatar_url
+        text bio
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    user_subscriptions {
+        uuid id PK
+        uuid user_id FK
+        text subscription_type
+        timestamp expires_at
+        boolean is_active
+        timestamp created_at
+    }
+    
+    admin_agent_packages {
+        uuid id PK
+        text name
+        text version
+        text file_name
+        text description
+        text_array features
+        text size
+        text status
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    agent_downloads {
+        uuid id PK
+        uuid user_id FK
+        uuid agent_package_id FK
+        timestamp downloaded_at
+        text download_status
+        text ip_address
+    }
+    
+    endpoints {
+        uuid id PK
+        uuid user_id FK
+        text hostname
+        text ip_address
+        text os_version
+        text agent_version
+        timestamp last_checkin
+        text status
+        jsonb metadata
+    }
+    
+    profiles ||--|| user_subscriptions : user_id
+    profiles ||--o{ agent_downloads : user_id
+    profiles ||--o{ endpoints : user_id
+    admin_agent_packages ||--o{ agent_downloads : agent_package_id`} />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
