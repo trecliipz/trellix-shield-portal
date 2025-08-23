@@ -14,7 +14,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://your-domain.com/sitemap.xml
+Sitemap: https://rtxepo.netlify.app/sitemap.xml
 
 # Host
-Host: https://your-domain.com
+Host: https://rtxepo.netlify.app
