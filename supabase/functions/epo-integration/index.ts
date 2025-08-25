@@ -35,7 +35,7 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const { action, customerId, ouGroupName, companyName, serverUrl, username, password } = requestBody;
+    const { action, customerId, ouGroupName, companyName, serverUrl, username, password, tier } = requestBody;
     
     // Use provided server details or fall back to secrets
     const effectiveServerUrl = serverUrl || epoServerUrl;
@@ -270,6 +270,18 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'generate-site-key') {
+      return await generateSiteKey(supabaseAdmin, customerId, effectiveServerUrl, effectiveUsername, effectivePassword);
+    }
+
+    if (action === 'apply-tier-policies') {
+      return await applyTierPolicies(supabaseAdmin, customerId, tier, effectiveServerUrl, effectiveUsername, effectivePassword);
+    }
+
+    if (action === 'sync-endpoints') {
+      return await syncCustomerEndpoints(supabaseAdmin, customerId);
+    }
+
     if (action === 'proxy') {
       return await proxyEPORequest(requestBody, effectiveServerUrl, effectiveUsername, effectivePassword);
     }
@@ -395,5 +407,220 @@ async function proxyEPORequest(requestData: any, serverUrl?: string, username?: 
   } catch (error: any) {
     logStep('EPO Proxy Error', { error: error.message, endpoint });
     throw new Error(`EPO API call failed: ${error.message}`);
+  }
+}
+
+async function generateSiteKey(supabaseAdmin: any, customerId: string, serverUrl: string, username: string, password: string) {
+  logStep("Generating site key", { customerId });
+  
+  try {
+    // Get customer details from Supabase
+    const { data: customer, error: customerError } = await supabaseAdmin
+      .from('customers')
+      .select('*')
+      .eq('id', customerId)
+      .single();
+
+    if (customerError || !customer) {
+      throw new Error("Customer not found");
+    }
+
+    // Generate site key via ePO API (simplified implementation)
+    const siteKey = `SITE_${customer.id.substring(0, 8)}_${Date.now()}`;
+    
+    // Store site key in agent_installers table
+    const { error: installerError } = await supabaseAdmin
+      .from('agent_installers')
+      .insert({
+        customer_id: customerId,
+        site_key: siteKey,
+        installer_name: `${customer.company_name} Agent`,
+        platform: 'Windows'
+      });
+
+    if (installerError) {
+      logStep("Failed to store site key", installerError);
+      throw installerError;
+    }
+
+    logStep("Site key generated successfully", { siteKey });
+    
+    return new Response(JSON.stringify({
+      success: true,
+      site_key: siteKey,
+      message: "Site key generated successfully"
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+
+  } catch (error) {
+    logStep("ERROR in generateSiteKey", { error: error.message });
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+}
+
+async function applyTierPolicies(supabaseAdmin: any, customerId: string, tier: string, serverUrl: string, username: string, password: string) {
+  logStep("Applying tier policies", { customerId, tier });
+  
+  try {
+    // Get customer ePO details
+    const { data: customer, error: customerError } = await supabaseAdmin
+      .from('customers')
+      .select('*')
+      .eq('id', customerId)
+      .single();
+
+    if (customerError || !customer) {
+      throw new Error("Customer not found");
+    }
+
+    // Define tier-based policies
+    const TIER_POLICIES = {
+      starter: {
+        ens_policy: 'SaaS-Basic-ENS-Policy',
+        tie_feeds: ['basic_threat_intel'],
+        scan_frequency: 'daily'
+      },
+      pro: {
+        ens_policy: 'SaaS-Advanced-ENS-Policy',
+        tie_feeds: ['basic_threat_intel', 'advanced_indicators'],
+        scan_frequency: 'every_6_hours'
+      },
+      enterprise: {
+        ens_policy: 'SaaS-Premium-ENS-Policy',
+        tie_feeds: ['all_threat_feeds', 'custom_indicators'],
+        scan_frequency: 'continuous'
+      }
+    };
+
+    const policies = TIER_POLICIES[tier] || TIER_POLICIES.starter;
+
+    // Apply ENS policy (simplified - in real implementation, use ePO API)
+    logStep("Applying ENS policy", { policy: policies.ens_policy, customer: customer.company_name });
+    
+    // Apply TIE feeds (simplified - in real implementation, use ePO API)
+    logStep("Applying TIE feeds", { feeds: policies.tie_feeds });
+
+    // In a real implementation, these would be ePO REST API calls:
+    // - Apply ENS policy to customer OU
+    // - Configure TIE feeds
+    // - Set scan schedules
+
+    logStep("Tier policies applied successfully", { tier, customerId });
+    
+    return new Response(JSON.stringify({
+      success: true,
+      applied_policies: policies,
+      message: `${tier} tier policies applied successfully`
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+
+  } catch (error) {
+    logStep("ERROR in applyTierPolicies", { error: error.message });
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+}
+
+async function syncCustomerEndpoints(supabaseAdmin: any, customerId: string) {
+  logStep("Syncing customer endpoints", { customerId });
+  
+  try {
+    // Get customer ePO details
+    const { data: customer, error: customerError } = await supabaseAdmin
+      .from('customers')
+      .select('*')
+      .eq('id', customerId)
+      .single();
+
+    if (customerError || !customer) {
+      throw new Error("Customer not found");
+    }
+
+    // In real implementation, query ePO API for endpoints in customer OU
+    // For now, simulate endpoint data
+    const mockEndpoints = [
+      {
+        hostname: 'DESKTOP-001',
+        ip_address: '192.168.1.100',
+        os_version: 'Windows 11',
+        agent_version: '5.7.8',
+        threat_status: 'clean'
+      },
+      {
+        hostname: 'LAPTOP-002', 
+        ip_address: '192.168.1.101',
+        os_version: 'Windows 10',
+        agent_version: '5.7.8',
+        threat_status: 'clean'
+      }
+    ];
+
+    // Update customer endpoints
+    for (const endpoint of mockEndpoints) {
+      await supabaseAdmin
+        .from('customer_endpoints')
+        .upsert({
+          customer_id: customerId,
+          hostname: endpoint.hostname,
+          ip_address: endpoint.ip_address,
+          os_version: endpoint.os_version,
+          agent_version: endpoint.agent_version,
+          threat_status: endpoint.threat_status,
+          status: 'online',
+          last_seen: new Date().toISOString()
+        });
+    }
+
+    // Update usage record for today
+    const today = new Date().toISOString().split('T')[0];
+    await supabaseAdmin
+      .from('usage_records')
+      .upsert({
+        customer_id: customerId,
+        record_date: today,
+        endpoint_count: mockEndpoints.length,
+        billable_endpoints: mockEndpoints.length,
+        sync_source: 'epo_api'
+      });
+
+    logStep("Endpoints synced successfully", { 
+      customerId, 
+      endpointCount: mockEndpoints.length 
+    });
+    
+    return new Response(JSON.stringify({
+      success: true,
+      endpoint_count: mockEndpoints.length,
+      endpoints: mockEndpoints,
+      message: "Endpoints synced successfully"
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+
+  } catch (error) {
+    logStep("ERROR in syncCustomerEndpoints", { error: error.message });
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 }

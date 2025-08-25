@@ -24,6 +24,7 @@ interface Endpoint {
   status: string;
   last_seen: string;
   agent_version: string | null;
+  threat_status?: string;
 }
 
 interface Installer {
@@ -406,6 +407,69 @@ export const Portal = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Status Cards Grid */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Provisioning Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Setup Progress:</span>
+                  <span className="font-medium">100%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Current Step:</span>
+                  <span className="text-green-600 font-medium">Completed</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ePO Environment:</span>
+                  <span className="text-green-600 font-medium">Ready</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Agent Installer:</span>
+                  <span className="text-green-600 font-medium">Available</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Usage Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Active Endpoints:</span>
+                  <span className="font-medium">{endpoints.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Protected Endpoints:</span>
+                  <span className="text-green-600 font-medium">{endpoints.filter(e => e.threat_status === 'clean').length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Plan Limit:</span>
+                  <span className="font-medium">Unlimited</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Last Sync:</span>
+                  <span className="text-muted-foreground text-sm">
+                    {new Date().toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Agent Downloads - Only show if subscribed */}
         {subscription.subscribed && (

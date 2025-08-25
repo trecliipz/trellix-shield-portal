@@ -50,6 +50,15 @@ verify_jwt = true
 [functions.grant-latest-agent-bulk]
 verify_jwt = true
 
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.provisioning-orchestrator]
+verify_jwt = true
+
+[functions.reconcile-usage]
+verify_jwt = false
+
 [db]
 port = 54322
 

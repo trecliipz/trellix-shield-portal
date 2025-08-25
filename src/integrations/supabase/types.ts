@@ -1536,6 +1536,59 @@ export type Database = {
         }
         Relationships: []
       }
+      provisioning_jobs: {
+        Row: {
+          completed_at: string | null
+          completed_steps: number | null
+          created_at: string
+          current_step: string | null
+          customer_id: string
+          error_message: string | null
+          id: string
+          job_type: string
+          status: string
+          step_details: Json | null
+          total_steps: number | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_steps?: number | null
+          created_at?: string
+          current_step?: string | null
+          customer_id: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          status?: string
+          step_details?: Json | null
+          total_steps?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_steps?: number | null
+          created_at?: string
+          current_step?: string | null
+          customer_id?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          status?: string
+          step_details?: Json | null
+          total_steps?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provisioning_jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ride_requests: {
         Row: {
           assigned_driver_id: string | null
@@ -2187,6 +2240,39 @@ export type Database = {
           id?: string
           type?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          created_at: string
+          data: Json
+          event_type: string
+          id: string
+          processed: boolean | null
+          processed_at: string | null
+          processing_error: string | null
+          stripe_event_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          event_type: string
+          id?: string
+          processed?: boolean | null
+          processed_at?: string | null
+          processing_error?: string | null
+          stripe_event_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          event_type?: string
+          id?: string
+          processed?: boolean | null
+          processed_at?: string | null
+          processing_error?: string | null
+          stripe_event_id?: string
         }
         Relationships: []
       }
