@@ -214,9 +214,9 @@ export const ArchitecturePage = () => {
                         Overview of all routes and page components in the application.
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <Mermaid diagram={routingDiagram} />
-                    </CardContent>
+                     <CardContent>
+                       <Mermaid title="Application Routing Map" diagram={routingDiagram} />
+                     </CardContent>
                   </Card>
                 </TabsContent>
                 
@@ -228,23 +228,23 @@ export const ArchitecturePage = () => {
                         Sequence diagram showing how users get agent downloads based on their subscription.
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <Mermaid diagram={subscriptionFlowDiagram} />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="data" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Core Data Model</CardTitle>
-                      <CardDescription>
-                        Entity relationship diagram of the main database tables and their relationships.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Mermaid diagram={dataModelDiagram} />
-                    </CardContent>
+                     <CardContent>
+                       <Mermaid title="Subscription & Agent Assignment Flow" diagram={subscriptionFlowDiagram} />
+                     </CardContent>
+                   </Card>
+                 </TabsContent>
+                 
+                 <TabsContent value="data" className="mt-6">
+                   <Card>
+                     <CardHeader>
+                       <CardTitle>Core Data Model</CardTitle>
+                       <CardDescription>
+                         Entity relationship diagram of the main database tables and their relationships.
+                       </CardDescription>
+                     </CardHeader>
+                     <CardContent>
+                       <Mermaid title="Core Data Model & Entity Relationships" diagram={dataModelDiagram} />
+                     </CardContent>
                   </Card>
                 </TabsContent>
               </Tabs>

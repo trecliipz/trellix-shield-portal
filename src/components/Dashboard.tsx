@@ -275,7 +275,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
                         <CardTitle>Application Routing Structure</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <Mermaid diagram={`graph LR
+                        <Mermaid title="Application Routing Architecture" diagram={`graph LR
     Start([User Access]) --> Index["/"]
     Index --> |Anonymous| Landing[Landing Page]
     Index --> |Authenticated| RoleCheck{Check Role}
@@ -319,7 +319,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
                         <CardTitle>Subscription & Agent Grant Flow</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <Mermaid diagram={`sequenceDiagram
+                        <Mermaid title="User Subscription & Agent Assignment Flow" diagram={`sequenceDiagram
     participant U as User
     participant F as Frontend
     participant CS as check-subscription
@@ -359,7 +359,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
                         <CardTitle>Core Database Schema</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <Mermaid diagram={`erDiagram
+                        <Mermaid title="Core Data Model & Entity Relationships" diagram={`erDiagram
     profiles {
         uuid id PK
         uuid user_id FK
