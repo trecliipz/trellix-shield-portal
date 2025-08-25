@@ -19,6 +19,8 @@ import UserProfile from "@/components/UserProfile";
 import { AnimatedArchitecture } from "@/components/AnimatedArchitecture";
 import { Architecture } from "@/components/Architecture";
 import { Mermaid } from "@/components/Mermaid";
+import { BillingManagement } from "./BillingManagement";
+import { WebhookManagement } from "./WebhookManagement";
 
 interface DashboardProps {
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
@@ -173,6 +175,8 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <TabsTrigger value="downloads" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Downloads</TabsTrigger>
             <TabsTrigger value="users" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Users</TabsTrigger>
             <TabsTrigger value="agents" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Agents</TabsTrigger>
+            <TabsTrigger value="billing" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Billing</TabsTrigger>
+            <TabsTrigger value="webhooks" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Webhooks</TabsTrigger>
             <TabsTrigger value="security-updates" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Security Updates</TabsTrigger>
             <TabsTrigger value="epo" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Trellix ePO</TabsTrigger>
             <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Messages</TabsTrigger>
@@ -225,6 +229,14 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
           <TabsContent value="agents">
             <AgentManagement />
+          </TabsContent>
+
+          <TabsContent value="billing">
+            <BillingManagement />
+          </TabsContent>
+
+          <TabsContent value="webhooks">
+            <WebhookManagement />
           </TabsContent>
 
           <TabsContent value="security-updates">
