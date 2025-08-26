@@ -17,118 +17,143 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-  );
-
   try {
-    logStep("Function started");
+    logStep("Checkout request received");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
+    // Initialize Supabase client for user authentication
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
 
+    // Authenticate user
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      throw new Error("No authorization header provided");
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user?.email) {
+      throw new Error("User not authenticated or email not available");
+    }
+
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { planType, customerId, priceAmount } = await req.json();
+    // Get request body
+    const { planType, customerId: providedCustomerId, priceAmount } = await req.json();
+    
+    if (!planType) {
+      throw new Error("planType is required");
+    }
+
+    // Initialize Stripe
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      throw new Error("STRIPE_SECRET_KEY not configured");
+    }
     
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-    
-    // Check if customer already exists in Stripe
+
+    // Check if Stripe customer exists for this email
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    let stripeCustomerId;
+    let customerId = providedCustomerId;
     
     if (customers.data.length > 0) {
-      stripeCustomerId = customers.data[0].id;
-      logStep("Found existing Stripe customer", { stripeCustomerId });
+      customerId = customers.data[0].id;
+      logStep("Found existing Stripe customer", { customerId });
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
         email: user.email,
-        name: user.user_metadata?.name || user.email.split('@')[0],
+        name: user.user_metadata?.name || user.email,
         metadata: {
-          supabase_user_id: user.id,
-          customer_id: customerId || ''
+          user_id: user.id,
+          plan_type: planType
         }
       });
-      stripeCustomerId = customer.id;
-      logStep("Created new Stripe customer", { stripeCustomerId });
+      customerId = customer.id;
+      logStep("Created new Stripe customer", { customerId });
     }
 
-    // Define plan details
+    // Define plan details based on planType
     const planDetails = {
       starter: {
         name: "Starter Plan",
-        description: "Up to 50 endpoints",
-        price: priceAmount || 1500,
-        features: ["Basic ENS protection", "Standard TIE feeds", "Email support", "Monthly reporting"]
+        description: "Basic endpoint protection for small businesses",
+        unit_amount: priceAmount || 999, // $9.99
+        recurring: { interval: "month" as const }
       },
-      pro: {
-        name: "Pro Plan", 
-        description: "Up to 500 endpoints",
-        price: priceAmount || 2500,
-        features: ["Advanced ENS", "Enhanced TIE", "Priority support", "Weekly reporting", "API access"]
+      professional: {
+        name: "Professional Plan", 
+        description: "Advanced protection for growing businesses",
+        unit_amount: priceAmount || 1999, // $19.99
+        recurring: { interval: "month" as const }
       },
       enterprise: {
         name: "Enterprise Plan",
-        description: "Unlimited endpoints", 
-        price: priceAmount || 4000,
-        features: ["Full ENS feature set", "Premium TIE", "Dedicated support", "Real-time reporting", "Full API access"]
+        description: "Complete security solution for large organizations", 
+        unit_amount: priceAmount || 3999, // $39.99
+        recurring: { interval: "month" as const }
       }
     };
 
-    const plan = planDetails[planType as keyof typeof planDetails] || planDetails.starter;
+    const selectedPlan = planDetails[planType as keyof typeof planDetails];
+    if (!selectedPlan) {
+      throw new Error(`Invalid plan type: ${planType}`);
+    }
 
+    logStep("Creating checkout session", { planType, amount: selectedPlan.unit_amount });
+
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomerId,
+      customer: customerId,
       line_items: [
         {
           price_data: {
             currency: "usd",
             product_data: {
-              name: plan.name,
-              description: plan.description,
+              name: selectedPlan.name,
+              description: selectedPlan.description,
             },
-            unit_amount: plan.price,
-            recurring: { interval: "month" },
+            unit_amount: selectedPlan.unit_amount,
+            recurring: selectedPlan.recurring,
           },
           quantity: 1,
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/portal?success=true`,
-      cancel_url: `${req.headers.get("origin")}/portal?canceled=true`,
+      success_url: `${req.headers.get("origin")}/portal?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.get("origin")}/setup/${planType}`,
       metadata: {
+        user_id: user.id,
         plan_type: planType,
-        customer_id: customerId || '',
-        user_id: user.id
-      }
+      },
     });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    logStep("Checkout session created successfully", { sessionId: session.id, url: session.url });
 
     return new Response(JSON.stringify({ 
       url: session.url,
-      sessionId: session.id 
+      session_id: session.id 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in create-checkout", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      success: false 
+    }), {
       status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

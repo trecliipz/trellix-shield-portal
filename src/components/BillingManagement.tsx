@@ -46,43 +46,71 @@ export const BillingManagement = () => {
     try {
       setLoading(true);
       
-      // For now, get customer subscriptions as usage proxy
-      const { data: subscriptions, error: subscriptionsError } = await supabase
-        .from('customer_subscriptions')
+      // Try to get actual usage records first
+      const { data: usageData, error: usageError } = await supabase
+        .from('usage_records')
         .select(`
           *,
           customers!inner (
             company_name
           )
         `)
-        .eq('status', 'active');
+        .order('record_date', { ascending: false })
+        .limit(100);
 
-      if (subscriptionsError) throw subscriptionsError;
+      if (usageError || !usageData?.length) {
+        // Fallback to customer subscriptions as usage proxy
+        const { data: subscriptions, error: subscriptionsError } = await supabase
+          .from('customer_subscriptions')
+          .select(`
+            *,
+            customers!inner (
+              company_name
+            )
+          `)
+          .eq('status', 'active');
 
-      // Mock usage records for display
-      const mockRecords: UsageRecord[] = subscriptions?.map((sub, index) => ({
-        id: sub.id,
-        customer_id: sub.customer_id,
-        record_date: new Date().toISOString().split('T')[0],
-        endpoint_count: Math.floor(Math.random() * 50) + 10,
-        billable_endpoints: Math.floor(Math.random() * 45) + 5,
-        overage_endpoints: Math.floor(Math.random() * 5),
-        customers: {
-          company_name: sub.customers?.company_name || 'Unknown'
-        }
-      })) || [];
+        if (subscriptionsError) throw subscriptionsError;
 
-      setUsageRecords(mockRecords);
+        // Mock usage records for display from subscriptions
+        const mockRecords: UsageRecord[] = subscriptions?.map((sub) => ({
+          id: sub.id,
+          customer_id: sub.customer_id,
+          record_date: new Date().toISOString().split('T')[0],
+          endpoint_count: sub.endpoint_count || Math.floor(Math.random() * 50) + 10,
+          billable_endpoints: Math.min(sub.endpoint_count || 50, 50),
+          overage_endpoints: Math.max(0, (sub.endpoint_count || 50) - 50),
+          customers: {
+            company_name: sub.customers?.company_name || 'Unknown'
+          }
+        })) || [];
 
-      // Calculate stats
-      const newStats = {
-        total_customers: subscriptions?.length || 0,
-        total_endpoints: mockRecords.reduce((sum, r) => sum + r.endpoint_count, 0),
-        total_overage: mockRecords.reduce((sum, r) => sum + r.overage_endpoints, 0),
-        daily_revenue: mockRecords.reduce((sum, r) => sum + (r.billable_endpoints * 15), 0) // $15 per endpoint
-      };
+        setUsageRecords(mockRecords);
 
-      setStats(newStats);
+        // Calculate stats from mock data
+        const newStats = {
+          total_customers: subscriptions?.length || 0,
+          total_endpoints: mockRecords.reduce((sum, r) => sum + r.endpoint_count, 0),
+          total_overage: mockRecords.reduce((sum, r) => sum + r.overage_endpoints, 0),
+          daily_revenue: mockRecords.reduce((sum, r) => sum + (r.billable_endpoints * 15) + (r.overage_endpoints * 22.5), 0)
+        };
+
+        setStats(newStats);
+      } else {
+        // Use actual usage records
+        setUsageRecords(usageData);
+
+        // Calculate stats from actual data
+        const uniqueCustomers = new Set(usageData.map(r => r.customer_id)).size;
+        const newStats = {
+          total_customers: uniqueCustomers,
+          total_endpoints: usageData.reduce((sum, r) => sum + r.endpoint_count, 0),
+          total_overage: usageData.reduce((sum, r) => sum + (r.overage_endpoints || 0), 0),
+          daily_revenue: usageData.reduce((sum, r) => sum + (r.total_amount || 0), 0)
+        };
+
+        setStats(newStats);
+      }
 
     } catch (error) {
       console.error('Error loading billing data:', error);

@@ -120,6 +120,9 @@ serve(async (req) => {
     }
 
     if (action === 'create-customer-ou') {
+      // ePO Safety Guard - ensure we only create OUs under SaaS-Customers parent
+      const SAAS_PARENT_OU_ID = Deno.env.get("SAAS_PARENT_OU_ID") || "3";
+      
       // Create System Tree OU for customer
       const createOuResponse = await fetch(`${effectiveServerUrl}/remote/core.createSystemTreeNode`, {
         method: 'POST',
@@ -128,7 +131,7 @@ serve(async (req) => {
           'Authorization': `Basic ${btoa(`${effectiveUsername}:${effectivePassword}`)}`
         },
         body: JSON.stringify({
-          parentId: 3, // Assuming 3 is the SaaS-Customers OU ID
+          parentId: parseInt(SAAS_PARENT_OU_ID), // Safety: only under SaaS-Customers OU
           name: ouGroupName,
           description: `Automated OU for ${companyName}`
         })
@@ -216,8 +219,9 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         success: true,
-        ouId: ouData.systemId,
-        siteKey: siteKey,
+        ou_id: ouData.systemId,
+        ou_path: `/SaaS-Customers/${ouGroupName}`,
+        site_key: siteKey,
         installer: {
           id: installerData.id,
           name: installerData.installer_name

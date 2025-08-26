@@ -298,6 +298,13 @@ export type Database = {
             foreignKeyName: "agent_installers_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "agent_installers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -384,6 +391,13 @@ export type Database = {
             foreignKeyName: "customer_api_keys_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_api_keys_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -427,6 +441,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_audit_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
           {
             foreignKeyName: "customer_audit_logs_customer_id_fkey"
             columns: ["customer_id"]
@@ -493,6 +514,13 @@ export type Database = {
             foreignKeyName: "customer_endpoints_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_endpoints_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -546,6 +574,13 @@ export type Database = {
             foreignKeyName: "customer_subscriptions_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_subscriptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -591,6 +626,13 @@ export type Database = {
             foreignKeyName: "customer_users_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_users_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -605,6 +647,7 @@ export type Database = {
           contact_name: string
           created_at: string
           epo_ou_id: string | null
+          epo_ou_path: string | null
           id: string
           ou_group_name: string
           phone: string | null
@@ -620,6 +663,7 @@ export type Database = {
           contact_name: string
           created_at?: string
           epo_ou_id?: string | null
+          epo_ou_path?: string | null
           id?: string
           ou_group_name: string
           phone?: string | null
@@ -635,6 +679,7 @@ export type Database = {
           contact_name?: string
           created_at?: string
           epo_ou_id?: string | null
+          epo_ou_path?: string | null
           id?: string
           ou_group_name?: string
           phone?: string | null
@@ -1584,6 +1629,13 @@ export type Database = {
             foreignKeyName: "provisioning_jobs_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "provisioning_jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -1938,39 +1990,58 @@ export type Database = {
       }
       usage_records: {
         Row: {
+          billable_endpoints: number | null
           created_at: string
           customer_id: string
           endpoint_count: number
           id: string
+          overage_endpoints: number | null
           period_end: string
           period_start: string
+          record_date: string
           stripe_invoice_id: string | null
           subscription_id: string
+          sync_source: string | null
           total_amount: number
         }
         Insert: {
+          billable_endpoints?: number | null
           created_at?: string
           customer_id: string
           endpoint_count: number
           id?: string
+          overage_endpoints?: number | null
           period_end: string
           period_start: string
+          record_date?: string
           stripe_invoice_id?: string | null
           subscription_id: string
+          sync_source?: string | null
           total_amount: number
         }
         Update: {
+          billable_endpoints?: number | null
           created_at?: string
           customer_id?: string
           endpoint_count?: number
           id?: string
+          overage_endpoints?: number | null
           period_end?: string
           period_start?: string
+          record_date?: string
           stripe_invoice_id?: string | null
           subscription_id?: string
+          sync_source?: string | null
           total_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "usage_records_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
           {
             foreignKeyName: "usage_records_customer_id_fkey"
             columns: ["customer_id"]
@@ -2278,7 +2349,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      billing_reconciliation: {
+        Row: {
+          company_name: string | null
+          contact_email: string | null
+          current_endpoints: number | null
+          customer_id: string | null
+          ou_group_name: string | null
+          overage_endpoints: number | null
+          plan_id: string | null
+          plan_limit: number | null
+          price_monthly: number | null
+          subscription_status: string | null
+          subscription_tier: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans_epo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       assign_admin_role: {

@@ -201,8 +201,9 @@ async function executeCreateOU(supabaseClient: any, job: any) {
   const { data: epoResult, error: epoError } = await supabaseClient.functions.invoke('epo-integration', {
     body: {
       action: 'create-customer-ou',
-      customerEmail: customer.email,
-      ouName: customer.company_name || 'Customer OU',
+      customerEmail: customer.contact_email,
+      ouGroupName: customer.ou_group_name,
+      companyName: customer.company_name,
       customerId: customer.id
     }
   });

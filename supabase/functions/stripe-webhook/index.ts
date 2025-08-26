@@ -149,11 +149,11 @@ async function handleCheckoutCompleted(supabaseClient: any, event: any) {
 
     logStep("Checkout details", { customerEmail, customerId, subscriptionId });
 
-    // Find or create customer record
+    // Find or create customer record using contact_email
     let { data: customer, error: customerError } = await supabaseClient
       .from('customers')
       .select('*')
-      .eq('email', customerEmail)
+      .eq('contact_email', customerEmail)
       .single();
 
     if (customerError && customerError.code !== 'PGRST116') {
@@ -161,13 +161,19 @@ async function handleCheckoutCompleted(supabaseClient: any, event: any) {
     }
 
     if (!customer) {
-      // Create new customer
+      // Create new customer with proper fields
+      const companyName = session.customer_details?.name || 'New Company';
+      const ouGroupName = companyName.replace(/[^a-zA-Z0-9]/g, '-') + '-OU';
+      
       const { data: newCustomer, error: createError } = await supabaseClient
         .from('customers')
         .insert({
-          email: customerEmail,
+          contact_email: customerEmail,
+          company_name: companyName,
+          ou_group_name: ouGroupName,
+          contact_name: session.customer_details?.name || 'New Customer',
           stripe_customer_id: customerId,
-          company_name: session.customer_details?.name || 'New Company'
+          status: 'active'
         })
         .select()
         .single();

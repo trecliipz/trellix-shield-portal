@@ -314,6 +314,64 @@ export const Portal = () => {
     }
   };
 
+  const handleSyncEndpoints = async () => {
+    if (!customer) return;
+    
+    setRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('epo-integration', {
+        body: {
+          action: 'sync-endpoints',
+          customerId: customer.id
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Endpoints Synced",
+        description: "Endpoint data has been synchronized from ePO",
+      });
+
+      // Reload endpoints data
+      await loadEndpoints(customer.id);
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: "Sync Error",
+        description: error instanceof Error ? error.message : "Failed to sync endpoints",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleStartSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          planType: 'professional', // Default to professional plan
+          priceAmount: 1999 // $19.99
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        // Open Stripe checkout in new tab
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      toast({
+        title: "Subscription Error",
+        description: error instanceof Error ? error.message : "Failed to start subscription process",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
@@ -363,6 +421,16 @@ export const Portal = () => {
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
+            {customer && (
+              <Button 
+                variant="outline" 
+                onClick={handleSyncEndpoints}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Sync Endpoints
+              </Button>
+            )}
             {subscription.subscribed && (
               <Button onClick={handleManageSubscription}>
                 <CreditCard className="h-4 w-4 mr-2" />
@@ -400,7 +468,7 @@ export const Portal = () => {
                 )}
               </div>
               {!subscription.subscribed && (
-                <Button onClick={() => navigate('/')}>
+                <Button onClick={handleStartSubscription}>
                   Subscribe Now
                 </Button>
               )}

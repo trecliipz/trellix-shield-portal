@@ -59,6 +59,9 @@ verify_jwt = true
 [functions.reconcile-usage]
 verify_jwt = false
 
+[functions.create-checkout]
+verify_jwt = true
+
 [db]
 port = 54322
 

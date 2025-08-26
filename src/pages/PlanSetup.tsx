@@ -3,14 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Shield, Zap, Crown, ArrowLeft } from 'lucide-react';
+import { Check, Shield, Zap, Crown, ArrowLeft, Loader2 } from 'lucide-react';
 import { EnhancedAuthModal } from '@/components/EnhancedAuthModal';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const PlanSetup = () => {
   const { plan } = useParams();
   const navigate = useNavigate();
   const [authModalType, setAuthModalType] = useState<'login' | 'register' | null>(null);
+  const [subscribing, setSubscribing] = useState(false);
+  const { toast } = useToast();
 
   const plans = {
     starter: {
@@ -82,6 +85,44 @@ export const PlanSetup = () => {
     };
     checkAuth();
   }, [navigate]);
+
+  const handleSubscribe = async () => {
+    setSubscribing(true);
+    try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // Not authenticated, show register modal
+        setAuthModalType('register');
+        return;
+      }
+
+      // User is authenticated, proceed with checkout
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          planType: plan,
+          priceAmount: selectedPlan?.monthlyPrice ? Math.round(selectedPlan.monthlyPrice * 100) : undefined
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        // Open Stripe checkout in current tab
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      toast({
+        title: "Subscription Error",
+        description: error instanceof Error ? error.message : "Failed to start subscription process",
+        variant: "destructive",
+      });
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   if (!selectedPlan) {
     return (
@@ -190,9 +231,17 @@ export const PlanSetup = () => {
                 <Button 
                   size="lg" 
                   className="w-full"
-                  onClick={() => setAuthModalType('register')}
+                  onClick={handleSubscribe}
+                  disabled={subscribing}
                 >
-                  Create Account
+                  {subscribing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Setting up subscription...
+                    </>
+                  ) : (
+                    'Subscribe Now'
+                  )}
                 </Button>
                 
                 <div className="relative">
