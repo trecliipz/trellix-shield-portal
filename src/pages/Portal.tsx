@@ -56,6 +56,17 @@ export const Portal = () => {
 
   useEffect(() => {
     checkAuth();
+    
+    // Check for successful payment in URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      toast({
+        title: "Payment Successful! 🎉",
+        description: "Your subscription is being set up. This may take a few moments.",
+      });
+      // Clean up URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   const checkAuth = async () => {

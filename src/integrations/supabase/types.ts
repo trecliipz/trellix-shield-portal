@@ -1262,6 +1262,33 @@ export type Database = {
           },
         ]
       }
+      health_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          id: string
+          overall_status: string
+          service_status: Json
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          overall_status: string
+          service_status?: Json
+          timestamp?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          overall_status?: string
+          service_status?: Json
+          timestamp?: string
+        }
+        Relationships: []
+      }
       ml_metrics: {
         Row: {
           id: string
