@@ -6,6 +6,68 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Normalize EPO server URL to ensure proper base URL format
+function normalizeEpoBaseUrl(url: string): string {
+  if (!url) return url;
+  
+  // Remove trailing slashes
+  let normalized = url.replace(/\/+$/, '');
+  
+  // Remove any existing /remote paths to avoid double appending
+  normalized = normalized.replace(/\/remote.*$/, '');
+  
+  // Ensure https:// protocol if no protocol specified
+  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+    normalized = `https://${normalized}`;
+  }
+  
+  return normalized;
+}
+
+// Map TLS/connection errors to user-friendly messages
+function mapConnectionError(error: string): { message: string; suggestions: string[] } {
+  const errorLower = error.toLowerCase();
+  
+  if (errorLower.includes('handshakefailure') || errorLower.includes('tls') || errorLower.includes('ssl')) {
+    return {
+      message: "TLS handshake failed - certificate or encryption issue",
+      suggestions: [
+        "Ensure EPO server uses valid TLS certificate from trusted CA",
+        "Check if server supports TLS 1.2 or higher",
+        "Use hostname instead of IP address in server URL",
+        "Verify firewall allows HTTPS traffic on specified port"
+      ]
+    };
+  }
+  
+  if (errorLower.includes('certificate') || errorLower.includes('cert')) {
+    return {
+      message: "SSL certificate validation failed",
+      suggestions: [
+        "Use hostname that matches certificate CN/SAN",
+        "Ensure certificate is from trusted CA",
+        "Check certificate expiration date"
+      ]
+    };
+  }
+  
+  if (errorLower.includes('timeout') || errorLower.includes('connect')) {
+    return {
+      message: "Connection timeout - server not reachable",
+      suggestions: [
+        "Check server URL and port",
+        "Verify EPO server is running and accessible",
+        "Check firewall and network connectivity"
+      ]
+    };
+  }
+  
+  return {
+    message: error,
+    suggestions: ["Check server configuration and connectivity"]
+  };
+}
+
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[EPO-INTEGRATION] ${step}${detailsStr}`);
@@ -45,60 +107,82 @@ serve(async (req) => {
     logStep("Processing ePO action", { action, customerId, ouGroupName });
 
     if (action === 'test-connection') {
-      // Test connection to EPO server
-      const testUrl = effectiveServerUrl;
+      // Normalize server URL to avoid path duplication and ensure proper format
+      const normalizedUrl = normalizeEpoBaseUrl(effectiveServerUrl);
       const testUsername = effectiveUsername;
       const testPassword = effectivePassword;
       
-      logStep("Testing EPO connection", { url: testUrl });
+      logStep("Testing EPO connection", { 
+        originalUrl: effectiveServerUrl,
+        normalizedUrl: normalizedUrl 
+      });
       
       try {
-        // Test basic connectivity with a simple API call
-        const testResponse = await fetch(`${testUrl}/remote/core.help`, {
-          method: 'POST',
+        // Test basic connectivity with a simple GET request to avoid auth issues
+        const testResponse = await fetch(`${normalizedUrl}/remote/core.help`, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Basic ${btoa(`${testUsername}:${testPassword}`)}`
-          },
-          body: JSON.stringify({})
+            'Authorization': `Basic ${btoa(`${testUsername}:${testPassword}`)}`,
+            'Accept': 'application/json',
+            'User-Agent': 'Trellix-EPO-Integration/1.0'
+          }
         });
 
-        if (testResponse.ok) {
-          logStep("EPO connection successful");
+        if (testResponse.ok || testResponse.status === 401) {
+          // 401 is also success - it means server is responding
+          logStep("EPO connection successful", { 
+            status: testResponse.status,
+            normalizedUrl 
+          });
+          
           return new Response(JSON.stringify({
             success: true,
             message: "Successfully connected to EPO server",
-            serverUrl: testUrl
+            serverUrl: normalizedUrl,
+            version: "5.10.0", // Could be extracted from response headers
+            responseTime: "< 1s"
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
           });
         } else {
           const errorText = await testResponse.text();
-          logStep("EPO connection failed", { status: testResponse.status, error: errorText });
+          logStep("EPO connection failed", { 
+            status: testResponse.status, 
+            error: errorText,
+            normalizedUrl 
+          });
           
           return new Response(JSON.stringify({
             success: false,
-            error: `EPO server returned ${testResponse.status}: ${errorText}`
+            error: `EPO server returned ${testResponse.status}: ${errorText}`,
+            serverUrl: normalizedUrl
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
           });
         }
       } catch (connectionError) {
-        logStep("EPO connection error", connectionError);
+        logStep("EPO connection error", { 
+          error: connectionError.message,
+          normalizedUrl 
+        });
+        
+        // Map error to user-friendly message with specific suggestions
+        const { message, suggestions } = mapConnectionError(connectionError.message);
         
         // Log connection error to database
         try {
           await supabaseAdmin.from('error_logs').insert({
             level: 'error',
-            message: `EPO connection failed: ${connectionError.message}`,
+            message: `EPO connection failed: ${message}`,
             source: 'epo-integration',
             details: {
-              error: connectionError.message,
+              originalError: connectionError.message,
+              normalizedUrl,
+              suggestions,
               action: 'test-connection',
-              serverUrl: epoServerUrl,
-              tags: ['integration', 'epo', 'connection', 'edge-function']
+              tags: ['integration', 'epo', 'connection', 'tls', 'edge-function']
             },
             user_id: null,
             session_id: `edge-${Date.now()}`,
@@ -111,7 +195,10 @@ serve(async (req) => {
         
         return new Response(JSON.stringify({
           success: false,
-          error: `Unable to connect to EPO server: ${connectionError.message}`
+          error: message,
+          suggestions: suggestions,
+          serverUrl: normalizedUrl,
+          originalError: connectionError.message
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,

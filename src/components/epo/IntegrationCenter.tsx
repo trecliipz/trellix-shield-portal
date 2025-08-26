@@ -59,6 +59,51 @@ export const IntegrationCenter = () => {
     port: '8443'
   });
 
+  // Helper function to normalize and validate EPO server URL
+  const normalizeServerUrl = (url: string): string => {
+    if (!url) return url;
+    
+    // Remove trailing slashes
+    let normalized = url.replace(/\/+$/, '');
+    
+    // Remove any existing /remote paths
+    normalized = normalized.replace(/\/remote.*$/, '');
+    
+    // Ensure https:// protocol if no protocol specified
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = `https://${normalized}`;
+    }
+    
+    return normalized;
+  };
+
+  // Validate URL and show warnings
+  const validateServerUrl = (url: string): { isValid: boolean; warnings: string[] } => {
+    const warnings: string[] = [];
+    
+    if (!url) {
+      return { isValid: false, warnings: [] };
+    }
+    
+    // Check for IP address (should use hostname for proper TLS)
+    const ipPattern = /^https?:\/\/(\d{1,3}\.){3}\d{1,3}/;
+    if (ipPattern.test(url)) {
+      warnings.push("⚠️ Using IP address may cause TLS certificate issues. Consider using hostname.");
+    }
+    
+    // Check for /remote path (will be stripped automatically)
+    if (url.includes('/remote')) {
+      warnings.push("ℹ️ '/remote' path will be normalized automatically.");
+    }
+    
+    // Check for HTTP instead of HTTPS
+    if (url.startsWith('http://')) {
+      warnings.push("⚠️ HTTP is not recommended. Use HTTPS for secure communication.");
+    }
+    
+    return { isValid: true, warnings };
+  };
+
   // Integration settings state
   const [integrationSettings, setIntegrationSettings] = useState({
     connectionTimeout: 30,
@@ -136,6 +181,17 @@ export const IntegrationCenter = () => {
       return;
     }
 
+    // Normalize server URL before saving
+    const normalizedUrl = normalizeServerUrl(newConnection.serverUrl);
+    const { warnings } = validateServerUrl(normalizedUrl);
+    
+    // Show warnings but don't block creation
+    if (warnings.length > 0) {
+      warnings.forEach(warning => {
+        toast.info(warning, { duration: 4000 });
+      });
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -148,7 +204,7 @@ export const IntegrationCenter = () => {
         .insert({
           user_id: user.id,
           name: newConnection.name,
-          server_url: newConnection.serverUrl,
+          server_url: normalizedUrl, // Use normalized URL
           username: newConnection.username,
           port: parseInt(newConnection.port),
           status: 'disconnected'
@@ -162,7 +218,7 @@ export const IntegrationCenter = () => {
           'epo',
           {
             connectionName: newConnection.name,
-            serverUrl: newConnection.serverUrl,
+            serverUrl: normalizedUrl,
             error: error.message,
             code: error.code
           }
@@ -192,7 +248,7 @@ export const IntegrationCenter = () => {
         'epo',
         {
           connectionName: newConnection.name,
-          serverUrl: newConnection.serverUrl,
+          serverUrl: normalizedUrl,
           error: error.message,
           stack: error.stack
         }
@@ -301,6 +357,7 @@ export const IntegrationCenter = () => {
         ));
 
         const errorMessage = data?.error || "Connection test failed - server not reachable";
+        const suggestions = data?.suggestions || [];
         
         logIntegrationError(
           errorMessage,
@@ -310,14 +367,31 @@ export const IntegrationCenter = () => {
             connectionId,
             connectionName: connection.name,
             serverUrl: connection.server_url,
-            responseData: data
+            responseData: data,
+            suggestions
           }
         );
         
+        // Show error with TLS-specific suggestions if available
+        const toastDescription = suggestions.length > 0 
+          ? `💡 ${suggestions.slice(0, 2).join(' • ')}`
+          : "Please check server URL, credentials, and network connectivity";
+        
         toast.error(`❌ ${errorMessage}`, {
-          description: "Please check server URL, credentials, and network connectivity",
-          duration: 6000,
+          description: toastDescription,
+          duration: 8000,
         });
+        
+        // Show additional suggestions as separate info toasts
+        if (suggestions.length > 2) {
+          setTimeout(() => {
+            suggestions.slice(2).forEach((suggestion, index) => {
+              setTimeout(() => {
+                toast.info(`💡 ${suggestion}`, { duration: 6000 });
+              }, index * 1500);
+            });
+          }, 2000);
+        }
       }
     } catch (error: any) {
       console.error('Connection test network error:', error);
@@ -1102,6 +1176,19 @@ export const IntegrationCenter = () => {
                   value={newConnection.serverUrl}
                   onChange={(e) => setNewConnection({ ...newConnection, serverUrl: e.target.value })}
                 />
+                <div className="mt-1 text-xs text-muted-foreground space-y-1">
+                  <p>💡 <strong>Best practices:</strong></p>
+                  <p>• Use hostname instead of IP address for proper TLS</p>
+                  <p>• Ensure HTTPS with valid certificate from trusted CA</p>
+                  <p>• Server must support TLS 1.2 or higher</p>
+                  <p>• Don't include /remote path (added automatically)</p>
+                </div>
+                {newConnection.serverUrl && (() => {
+                  const { warnings } = validateServerUrl(newConnection.serverUrl);
+                  return warnings.map((warning, index) => (
+                    <p key={index} className="text-xs text-amber-600 mt-1">{warning}</p>
+                  ));
+                })()}
               </div>
               <div>
                 <Label htmlFor="port">Port</Label>
