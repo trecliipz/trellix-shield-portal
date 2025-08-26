@@ -310,6 +310,36 @@ export type Database = {
           },
         ]
       }
+      api_rate_limits: {
+        Row: {
+          created_at: string
+          id: string
+          identifier: string
+          request_count: number
+          updated_at: string
+          window_seconds: number
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identifier: string
+          request_count?: number
+          updated_at?: string
+          window_seconds?: number
+          window_start?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identifier?: string
+          request_count?: number
+          updated_at?: string
+          window_seconds?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
       bulk_operations: {
         Row: {
           completed_items: number | null
@@ -1209,6 +1239,57 @@ export type Database = {
         }
         Relationships: []
       }
+      epo_events: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          event_id: string | null
+          event_type: string | null
+          id: string
+          payload: Json
+          processed: boolean
+          processing_error: string | null
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          event_id?: string | null
+          event_type?: string | null
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processing_error?: string | null
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          event_id?: string | null
+          event_type?: string | null
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processing_error?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epo_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "epo_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       error_logs: {
         Row: {
           created_at: string
@@ -1943,6 +2024,98 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      support_ticket_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          id: string
+          last_activity_at: string
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          last_activity_at?: string
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          last_activity_at?: string
+          priority?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "billing_reconciliation"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "support_tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       threat_classifications: {
         Row: {
