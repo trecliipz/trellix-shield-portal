@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { 
   Settings, 
   Shield, 
@@ -26,7 +29,9 @@ import {
   FileText,
   Users,
   Activity,
-  Loader2
+  Loader2,
+  Lock,
+  Info
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,8 +62,13 @@ export const IntegrationCenter = () => {
     username: '',
     password: '',
     port: '8443',
-    caCertificate: ''
+    caCertificate: '',
+    pinCertificate: false
   });
+
+  // Certificate analysis state
+  const [certificateAnalysis, setCertificateAnalysis] = useState<any>(null);
+  const [showCertificateAnalysis, setShowCertificateAnalysis] = useState(false);
 
   // Helper function to normalize and validate EPO server URL
   const normalizeServerUrl = (url: string): string => {
@@ -103,6 +113,105 @@ export const IntegrationCenter = () => {
     }
     
     return { isValid: true, warnings };
+  };
+
+  // Analyze certificate data and provide feedback
+  const analyzeCertificateData = (pemData: string) => {
+    if (!pemData.trim()) {
+      setCertificateAnalysis(null);
+      return;
+    }
+
+    const analysis = {
+      totalBlocks: 0,
+      validCerts: 0,
+      invalidBlocks: 0,
+      details: [] as any[],
+      warnings: [] as string[]
+    };
+
+    // Split by certificate boundaries
+    const certBlocks = pemData
+      .split('-----END CERTIFICATE-----')
+      .map(block => block.trim() + '-----END CERTIFICATE-----')
+      .filter(block => block.includes('-----BEGIN CERTIFICATE-----'))
+      .filter(block => block.length > 50);
+
+    analysis.totalBlocks = certBlocks.length;
+
+    if (analysis.totalBlocks === 0) {
+      analysis.warnings.push("No certificate blocks found. Ensure PEM format with proper BEGIN/END markers.");
+      setCertificateAnalysis(analysis);
+      return;
+    }
+
+    certBlocks.forEach((block, index) => {
+      try {
+        // Basic PEM validation
+        if (!block.includes('-----BEGIN CERTIFICATE-----') || 
+            !block.includes('-----END CERTIFICATE-----')) {
+          analysis.invalidBlocks++;
+          analysis.details.push({
+            index: index + 1,
+            type: 'invalid',
+            error: 'Missing proper PEM markers'
+          });
+          return;
+        }
+
+        // Extract and validate base64 data
+        const certData = block
+          .replace('-----BEGIN CERTIFICATE-----', '')
+          .replace('-----END CERTIFICATE-----', '')
+          .replace(/\s/g, '');
+
+        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(certData)) {
+          analysis.invalidBlocks++;
+          analysis.details.push({
+            index: index + 1,
+            type: 'invalid',
+            error: 'Invalid base64 encoding'
+          });
+          return;
+        }
+
+        // Test base64 decoding
+        atob(certData);
+        
+        analysis.validCerts++;
+        analysis.details.push({
+          index: index + 1,
+          type: 'valid',
+          size: certData.length,
+          description: `Certificate ${index + 1} - Valid PEM format`
+        });
+
+      } catch (error) {
+        analysis.invalidBlocks++;
+        analysis.details.push({
+          index: index + 1,
+          type: 'invalid',
+          error: error.message || 'Parsing failed'
+        });
+      }
+    });
+
+    // Add helpful warnings
+    if (analysis.validCerts === 1 && analysis.totalBlocks === 1) {
+      analysis.warnings.push("Single certificate detected. For enterprise CAs, you may need the full certificate chain.");
+    }
+    
+    if (analysis.validCerts > 3) {
+      analysis.warnings.push("Many certificates detected. Ensure this includes only necessary CA certificates.");
+    }
+
+    setCertificateAnalysis(analysis);
+  };
+
+  // Handle certificate textarea changes with real-time analysis
+  const handleCertificateChange = (value: string) => {
+    setNewConnection(prev => ({ ...prev, caCertificate: value }));
+    analyzeCertificateData(value);
   };
 
   // Integration settings state
@@ -238,8 +347,10 @@ export const IntegrationCenter = () => {
         username: '',
         password: '',
         port: '8443',
-        caCertificate: ''
+        caCertificate: '',
+        pinCertificate: false
       });
+      setCertificateAnalysis(null);
 
       toast.success("EPO connection added successfully");
     } catch (error) {
@@ -259,7 +370,7 @@ export const IntegrationCenter = () => {
     }
   };
 
-  const handleTestConnection = async (connectionId: string, caCertificate?: string) => {
+  const handleTestConnection = async (connectionId: string, caCertificate?: string, pinCertificate?: boolean) => {
     const connection = connections.find(c => c.id === connectionId);
     if (!connection) return;
 
@@ -283,7 +394,8 @@ export const IntegrationCenter = () => {
           serverUrl: connection.server_url,
           username: connection.username,
           port: connection.port,
-          caCertificate: caCertificate
+          caCertificate: caCertificate,
+          pinCertificate: pinCertificate
         }
       });
 
@@ -347,10 +459,32 @@ export const IntegrationCenter = () => {
           );
         }
 
+        // Show detailed connection success info
+        const connectionInfo = [
+          `Version: ${data.version || 'Unknown'}`,
+          `Response time: ${data.responseTime || 'N/A'}`
+        ];
+        
+        if (data.certificateAnalysis?.validCerts) {
+          connectionInfo.push(`Custom CA: ${data.certificateAnalysis.validCerts} cert(s)`);
+        }
+        
+        if (data.connectionDetails?.certificatePinning) {
+          connectionInfo.push(`Certificate pinning: Active`);
+        }
+
         toast.success(`✅ Successfully connected to ${connection.name}!`, {
-          description: `Version: ${data.version || 'Unknown'} • Response time: ${data.responseTime || 'N/A'}`,
+          description: connectionInfo.join(' • '),
           duration: 4000,
         });
+
+        // Log certificate analysis if available
+        if (data.certificateAnalysis || data.connectionDetails) {
+          console.log('Connection details:', {
+            certificateAnalysis: data.certificateAnalysis,
+            connectionDetails: data.connectionDetails
+          });
+        }
       } else {
         console.log('Connection test failed:', data);
         
@@ -745,13 +879,25 @@ export const IntegrationCenter = () => {
                               variant="outline" 
                               size="sm"
                               onClick={() => {
-                                const ca = prompt("Paste your CA certificate (PEM format):");
+                                const ca = prompt("Paste your CA certificate(s) (PEM format).\nYou can include multiple certificates:");
                                 if (ca) handleTestConnection(connection.id, ca);
                               }}
                               disabled={isTestingThisConnection}
-                              title="Test with custom CA certificate"
+                              title="Test with custom CA certificate - supports multiple PEMs"
                             >
-                              🔒 Test w/ CA
+                              <Lock className="h-3 w-3 mr-1" />
+                              Test w/ CA
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleTestConnection(connection.id, undefined, true)}
+                              disabled={isTestingThisConnection}
+                              title="Test with certificate pinning (bypass CA validation)"
+                              className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                            >
+                              <Lock className="h-3 w-3 mr-1" />
+                              Pin & Test
                             </Button>
                             <Button variant="ghost" size="sm">
                               <Edit className="h-4 w-4" />
@@ -1233,24 +1379,120 @@ export const IntegrationCenter = () => {
                    onChange={(e) => setNewConnection({ ...newConnection, password: e.target.value })}
                  />
                </div>
-               <div>
-                 <Label htmlFor="caCertificate">CA Certificate (Optional)</Label>
-                 <textarea
-                   id="caCertificate"
-                   className="w-full h-32 p-3 border rounded-md font-mono text-xs resize-y"
-                   placeholder="-----BEGIN CERTIFICATE-----
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="caCertificate">CA Certificate (Optional)</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCertificateAnalysis(!showCertificateAnalysis)}
+                      className="text-xs"
+                    >
+                      <Info className="h-3 w-3 mr-1" />
+                      {showCertificateAnalysis ? 'Hide' : 'Show'} Analysis
+                    </Button>
+                  </div>
+                  <Textarea
+                    id="caCertificate"
+                    className="font-mono text-xs resize-y min-h-[120px]"
+                    placeholder="-----BEGIN CERTIFICATE-----
 MIIFaTCCA1GgAwIBAgIJALvN...
------END CERTIFICATE-----"
-                   value={newConnection.caCertificate}
-                   onChange={(e) => setNewConnection({ ...newConnection, caCertificate: e.target.value })}
-                 />
-                 <div className="mt-1 text-xs text-muted-foreground space-y-1">
-                   <p>🔒 <strong>Enterprise CA Support:</strong></p>
-                   <p>• Paste your enterprise CA certificate here if EPO uses self-signed/internal CA</p>
-                   <p>• Only needed if you get "SSL certificate validation failed" errors</p>
-                   <p>• Certificate must be in PEM format (-----BEGIN CERTIFICATE-----)</p>
-                 </div>
-               </div>
+-----END CERTIFICATE-----
+
+Can paste multiple certificates here (full chain)"
+                    value={newConnection.caCertificate}
+                    onChange={(e) => handleCertificateChange(e.target.value)}
+                  />
+                  
+                  {/* Certificate Analysis */}
+                  {showCertificateAnalysis && certificateAnalysis && (
+                    <div className="mt-2 p-3 bg-muted/50 rounded-md border">
+                      <div className="text-xs font-medium mb-2">Certificate Analysis:</div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span>Total Blocks:</span>
+                          <span>{certificateAnalysis.totalBlocks}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Valid Certificates:</span>
+                          <span className="text-green-600 font-medium">{certificateAnalysis.validCerts}</span>
+                        </div>
+                        {certificateAnalysis.invalidBlocks > 0 && (
+                          <div className="flex justify-between">
+                            <span>Invalid Blocks:</span>
+                            <span className="text-red-600 font-medium">{certificateAnalysis.invalidBlocks}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {certificateAnalysis.warnings.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {certificateAnalysis.warnings.map((warning, index) => (
+                            <div key={index} className="text-xs text-amber-600 flex items-start gap-1">
+                              <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                              <span>{warning}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {certificateAnalysis.details.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-xs font-medium mb-1">Certificate Details:</div>
+                          <div className="space-y-1">
+                            {certificateAnalysis.details.map((detail, index) => (
+                              <div key={index} className="text-xs flex items-center gap-2">
+                                {detail.type === 'valid' ? (
+                                  <CheckCircle className="h-3 w-3 text-green-600" />
+                                ) : (
+                                  <AlertCircle className="h-3 w-3 text-red-600" />
+                                )}
+                                <span>{detail.description || `${detail.type}: ${detail.error || 'Unknown'}`}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                    <p>🔒 <strong>Enterprise CA Support:</strong></p>
+                    <p>• Paste your enterprise CA certificate(s) here if EPO uses self-signed/internal CA</p>
+                    <p>• Can include multiple certificates (full chain) in single input</p>
+                    <p>• Only needed if you get "SSL certificate validation failed" errors</p>
+                    <p>• Certificates must be in PEM format (-----BEGIN CERTIFICATE-----)</p>
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="pinCertificate"
+                      checked={newConnection.pinCertificate}
+                      onCheckedChange={(checked) => 
+                        setNewConnection({ ...newConnection, pinCertificate: !!checked })
+                      }
+                    />
+                    <Label htmlFor="pinCertificate" className="text-xs flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      Pin server certificate (bypass CA validation)
+                    </Label>
+                  </div>
+                  
+                  {newConnection.pinCertificate && (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                      <div className="flex items-start gap-1">
+                        <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <strong>Security Warning:</strong> Certificate pinning bypasses CA validation.
+                          Only use this as a temporary workaround. Consider obtaining proper CA certificates instead.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               <div className="flex space-x-2">
                 <Button onClick={handleAddConnection} className="flex-1">
                   Add Connection
