@@ -241,10 +241,13 @@ async function executeGenerateSiteKey(supabaseClient: any, job: any) {
 }
 
 async function executeApplyTierPolicies(supabaseClient: any, job: any) {
-  // Get subscription details to determine tier
+  // Get subscription details with plan information to determine tier
   const { data: subscription } = await supabaseClient
     .from('customer_subscriptions')
-    .select('*')
+    .select(`
+      *,
+      subscription_plans!inner(plan_name, price_monthly)
+    `)
     .eq('customer_id', job.customer_id)
     .single();
 
@@ -252,8 +255,24 @@ async function executeApplyTierPolicies(supabaseClient: any, job: any) {
     throw new Error("Customer subscription not found");
   }
 
-  // Determine tier based on subscription (simplified logic)
-  const tier = 'starter'; // Default tier - should be determined from Stripe subscription
+  // Determine tier based on actual subscription plan
+  let tier = 'starter'; // Default fallback
+  
+  if (subscription.subscription_plans) {
+    const planName = subscription.subscription_plans.plan_name?.toLowerCase() || '';
+    const price = subscription.subscription_plans.price_monthly || 0;
+    
+    // Map plan name and price to tier
+    if (planName.includes('enterprise') || price >= 39.99) {
+      tier = 'enterprise';
+    } else if (planName.includes('professional') || planName.includes('pro') || price >= 19.99) {
+      tier = 'professional';
+    } else {
+      tier = 'starter';
+    }
+  }
+  
+  logStep("Determined subscription tier", { tier, planName: subscription.subscription_plans?.plan_name });
 
   // Call ePO integration to apply tier policies
   const { data: epoResult, error: epoError } = await supabaseClient.functions.invoke('epo-integration', {

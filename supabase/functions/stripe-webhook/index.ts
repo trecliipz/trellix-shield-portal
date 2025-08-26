@@ -38,11 +38,21 @@ serve(async (req) => {
       throw new Error("No Stripe signature found");
     }
 
-    // Verify webhook signature (simplified for now - in production use proper Stripe verification)
-    logStep("Signature verified");
+    // Verify webhook signature with Stripe library
+    let stripeEvent;
+    try {
+      // Import Stripe for webhook verification
+      const { default: Stripe } = await import("https://esm.sh/stripe@14.21.0");
+      const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "");
+      stripeEvent = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      logStep("Signature verified successfully");
+    } catch (err) {
+      logStep("Webhook signature verification failed", { error: err.message });
+      throw new Error(`Webhook signature verification failed: ${err.message}`);
+    }
 
-    // Parse event
-    const event = JSON.parse(body);
+    // Use the verified event from Stripe
+    const event = stripeEvent;
     logStep("Event parsed", { type: event.type, id: event.id });
 
     // Check if we've already processed this event
@@ -183,12 +193,34 @@ async function handleCheckoutCompleted(supabaseClient: any, event: any) {
       logStep("Created new customer", { customerId: customer.id });
     }
 
-    // Create or update subscription
+    // Get plan details from line items to determine proper plan_id
+    const lineItems = session.line_items?.data || session.display_items || [];
+    let planId = null;
+    
+    if (lineItems.length > 0) {
+      const priceAmount = lineItems[0].amount_total || lineItems[0].price?.unit_amount || 0;
+      
+      // Map price to plan
+      const { data: planData } = await supabaseClient
+        .from('subscription_plans')
+        .select('id, plan_name')
+        .gte('price_monthly', (priceAmount / 100) - 1) // Allow for small variance
+        .lte('price_monthly', (priceAmount / 100) + 1)
+        .single();
+      
+      if (planData) {
+        planId = planData.id;
+        logStep("Mapped plan", { planName: planData.plan_name, planId, priceAmount });
+      }
+    }
+
+    // Create or update subscription with proper plan mapping
     const { error: subscriptionError } = await supabaseClient
       .from('customer_subscriptions')
       .upsert({
         customer_id: customer.id,
         stripe_subscription_id: subscriptionId,
+        plan_id: planId,
         status: 'active',
         current_period_start: new Date().toISOString(),
         current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
@@ -197,6 +229,24 @@ async function handleCheckoutCompleted(supabaseClient: any, event: any) {
     if (subscriptionError) {
       logStep("Failed to upsert subscription", subscriptionError);
       throw subscriptionError;
+    }
+
+    // Ensure customer_users link for RLS
+    const { data: userData } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('email', customerEmail)
+      .single();
+
+    if (userData) {
+      await supabaseClient
+        .from('customer_users')
+        .upsert({
+          user_id: userData.id,
+          customer_id: customer.id,
+          role: 'primary'
+        });
+      logStep("Linked customer_users for RLS", { userId: userData.id, customerId: customer.id });
     }
 
     // Trigger provisioning

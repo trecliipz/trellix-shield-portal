@@ -84,7 +84,23 @@ export const PlanSetup = () => {
       }
     };
     checkAuth();
-  }, [navigate]);
+
+    // Listen for auth state changes to auto-trigger subscription after login
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user && plan && selectedPlan) {
+          // User just signed in, auto-trigger checkout
+          setTimeout(() => {
+            handleSubscribe();
+          }, 1000); // Small delay to ensure UI is ready
+        }
+      }
+    );
+
+    return () => {
+      authSubscription.unsubscribe();
+    };
+  }, [navigate, plan, selectedPlan]);
 
   const handleSubscribe = async () => {
     setSubscribing(true);

@@ -470,6 +470,51 @@ async function generateSiteKey(supabaseAdmin: any, customerId: string, serverUrl
   }
 }
 
+async function handleHealthCheck() {
+  logStep("Performing ePO health check");
+  
+  try {
+    const epoServerUrl = Deno.env.get('EPO_SERVER_URL');
+    const epoUsername = Deno.env.get('EPO_API_USERNAME');
+    const epoPassword = Deno.env.get('EPO_API_PASSWORD');
+
+    if (!epoServerUrl || !epoUsername || !epoPassword) {
+      return { success: false, error: "ePO configuration missing" };
+    }
+
+    // Simple ping to ePO server
+    const response = await fetch(`${epoServerUrl}/remote/system.listSystems`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${btoa(`${epoUsername}:${epoPassword}`)}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const isHealthy = response.status === 200 || response.status === 401; // 401 is ok, means server is responding
+    
+    logStep("ePO health check completed", { 
+      status: response.status, 
+      healthy: isHealthy,
+      url: epoServerUrl 
+    });
+
+    return { 
+      success: isHealthy, 
+      status: response.status,
+      message: isHealthy ? "ePO server is responding" : "ePO server not responding"
+    };
+    
+  } catch (error) {
+    logStep("ePO health check failed", { error: error.message });
+    return { 
+      success: false, 
+      error: error.message,
+      message: "Failed to reach ePO server"
+    };
+  }
+}
+
 async function applyTierPolicies(supabaseAdmin: any, customerId: string, tier: string, serverUrl: string, username: string, password: string) {
   logStep("Applying tier policies", { customerId, tier });
   
