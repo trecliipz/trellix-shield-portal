@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,7 @@ interface EPOConnection {
   server_url: string;
   username: string;
   port: number;
-  status: 'connected' | 'disconnected' | 'error';
+  status: 'connected' | 'disconnected' | 'error' | 'testing';
   last_sync: string | null;
   version: string | null;
   created_at: string;
@@ -49,6 +48,7 @@ interface EPOConnection {
 export const IntegrationCenter = () => {
   const [connections, setConnections] = useState<EPOConnection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
 
   const [showAddConnection, setShowAddConnection] = useState(false);
   const [newConnection, setNewConnection] = useState({
@@ -205,53 +205,161 @@ export const IntegrationCenter = () => {
     const connection = connections.find(c => c.id === connectionId);
     if (!connection) return;
 
-    toast.info("Testing connection...");
+    // Set testing state immediately for real-time UI feedback
+    setTestingConnections(prev => new Set([...prev, connectionId]));
+    setConnections(prev => prev.map(c => 
+      c.id === connectionId ? { ...c, status: 'testing' } : c
+    ));
+
+    toast.info(`Testing connection to ${connection.name}...`, {
+      duration: 2000,
+    });
     
     try {
-      // Simulate connection test
-      setTimeout(async () => {
-        const { error } = await supabase
+      console.log(`Starting connection test for ${connection.name} (${connection.server_url}:${connection.port})`);
+      
+      // Call the EPO integration function to test the connection
+      const { data, error } = await supabase.functions.invoke('epo-integration', {
+        body: {
+          action: 'test-connection',
+          serverUrl: connection.server_url,
+          username: connection.username,
+          port: connection.port
+        }
+      });
+
+      console.log('Test connection response:', { data, error });
+
+      if (error) {
+        console.error('Connection test error:', error);
+        
+        // Update connection status to error immediately
+        setConnections(prev => prev.map(c => 
+          c.id === connectionId ? { ...c, status: 'error' } : c
+        ));
+
+        logIntegrationError(
+          `EPO connection test failed: ${error.message}`,
+          'IntegrationCenter.tsx',
+          'epo',
+          {
+            connectionId,
+            connectionName: connection.name,
+            serverUrl: connection.server_url,
+            error: error.message
+          }
+        );
+        
+        toast.error(`Connection test failed: ${error.message}`, {
+          duration: 5000,
+        });
+      } else if (data?.success) {
+        console.log('Connection test successful:', data);
+        
+        // Update connection status and sync info immediately
+        const updatedConnection = {
+          status: 'connected' as const,
+          last_sync: new Date().toISOString(),
+          version: data.version || '5.10.0'
+        };
+        
+        setConnections(prev => prev.map(c => 
+          c.id === connectionId ? { ...c, ...updatedConnection } : c
+        ));
+
+        // Also update in database
+        const { error: updateError } = await supabase
           .from('epo_connections')
-          .update({
-            status: 'connected',
-            last_sync: new Date().toISOString(),
-            version: '5.10.0'
-          })
+          .update(updatedConnection)
           .eq('id', connectionId);
 
-        if (error) {
-          console.error('Error updating connection:', error);
+        if (updateError) {
+          console.error('Error updating connection in database:', updateError);
           logIntegrationError(
-            'Failed to update EPO connection status after test',
+            'Failed to update EPO connection status in database',
             'IntegrationCenter.tsx',
             'epo',
             {
               connectionId,
               connectionName: connection.name,
-              error: error.message,
-              code: error.code
+              error: updateError.message,
+              code: updateError.code
             }
           );
-          toast.error("Failed to update connection status");
-        } else {
-          await loadConnections();
-          toast.success("Connection test successful");
         }
-      }, 2000);
-    } catch (error) {
-      console.error('Error testing connection:', error);
+
+        toast.success(`✅ Successfully connected to ${connection.name}!`, {
+          description: `Version: ${data.version || 'Unknown'} • Response time: ${data.responseTime || 'N/A'}`,
+          duration: 4000,
+        });
+      } else {
+        console.log('Connection test failed:', data);
+        
+        // Update connection status to error immediately
+        setConnections(prev => prev.map(c => 
+          c.id === connectionId ? { ...c, status: 'error' } : c
+        ));
+
+        const errorMessage = data?.error || "Connection test failed - server not reachable";
+        
+        logIntegrationError(
+          errorMessage,
+          'IntegrationCenter.tsx',
+          'epo',
+          {
+            connectionId,
+            connectionName: connection.name,
+            serverUrl: connection.server_url,
+            responseData: data
+          }
+        );
+        
+        toast.error(`❌ ${errorMessage}`, {
+          description: "Please check server URL, credentials, and network connectivity",
+          duration: 6000,
+        });
+      }
+    } catch (error: any) {
+      console.error('Connection test network error:', error);
+      
+      // Update connection status to error immediately
+      setConnections(prev => prev.map(c => 
+        c.id === connectionId ? { ...c, status: 'error' } : c
+      ));
+      
+      let errorMessage = "Connection test failed";
+      
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        errorMessage = "Network error: Unable to reach EPO server. Please check connectivity.";
+      } else {
+        errorMessage = `Connection test failed: ${error.message || 'Unknown error'}`;
+      }
+      
       logIntegrationError(
-        'Network error during EPO connection test',
+        errorMessage,
         'IntegrationCenter.tsx',
         'epo',
         {
           connectionId,
           connectionName: connection.name,
+          serverUrl: connection.server_url,
           error: error.message,
           stack: error.stack
         }
       );
-      toast.error("Failed to test connection");
+      
+      toast.error(`❌ ${errorMessage}`, {
+        duration: 6000,
+      });
+    } finally {
+      // Remove from testing state
+      setTestingConnections(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(connectionId);
+        return newSet;
+      });
+      
+      console.log(`Connection test completed for ${connection.name}`);
     }
   };
 
@@ -408,11 +516,21 @@ export const IntegrationCenter = () => {
     }, 2000);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, isLoading = false) => {
+    if (isLoading) {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Testing...
+        </Badge>
+      );
+    }
+
     const statusConfig = {
       connected: { variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
       disconnected: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600" },
       error: { variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
+      testing: { variant: "secondary" as const, icon: Loader2, color: "text-blue-600" },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.disconnected;
@@ -420,7 +538,7 @@ export const IntegrationCenter = () => {
     
     return (
       <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className={`h-3 w-3 ${status === 'testing' ? 'animate-spin' : ''}`} />
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
@@ -505,47 +623,61 @@ export const IntegrationCenter = () => {
                       No EPO connections configured. Click "Add Connection" to get started.
                     </div>
                   ) : (
-                    connections.map((connection) => (
-                      <div key={connection.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <Shield className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{connection.name}</h3>
-                            <p className="text-sm text-muted-foreground">{connection.server_url}:{connection.port}</p>
-                            <div className="flex items-center space-x-4 mt-1">
-                              <span className="text-xs text-muted-foreground">Username: {connection.username}</span>
-                              <span className="text-xs text-muted-foreground">Version: {connection.version || 'Unknown'}</span>
-                              <span className="text-xs text-muted-foreground">
-                                Last Sync: {connection.last_sync ? new Date(connection.last_sync).toLocaleString() : 'Never'}
-                              </span>
+                    connections.map((connection) => {
+                      const isTestingThisConnection = testingConnections.has(connection.id);
+                      
+                      return (
+                        <div key={connection.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                              <Shield className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{connection.name}</h3>
+                              <p className="text-sm text-muted-foreground">{connection.server_url}:{connection.port}</p>
+                              <div className="flex items-center space-x-4 mt-1">
+                                <span className="text-xs text-muted-foreground">Username: {connection.username}</span>
+                                <span className="text-xs text-muted-foreground">Version: {connection.version || 'Unknown'}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Last Sync: {connection.last_sync ? new Date(connection.last_sync).toLocaleString() : 'Never'}
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center space-x-2">
+                            {getStatusBadge(connection.status, isTestingThisConnection)}
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleTestConnection(connection.id)}
+                              disabled={isTestingThisConnection}
+                            >
+                              {isTestingThisConnection ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  Testing...
+                                </>
+                              ) : (
+                                <>
+                                  <Network className="h-4 w-4 mr-1" />
+                                  Test
+                                </>
+                              )}
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteConnection(connection.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          {getStatusBadge(connection.status)}
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleTestConnection(connection.id)}
-                          >
-                            <Network className="h-4 w-4 mr-1" />
-                            Test
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteConnection(connection.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               )}
