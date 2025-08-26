@@ -56,7 +56,8 @@ export const IntegrationCenter = () => {
     serverUrl: '',
     username: '',
     password: '',
-    port: '8443'
+    port: '8443',
+    caCertificate: ''
   });
 
   // Helper function to normalize and validate EPO server URL
@@ -236,7 +237,8 @@ export const IntegrationCenter = () => {
         serverUrl: '',
         username: '',
         password: '',
-        port: '8443'
+        port: '8443',
+        caCertificate: ''
       });
 
       toast.success("EPO connection added successfully");
@@ -257,7 +259,7 @@ export const IntegrationCenter = () => {
     }
   };
 
-  const handleTestConnection = async (connectionId: string) => {
+  const handleTestConnection = async (connectionId: string, caCertificate?: string) => {
     const connection = connections.find(c => c.id === connectionId);
     if (!connection) return;
 
@@ -280,7 +282,8 @@ export const IntegrationCenter = () => {
           action: 'test-connection',
           serverUrl: connection.server_url,
           username: connection.username,
-          port: connection.port
+          port: connection.port,
+          caCertificate: caCertificate
         }
       });
 
@@ -737,6 +740,18 @@ export const IntegrationCenter = () => {
                                   Test
                                 </>
                               )}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                const ca = prompt("Paste your CA certificate (PEM format):");
+                                if (ca) handleTestConnection(connection.id, ca);
+                              }}
+                              disabled={isTestingThisConnection}
+                              title="Test with custom CA certificate"
+                            >
+                              🔒 Test w/ CA
                             </Button>
                             <Button variant="ghost" size="sm">
                               <Edit className="h-4 w-4" />
@@ -1210,14 +1225,32 @@ export const IntegrationCenter = () => {
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Password"
-                  value={newConnection.password}
-                  onChange={(e) => setNewConnection({ ...newConnection, password: e.target.value })}
-                />
-              </div>
+                 <Input
+                   id="password"
+                   type="password"
+                   placeholder="Password"
+                   value={newConnection.password}
+                   onChange={(e) => setNewConnection({ ...newConnection, password: e.target.value })}
+                 />
+               </div>
+               <div>
+                 <Label htmlFor="caCertificate">CA Certificate (Optional)</Label>
+                 <textarea
+                   id="caCertificate"
+                   className="w-full h-32 p-3 border rounded-md font-mono text-xs resize-y"
+                   placeholder="-----BEGIN CERTIFICATE-----
+MIIFaTCCA1GgAwIBAgIJALvN...
+-----END CERTIFICATE-----"
+                   value={newConnection.caCertificate}
+                   onChange={(e) => setNewConnection({ ...newConnection, caCertificate: e.target.value })}
+                 />
+                 <div className="mt-1 text-xs text-muted-foreground space-y-1">
+                   <p>🔒 <strong>Enterprise CA Support:</strong></p>
+                   <p>• Paste your enterprise CA certificate here if EPO uses self-signed/internal CA</p>
+                   <p>• Only needed if you get "SSL certificate validation failed" errors</p>
+                   <p>• Certificate must be in PEM format (-----BEGIN CERTIFICATE-----)</p>
+                 </div>
+               </div>
               <div className="flex space-x-2">
                 <Button onClick={handleAddConnection} className="flex-1">
                   Add Connection

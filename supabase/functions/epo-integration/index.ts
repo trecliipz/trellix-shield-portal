@@ -97,7 +97,7 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const { action, customerId, ouGroupName, companyName, serverUrl, username, password, tier } = requestBody;
+    const { action, customerId, ouGroupName, companyName, serverUrl, username, password, tier, caCertificate } = requestBody;
     
     // Use provided server details or fall back to secrets
     const effectiveServerUrl = serverUrl || epoServerUrl;
@@ -118,15 +118,46 @@ serve(async (req) => {
       });
       
       try {
-        // Test basic connectivity with a simple GET request to avoid auth issues
-        const testResponse = await fetch(`${normalizedUrl}/remote/core.help`, {
+        // Create fetch options with optional custom CA certificate
+        const fetchOptions: RequestInit = {
           method: 'GET',
           headers: {
             'Authorization': `Basic ${btoa(`${testUsername}:${testPassword}`)}`,
             'Accept': 'application/json',
             'User-Agent': 'Trellix-EPO-Integration/1.0'
           }
-        });
+        };
+
+        // If CA certificate is provided, create custom TLS client
+        if (caCertificate) {
+          logStep("Using custom CA certificate for connection test");
+          
+          try {
+            // Create TLS client with custom CA
+            const caCerts = [caCertificate];
+            const client = Deno.createHttpClient({
+              caCerts
+            });
+            
+            fetchOptions.client = client;
+          } catch (caError) {
+            logStep("CA certificate error", { error: caError.message });
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: "Invalid CA certificate format",
+                suggestions: ["Ensure certificate is in PEM format", "Check certificate syntax"]
+              }),
+              { 
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" } 
+              }
+            );
+          }
+        }
+        
+        // Test basic connectivity with a simple GET request to avoid auth issues
+        const testResponse = await fetch(`${normalizedUrl}/remote/core.help`, fetchOptions);
 
         if (testResponse.ok || testResponse.status === 401) {
           // 401 is also success - it means server is responding
