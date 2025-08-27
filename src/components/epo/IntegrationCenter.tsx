@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,8 @@ import {
   Activity,
   Loader2,
   Lock,
-  Info
+  Info,
+  LogOut
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,6 +70,13 @@ export const IntegrationCenter = () => {
   // Certificate analysis state
   const [certificateAnalysis, setCertificateAnalysis] = useState<any>(null);
   const [showCertificateAnalysis, setShowCertificateAnalysis] = useState(false);
+
+  // Authentication state
+  const [authMode, setAuthMode] = useState<'basic' | 'session'>('basic');
+  const [outputType, setOutputType] = useState('json');
+  const [authPassword, setAuthPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [sessionExpiry, setSessionExpiry] = useState<string>('');
 
   // Helper function to normalize and validate EPO server URL
   const normalizeServerUrl = (url: string): string => {
@@ -269,6 +277,67 @@ export const IntegrationCenter = () => {
       toast.error('Failed to load connections');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Authentication functions
+  const handleAuthenticate = async () => {
+    const connection = connections.find(c => c.id === selectedConnection);
+    if (!connection || !authPassword.trim()) {
+      toast.error("Please select a connection and enter your password");
+      return;
+    }
+
+    setIsExecuting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke('epo-integration', {
+        body: {
+          action: 'login',
+          serverUrl: connection.server_url,
+          username: connection.username,
+          password: authPassword,
+          port: connection.port,
+          connectionId: connection.id,
+          userId: user?.id
+        }
+      });
+
+      if (error) throw error;
+
+      setIsAuthenticated(true);
+      setSessionExpiry(data.expiresAt);
+      setAuthPassword('');
+      
+      toast.success("Authentication successful");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!selectedConnection) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.functions.invoke('epo-integration', {
+        body: {
+          action: 'logout',
+          connectionId: selectedConnection,
+          userId: user?.id
+        }
+      });
+
+      if (error) throw error;
+
+      setIsAuthenticated(false);
+      setSessionExpiry('');
+      
+      toast.success("Logged out successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Logout failed');
     }
   };
 

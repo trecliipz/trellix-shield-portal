@@ -1290,6 +1290,44 @@ export type Database = {
           },
         ]
       }
+      epo_sessions: {
+        Row: {
+          connection_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          session_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          session_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          session_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epo_sessions_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "epo_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       error_logs: {
         Row: {
           created_at: string
