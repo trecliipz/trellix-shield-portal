@@ -354,6 +354,66 @@ export const IntegrationCenter = () => {
     { value: 'system.getLastAgent', label: 'Get Last Agent Communication', description: 'Get last agent communication time' }
   ];
 
+  // Execute EPO command
+  const handleExecuteCommand = async () => {
+    if (!selectedConnection || !selectedCommand) {
+      toast.error("Please select a connection and command");
+      return;
+    }
+
+    const connection = connections.find(c => c.id === selectedConnection);
+    if (!connection) {
+      toast.error("Selected connection not found");
+      return;
+    }
+
+    setIsExecuting(true);
+    setCommandResults('');
+
+    try {
+      let parameters = {};
+      if (commandParameters.trim()) {
+        try {
+          parameters = JSON.parse(commandParameters);
+        } catch (error) {
+          toast.error("Invalid JSON in parameters field");
+          setIsExecuting(false);
+          return;
+        }
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke('epo-integration', {
+        body: {
+          action: authMode === 'session' ? 'proxy' : 'execute',
+          serverUrl: connection.server_url,
+          username: connection.username,
+          port: connection.port,
+          connectionId: connection.id,
+          userId: user?.id,
+          command: selectedCommand,
+          parameters,
+          outputType,
+          authMode
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setCommandResults(JSON.stringify(data.result, null, 2));
+      toast.success("Command executed successfully");
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Command execution failed';
+      setCommandResults(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   const handleAddConnection = async () => {
     if (!newConnection.name || !newConnection.serverUrl || !newConnection.username) {
       toast.error("Please fill in all required fields");
@@ -709,93 +769,6 @@ export const IntegrationCenter = () => {
     }
   };
 
-  const handleExecuteCommand = async () => {
-    if (!selectedConnection || !selectedCommand) {
-      toast.error("Please select a connection and command");
-      return;
-    }
-
-    const connection = connections.find(c => c.id === selectedConnection);
-    if (!connection) {
-      toast.error("Selected connection not found");
-      return;
-    }
-
-    if (connection.status !== 'connected') {
-      toast.error("Connection must be active to execute commands");
-      return;
-    }
-
-    setIsExecuting(true);
-    toast.info("Executing EPO command...");
-
-    // Simulate API command execution
-    setTimeout(() => {
-      const mockResponses = {
-        'system.find': `[
-  {
-    "EPOBranchNode.AutoID": 3,
-    "EPOLeafNode.NodeName": "WORKSTATION-001",
-    "EPOComputerProperties.IPAddress": "192.168.1.100",
-    "EPOComputerProperties.OSType": "Windows 10 Pro",
-    "EPOComputerProperties.LastUpdate": "2024-08-03T14:30:00Z",
-    "EPOComputerProperties.AgentVersion": "5.10.0.123"
-  }
-]`,
-        'policy.listPolicies': `[
-  {
-    "productId": "ENDP_AM_1000",
-    "policyName": "Default Anti-Malware Policy",
-    "policyType": "Anti-Malware",
-    "assignedSystems": 45,
-    "lastModified": "2024-08-01T10:15:00Z"
-  },
-  {
-    "productId": "ENDP_FW_1000", 
-    "policyName": "Corporate Firewall Policy",
-    "policyType": "Firewall",
-    "assignedSystems": 52,
-    "lastModified": "2024-07-28T16:45:00Z"
-  }
-]`,
-        'system.listUsers': `[
-  {
-    "userId": 1,
-    "userName": "admin",
-    "fullName": "Administrator",
-    "email": "admin@company.com",
-    "lastLogin": "2024-08-03T09:30:00Z",
-    "permissions": ["SuperUser"]
-  }
-]`,
-        'core.getVersion': `{
-  "version": "5.10.0 Build 3201",
-  "build": "3201",
-  "buildDate": "2024-07-15",
-  "hotfixes": ["HF1234567", "HF1234568"]
-}`,
-        'repository.findPackages': `[
-  {
-    "packageId": 1001,
-    "packageName": "ENS 10.7.0 Windows",
-    "version": "10.7.0.1234",
-    "platform": "Windows",
-    "packageType": "Product Package",
-    "size": "256 MB",
-    "checkInDate": "2024-08-01T14:22:00Z"
-  }
-]`
-      };
-
-      const result = mockResponses[selectedCommand as keyof typeof mockResponses] || 
-        `Command executed successfully on ${connection.name}`;
-      
-      setCommandResults(result);
-      setIsExecuting(false);
-      toast.success("Command executed successfully");
-    }, 2000);
-  };
-
   const getStatusBadge = (status: string, isLoading = false) => {
     if (isLoading) {
       return (
@@ -1147,8 +1120,106 @@ export const IntegrationCenter = () => {
                 <Terminal className="h-5 w-5" />
                 EPO API Commands
               </CardTitle>
+              <CardDescription>
+                Execute ePO API commands directly
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              {/* Authentication Section */}
+              <div className="border border-border rounded-lg p-4 space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Lock className="h-4 w-4" />
+                  <h4 className="font-medium">Authentication</h4>
+                  {isAuthenticated && (
+                    <Badge variant="secondary" className="ml-auto">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Authenticated
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="auth-mode">Authentication Mode</Label>
+                    <Select value={authMode} onValueChange={(value: 'basic' | 'session') => setAuthMode(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">Basic Authentication</SelectItem>
+                        <SelectItem value="session">Session Authentication</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="output-type">Output Format</Label>
+                    <Select value={outputType} onValueChange={setOutputType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="xml">XML</SelectItem>
+                        <SelectItem value="verbose">Verbose</SelectItem>
+                        <SelectItem value="terse">Terse</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {authMode === 'session' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <Label htmlFor="auth-password">Password</Label>
+                        <Input
+                          id="auth-password"
+                          type="password"
+                          placeholder="Enter your ePO password"
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
+                          disabled={isAuthenticated}
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        {!isAuthenticated ? (
+                          <Button 
+                            onClick={handleAuthenticate}
+                            disabled={!selectedConnection || !authPassword.trim() || isExecuting}
+                            className="w-full"
+                          >
+                            {isExecuting ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Lock className="h-4 w-4 mr-2" />
+                            )}
+                            Authenticate
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={handleLogout}
+                            variant="outline"
+                            className="w-full"
+                          >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Logout
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {isAuthenticated && sessionExpiry && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        Session expires: {new Date(sessionExpiry).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Command Execution Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
@@ -1158,9 +1229,17 @@ export const IntegrationCenter = () => {
                         <SelectValue placeholder="Choose EPO connection" />
                       </SelectTrigger>
                       <SelectContent>
-                         {connections.filter(c => c.status === 'connected').map((connection) => (
+                         {connections.map((connection) => (
                            <SelectItem key={connection.id} value={connection.id}>
-                             {connection.name} ({connection.server_url})
+                             <div className="flex items-center justify-between w-full">
+                               <span>{connection.name}</span>
+                               <Badge 
+                                 variant={connection.status === 'connected' ? 'default' : 'secondary'} 
+                                 className="ml-2"
+                               >
+                                 {connection.status}
+                               </Badge>
+                             </div>
                            </SelectItem>
                          ))}
                       </SelectContent>
@@ -1188,11 +1267,12 @@ export const IntegrationCenter = () => {
 
                   <div>
                     <Label>Parameters (JSON)</Label>
-                    <textarea
-                      className="w-full h-24 p-3 border rounded-md font-mono text-sm"
+                    <Textarea
+                      className="font-mono text-sm"
                       placeholder='{"searchText": "WORKSTATION-*", "maxResults": 10}'
                       value={commandParameters}
                       onChange={(e) => setCommandParameters(e.target.value)}
+                      rows={4}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Optional: Provide parameters in JSON format
@@ -1202,11 +1282,11 @@ export const IntegrationCenter = () => {
                   <Button 
                     onClick={handleExecuteCommand} 
                     className="w-full"
-                    disabled={isExecuting || !selectedConnection || !selectedCommand}
+                    disabled={isExecuting || !selectedConnection || !selectedCommand || (authMode === 'session' && !isAuthenticated)}
                   >
                     {isExecuting ? (
                       <>
-                        <Activity className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Executing...
                       </>
                     ) : (
