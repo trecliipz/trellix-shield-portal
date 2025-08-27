@@ -23,6 +23,23 @@ let mermaidInitialized = false;
 type Theme = 'modern' | 'minimal' | 'contrast';
 
 const themes: Record<Theme, any> = {
+  minimal: {
+    theme: 'base',
+    themeVariables: {
+      primaryColor: 'hsl(210, 40%, 98%)',
+      primaryTextColor: 'hsl(222, 84%, 5%)',
+      primaryBorderColor: 'hsl(214, 32%, 91%)',
+      lineColor: 'hsl(214, 32%, 91%)',
+      secondaryColor: 'hsl(210, 40%, 96%)',
+      tertiaryColor: 'hsl(210, 40%, 94%)',
+      background: 'hsl(0, 0%, 100%)',
+      mainBkg: 'hsl(210, 40%, 98%)',
+      secondBkg: 'hsl(210, 40%, 96%)',
+      tertiaryBkg: 'hsl(210, 40%, 94%)',
+      fontSize: 18,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    }
+  },
   modern: {
     theme: 'base',
     themeVariables: {
@@ -53,21 +70,8 @@ const themes: Record<Theme, any> = {
       labelTextColor: 'hsl(0, 0%, 100%)',
       errorBkgColor: 'hsl(0, 84%, 60%)',
       errorTextColor: 'hsl(0, 0%, 100%)',
-    }
-  },
-  minimal: {
-    theme: 'base',
-    themeVariables: {
-      primaryColor: 'hsl(210, 40%, 98%)',
-      primaryTextColor: 'hsl(222, 84%, 5%)',
-      primaryBorderColor: 'hsl(214, 32%, 91%)',
-      lineColor: 'hsl(214, 32%, 91%)',
-      secondaryColor: 'hsl(210, 40%, 96%)',
-      tertiaryColor: 'hsl(210, 40%, 94%)',
-      background: 'hsl(0, 0%, 100%)',
-      mainBkg: 'hsl(210, 40%, 98%)',
-      secondBkg: 'hsl(210, 40%, 96%)',
-      tertiaryBkg: 'hsl(210, 40%, 94%)',
+      fontSize: 18,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
     }
   },
   contrast: {
@@ -83,6 +87,8 @@ const themes: Record<Theme, any> = {
       mainBkg: 'hsl(0, 0%, 100%)',
       secondBkg: 'hsl(0, 0%, 95%)',
       tertiaryBkg: 'hsl(47, 100%, 50%)',
+      fontSize: 20,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
     }
   }
 };
@@ -90,7 +96,7 @@ const themes: Record<Theme, any> = {
 export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentTheme, setCurrentTheme] = useState<Theme>('modern');
+  const [currentTheme, setCurrentTheme] = useState<Theme>('minimal');
   const [svgContent, setSvgContent] = useState<string>('');
   const { toast } = useToast();
 
@@ -99,36 +105,36 @@ export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
     mermaid.initialize({
       startOnLoad: false,
       ...themes[theme],
-      fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-      fontSize: 16,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontSize: 18,
       flowchart: {
         curve: 'basis',
-        nodeSpacing: 50,
-        rankSpacing: 50,
-        padding: 20,
+        nodeSpacing: 60,
+        rankSpacing: 80,
+        padding: 30,
         useMaxWidth: true,
       },
       sequence: {
-        actorMargin: 50,
-        width: 150,
-        height: 65,
-        boxMargin: 10,
-        boxTextMargin: 5,
-        noteMargin: 10,
-        messageMargin: 35,
+        actorMargin: 60,
+        width: 180,
+        height: 80,
+        boxMargin: 15,
+        boxTextMargin: 8,
+        noteMargin: 15,
+        messageMargin: 45,
         mirrorActors: true,
         bottomMarginAdj: 1,
         useMaxWidth: true,
       },
       er: {
-        diagramPadding: 20,
+        diagramPadding: 30,
         layoutDirection: 'TB',
-        minEntityWidth: 100,
-        minEntityHeight: 75,
-        entityPadding: 15,
+        minEntityWidth: 120,
+        minEntityHeight: 90,
+        entityPadding: 20,
         stroke: 'gray',
         fill: 'honeydew',
-        fontSize: 12,
+        fontSize: 16,
         useMaxWidth: true,
       }
     });
@@ -176,7 +182,7 @@ export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
     });
   };
 
-  const downloadPNG = () => {
+  const downloadPNG = (resolution = 2) => {
     if (!elementRef.current) return;
 
     const svgElement = elementRef.current.querySelector('svg');
@@ -187,17 +193,23 @@ export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
     const img = new Image();
 
     img.onload = () => {
-      canvas.width = img.width * 2;
-      canvas.height = img.height * 2;
-      ctx?.scale(2, 2);
-      ctx?.drawImage(img, 0, 0);
+      canvas.width = img.width * resolution;
+      canvas.height = img.height * resolution;
+      
+      // White background for better readability
+      if (ctx) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.scale(resolution, resolution);
+        ctx.drawImage(img, 0, 0);
+      }
       
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `${title || 'diagram'}.png`;
+          link.download = `${title || 'diagram'}-${resolution}x.png`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -205,7 +217,7 @@ export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
           
           toast({
             title: "Downloaded",
-            description: "PNG diagram saved successfully (2x resolution)",
+            description: `PNG diagram saved successfully (${resolution}x resolution)`,
           });
         }
       }, 'image/png');
@@ -215,6 +227,60 @@ export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     img.src = url;
+  };
+
+  const openPrintView = () => {
+    if (!svgContent) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title || 'System Diagram'}</title>
+          <style>
+            body { 
+              margin: 0; 
+              padding: 20px; 
+              font-family: Inter, sans-serif;
+              background: white;
+            }
+            .diagram-container { 
+              text-align: center; 
+              page-break-inside: avoid;
+            }
+            h1 { 
+              margin-bottom: 20px; 
+              color: #1f2937;
+              font-size: 24px;
+            }
+            svg { 
+              max-width: 100%; 
+              height: auto; 
+              background: white;
+            }
+            @media print {
+              body { margin: 0; padding: 10mm; }
+              .diagram-container { break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="diagram-container">
+            <h1>${title || 'System Diagram'}</h1>
+            ${svgContent}
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    
+    toast({
+      title: "Print View Opened",
+      description: "Diagram opened in new window for printing or PDF export",
+    });
   };
 
   const copySVG = async () => {
@@ -273,11 +339,11 @@ export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleThemeChange('minimal')}>
+                  Minimal (Light) - Default
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleThemeChange('modern')}>
                   Modern (Dark)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleThemeChange('minimal')}>
-                  Minimal (Light)
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleThemeChange('contrast')}>
                   High Contrast
@@ -296,10 +362,16 @@ export const Mermaid = ({ diagram, className = "", title }: MermaidProps) => {
                 <DropdownMenuItem onClick={downloadSVG}>
                   Download as SVG
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={downloadPNG}>
-                  Download as PNG (2x)
+                <DropdownMenuItem onClick={() => downloadPNG(2)}>
+                  Download PNG (2x)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadPNG(3)}>
+                  Download PNG (3x)
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={openPrintView}>
+                  Print View
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={copySVG}>
                   <Copy className="h-4 w-4 mr-2" />
                   Copy SVG Code

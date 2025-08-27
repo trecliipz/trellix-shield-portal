@@ -13,8 +13,7 @@ import SecurityUpdates from "@/components/SecurityUpdates";
 import { EPOManagement } from "@/components/EPOManagement";
 import { AdminMessages } from "@/components/AdminMessages";
 import { SecurityCompliance } from "@/components/SecurityCompliance";
-import { AuditLog } from "@/components/AuditLog";
-import { ErrorLogs } from "@/components/ErrorLogs";
+import { LogsCenter } from "@/components/admin/LogsCenter";
 import UserProfile from "@/components/UserProfile";
 import { AnimatedArchitecture } from "@/components/AnimatedArchitecture";
 import { Architecture } from "@/components/Architecture";
@@ -181,8 +180,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <TabsTrigger value="epo" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Trellix ePO</TabsTrigger>
             <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Messages</TabsTrigger>
             <TabsTrigger value="security" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Security</TabsTrigger>
-            <TabsTrigger value="audit" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Audit Log</TabsTrigger>
-            <TabsTrigger value="errors" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Error Logs</TabsTrigger>
+            <TabsTrigger value="logs" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Logs</TabsTrigger>
             <TabsTrigger value="analytics" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Analytics</TabsTrigger>
             <TabsTrigger value="architecture" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Architecture</TabsTrigger>
           </TabsList>
@@ -255,12 +253,8 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <SecurityCompliance />
           </TabsContent>
 
-          <TabsContent value="audit">
-            <AuditLog />
-          </TabsContent>
-
-          <TabsContent value="errors">
-            <ErrorLogs />
+          <TabsContent value="logs">
+            <LogsCenter />
           </TabsContent>
 
           <TabsContent value="analytics">
