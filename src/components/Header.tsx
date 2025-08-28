@@ -66,7 +66,7 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
         <nav className="container mx-auto px-4 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <a href="#" className="text-2xl font-bold text-primary">
-              Trellix
+              RTX
             </a>
             
             <div className="hidden md:flex space-x-8">
