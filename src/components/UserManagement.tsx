@@ -14,8 +14,17 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: string;
+  phone?: string;
+  department?: string;
+  username?: string;
+  photo?: string;
+  rating?: number;
+  rides?: number;
+  is_online?: boolean;
+  last_seen?: string;
   created_at: string;
+  updated_at?: string;
+  role?: string;
   status?: string;
 }
 

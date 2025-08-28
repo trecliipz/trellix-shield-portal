@@ -13,11 +13,20 @@ import { MembershipCard } from './MembershipCard';
 interface Profile {
   id: string;
   name: string;
-  phone: string;
-  company: string;
-  avatar_url: string;
-  role: string;
+  phone?: string;
+  email?: string;
+  username?: string;
+  department?: string;
+  photo?: string;
+  rating?: number;
+  rides?: number;
+  is_online?: boolean;
+  last_seen?: string;
   created_at: string;
+  updated_at?: string;
+  company?: string;
+  avatar_url?: string;
+  role?: string;
 }
 
 export const UserProfile = () => {
@@ -56,7 +65,7 @@ export const UserProfile = () => {
         setEditForm({
           name: profileData?.name || '',
           phone: profileData?.phone || '',
-          company: profileData?.company || '',
+          company: profileData?.department || '',
         });
       }
     } catch (error) {
