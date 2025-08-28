@@ -65,7 +65,7 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
       <header className="fixed top-0 w-full glass-header z-50">
         <nav className="container mx-auto px-4 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <a href="#" className="text-2xl font-bold text-primary">
+            <a href="#" className="text-4xl font-extrabold bg-gradient-to-br from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent drop-shadow-lg hover:scale-105 transition-all duration-300 hover:drop-shadow-xl">
               RTX
             </a>
             
