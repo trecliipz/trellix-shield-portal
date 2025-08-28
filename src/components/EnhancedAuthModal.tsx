@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -28,6 +28,14 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+const passwordResetSchema = z.object({
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(8, "Please confirm your password"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 interface EnhancedAuthModalProps {
   type: 'login' | 'register' | null;
   onClose: () => void;
@@ -37,6 +45,9 @@ interface EnhancedAuthModalProps {
 export const EnhancedAuthModal = ({ type, onClose, planType }: EnhancedAuthModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [tempPassword, setTempPassword] = useState<string>("");
   const { toast } = useToast();
 
   const loginForm = useForm({
@@ -58,21 +69,31 @@ export const EnhancedAuthModal = ({ type, onClose, planType }: EnhancedAuthModal
     },
   });
 
+  const passwordResetForm = useForm({
+    resolver: zodResolver(passwordResetSchema),
+    defaultValues: {
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          // Close modal and let parent handle navigation
-          onClose();
-          // Dispatch event for parent to handle auth state
-          const authEvent = new CustomEvent('checkAuthStatus');
-          window.dispatchEvent(authEvent);
+          // Don't close modal if we need to force password reset
+          if (!showPasswordReset) {
+            onClose();
+            // Dispatch event for parent to handle auth state
+            const authEvent = new CustomEvent('checkAuthStatus');
+            window.dispatchEvent(authEvent);
+          }
         }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [onClose]);
+  }, [onClose, showPasswordReset]);
 
   const handleLogin = async (data: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
@@ -84,10 +105,28 @@ export const EnhancedAuthModal = ({ type, onClose, planType }: EnhancedAuthModal
 
       if (error) throw error;
 
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
+      // Check if this is a temporary password
+      const { data: adminUser } = await supabase
+        .from('admin_users')
+        .select('temp_password')
+        .eq('email', data.email)
+        .single();
+
+      if (adminUser && adminUser.temp_password === data.password) {
+        // This is a temporary password - force reset
+        setUserEmail(data.email);
+        setTempPassword(data.password);
+        setShowPasswordReset(true);
+        toast({
+          title: "Password reset required",
+          description: "Please create a new password to continue.",
+        });
+      } else {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -172,7 +211,126 @@ export const EnhancedAuthModal = ({ type, onClose, planType }: EnhancedAuthModal
     }
   };
 
+  const handlePasswordReset = async (data: z.infer<typeof passwordResetSchema>) => {
+    setIsSubmitting(true);
+    try {
+      // Update password in Supabase Auth
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: data.newPassword
+      });
+
+      if (updateError) throw updateError;
+
+      // Remove temporary password from admin_users table
+      const { error: deleteError } = await supabase
+        .from('admin_users')
+        .delete()
+        .eq('email', userEmail);
+
+      if (deleteError) {
+        console.warn('Failed to delete admin user record:', deleteError);
+      }
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated.",
+      });
+
+      // Reset state and close modal
+      setShowPasswordReset(false);
+      setUserEmail("");
+      setTempPassword("");
+      passwordResetForm.reset();
+      onClose();
+
+      // Dispatch event for parent to handle auth state
+      const authEvent = new CustomEvent('checkAuthStatus');
+      window.dispatchEvent(authEvent);
+
+    } catch (error: any) {
+      toast({
+        title: "Password update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (!type) return null;
+
+  // Show password reset modal if temporary password was used
+  if (showPasswordReset) {
+    return (
+      <Dialog open={true} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Create New Password
+            </DialogTitle>
+          </DialogHeader>
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-xl">Password Reset Required</CardTitle>
+              <CardDescription>
+                You're using a temporary password. Please create a new secure password to continue.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={passwordResetForm.handleSubmit(handlePasswordReset)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="Enter your new password"
+                    {...passwordResetForm.register("newPassword")}
+                  />
+                  {passwordResetForm.formState.errors.newPassword && (
+                    <p className="text-sm text-destructive">
+                      {passwordResetForm.formState.errors.newPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your new password"
+                    {...passwordResetForm.register("confirmPassword")}
+                  />
+                  {passwordResetForm.formState.errors.confirmPassword && (
+                    <p className="text-sm text-destructive">
+                      {passwordResetForm.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating password...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={!!type} onOpenChange={onClose}>
