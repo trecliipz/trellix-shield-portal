@@ -20,6 +20,7 @@ import { Architecture } from "@/components/Architecture";
 import { Mermaid } from "@/components/Mermaid";
 import { BillingManagement } from "./BillingManagement";
 import { WebhookManagement } from "./WebhookManagement";
+import { AdminTerminal } from "@/components/admin/AdminTerminal";
 
 interface DashboardProps {
   currentUser: { email: string; name: string; role: 'admin' | 'user' } | null;
@@ -181,6 +182,7 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
             <TabsTrigger value="messages" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Messages</TabsTrigger>
             <TabsTrigger value="security" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Security</TabsTrigger>
             <TabsTrigger value="logs" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Logs</TabsTrigger>
+            <TabsTrigger value="terminal" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Terminal</TabsTrigger>
             <TabsTrigger value="analytics" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Analytics</TabsTrigger>
             <TabsTrigger value="architecture" className="flex-shrink-0 px-4 py-2 transition-all duration-300 hover:scale-105 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Architecture</TabsTrigger>
           </TabsList>
@@ -255,6 +257,10 @@ export const Dashboard = ({ currentUser }: DashboardProps) => {
 
           <TabsContent value="logs">
             <LogsCenter />
+          </TabsContent>
+
+          <TabsContent value="terminal">
+            <AdminTerminal />
           </TabsContent>
 
           <TabsContent value="analytics">

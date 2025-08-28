@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Settings, 
   Shield, 
@@ -1468,13 +1469,15 @@ export const IntegrationCenter = () => {
       </Tabs>
 
       {showAddConnection && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 z-50 p-4 overflow-y-auto flex items-center justify-center">
+          <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
             <CardHeader>
               <CardTitle>Add EPO Connection</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+            <CardContent className="p-0">
+              <ScrollArea className="max-h-[70vh] p-6">
+                <div className="space-y-4">
+                  <div>
                 <Label htmlFor="name">Connection Name</Label>
                 <Input
                   id="name"
@@ -1682,33 +1685,35 @@ Can paste multiple certificates here (full chain)"
                        </div>
                      )}
                    </div>
-                 </div>
-
-               <div className="flex space-x-2">
-                 <Button onClick={handleAddConnection} className="flex-1">
-                   Add Connection
-                 </Button>
-                 <Button 
-                   variant="outline" 
-                   onClick={() => {
-                     setShowAddConnection(false);
-                     setNewConnection({
-                       name: '',
-                       serverUrl: '',
-                       username: '',
-                       password: '',
-                       port: '8443',
-                       caCertificate: '',
-                       pinCertificate: false,
-                       allowInsecureTLS: false
-                     });
-                     setCertificateAnalysis(null);
-                   }}
-                   className="flex-1"
-                 >
-                   Cancel
-                 </Button>
-               </div>
+                  </div>
+                </div>
+              </ScrollArea>
+              
+              <div className="flex space-x-2 p-6 pt-4 border-t bg-card">
+                <Button onClick={handleAddConnection} className="flex-1">
+                  Add Connection
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowAddConnection(false);
+                    setNewConnection({
+                      name: '',
+                      serverUrl: '',
+                      username: '',
+                      password: '',
+                      port: '8443',
+                      caCertificate: '',
+                      pinCertificate: false,
+                      allowInsecureTLS: false
+                    });
+                    setCertificateAnalysis(null);
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
