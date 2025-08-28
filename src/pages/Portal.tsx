@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Download, RefreshCw, CreditCard, Settings, Users, Shield, BarChart3 } from "lucide-react";
@@ -49,6 +51,7 @@ export const Portal = () => {
   const [subscription, setSubscription] = useState<Subscription>({ subscribed: false, subscription_tier: null, subscription_end: null });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>('professional');
   const [availableAgents, setAvailableAgents] = useState<any[]>([]);
   const [grantingAgent, setGrantingAgent] = useState(false);
   const navigate = useNavigate();
@@ -360,10 +363,16 @@ export const Portal = () => {
 
   const handleStartSubscription = async () => {
     try {
+      const planPricing = {
+        starter: 999,     // $9.99
+        professional: 1999, // $19.99  
+        enterprise: 3999   // $39.99
+      };
+
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
-          planType: 'professional', // Default to professional plan
-          priceAmount: 1999 // $19.99
+          planType: selectedPlan,
+          priceAmount: planPricing[selectedPlan as keyof typeof planPricing]
         }
       });
 
@@ -479,9 +488,39 @@ export const Portal = () => {
                 )}
               </div>
               {!subscription.subscribed && (
-                <Button onClick={handleStartSubscription}>
-                  Subscribe Now
-                </Button>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-select">Choose a Plan</Label>
+                    <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="starter">
+                          <div className="flex flex-col">
+                            <span>Starter Plan</span>
+                            <span className="text-sm text-muted-foreground">$9.99/month</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="professional">
+                          <div className="flex flex-col">
+                            <span>Professional Plan</span>
+                            <span className="text-sm text-muted-foreground">$19.99/month</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="enterprise">
+                          <div className="flex flex-col">
+                            <span>Enterprise Plan</span>
+                            <span className="text-sm text-muted-foreground">$39.99/month</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleStartSubscription}>
+                    Subscribe Now
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>
