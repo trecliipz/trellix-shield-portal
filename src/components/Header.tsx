@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EnhancedAuthModal } from "./EnhancedAuthModal";
 import { ContactForm } from "./ContactForm";
-import { SecurityBadge } from "./SecurityBadge";
 import { MessageSquare, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -149,7 +148,6 @@ export const Header = ({ isLoggedIn, currentUser, onLogin, onLogout }: HeaderPro
             </div>
 
             <div className="flex items-center space-x-4">
-              <SecurityBadge />
               {isLoggedIn ? (
                 <>
                   <Button

@@ -1,5 +1,6 @@
 
 import { Button } from "@/components/ui/button";
+import { SecurityBadge } from "./SecurityBadge";
 
 interface HeroProps {
   onGetStarted: () => void;
@@ -39,6 +40,7 @@ export const Hero = ({ onGetStarted }: HeroProps) => {
           </div>
         </div>
 
+        <SecurityBadge />
 
         <p className="text-sm text-muted-foreground mt-4">
           No credit card required • 14-day free trial • Cancel anytime
