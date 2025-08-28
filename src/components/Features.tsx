@@ -1,14 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Shield, Users, Activity, Lock, AlertTriangle, CheckCircle, Download, Calendar, RefreshCw, Brain, Zap, Target, Bot, Heart, Globe, Cpu, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { AgentCompatibility } from './AgentCompatibility';
 import { MLDashboard } from './MLDashboard';
 import { CyberAttacksSection } from './CyberAttacksSection';
-import { useErrorHandling } from '@/hooks/useErrorHandling';
+import { useSecurityUpdates, normalizeUpdateType } from '@/hooks/useSecurityUpdates';
 import { useToast } from '@/hooks/use-toast';
 
 const features = [
@@ -54,27 +53,8 @@ const features = [
   }
 ];
 
-interface SecurityUpdateData {
-  type: string;
-  urgency: string;
-  category?: string;
-  platforms: Array<{
-    name: string;
-    version: string;
-    date: string;
-    size: string;
-    icon: React.ReactNode;
-    status: string;
-    criticality?: string;
-  }>;
-  description: string;
-  frequency: string;
-}
-
 const Features = (): JSX.Element => {
-  const [securityUpdates, setSecurityUpdates] = useState<SecurityUpdateData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { errorState, handleError, retryOperation, clearError } = useErrorHandling();
+  const { updates, isLoading, error, triggerUpdateFetch, stats } = useSecurityUpdates();
   const { toast } = useToast();
 
   // Helper functions
@@ -99,167 +79,87 @@ const Features = (): JSX.Element => {
     return '💻';
   };
 
-  const getUpdateFrequency = (type: string): string => {
-    const frequencies: Record<string, string> = {
-      'dat': 'Updated multiple times daily',
-      'datv3': 'Updated multiple times daily',
-      'meddat': 'Updated weekly',
-      'tie': 'Updated continuously',
-      'exploit_prevention': 'Updated as threats emerge',
-      'amcore_dat': 'Updated daily',
-      'engine': 'Updated weekly',
-      'content': 'Updated daily'
-    };
-    return frequencies[type] || 'Updated regularly';
-  };
-
-  // Fetch and aggregate security updates from Supabase with error handling
-  const fetchSecurityUpdates = async () => {
-    try {
-      setLoading(true);
-      clearError();
-      
-      const operation = async () => {
-        const { data, error } = await supabase
-          .from('security_updates')
-          .select('*')
-          .order('release_date', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching security updates:', error);
-          throw new Error('Failed to load user data from API');
-        }
-
-        return data;
-      };
-
-      const data = await retryOperation(operation, 3);
-
-      // Group updates by type with priority for V3 DAT, MEDDAT, TIE, and Exploit Prevention
-      const groupedUpdates: { [key: string]: any } = {};
-      
-      data?.forEach(update => {
-        const typeKey = update.type === 'dat' ? 'Standard DAT Files' :
-                       update.type === 'datv3' ? 'V3 Virus Definition Files' :
-                       update.type === 'meddat' ? 'Medical Device DAT Files' :
-                       update.type === 'tie' ? 'TIE Intelligence Updates' :
-                       update.type === 'exploit_prevention' ? 'Exploit Prevention Content' :
-                       update.type === 'amcore_dat' ? 'AMCore Content' :
-                       update.type === 'epo_dat' ? 'EPO DAT Package' :
-                       update.type === 'epo_policy' ? 'EPO Security Policies' :
-                       update.type === 'security_engine' ? 'Security Engine' :
-                       update.type === 'content_package' ? 'Content Updates' : 
-                       'Security Updates';
-        
-        if (!groupedUpdates[typeKey]) {
-          groupedUpdates[typeKey] = {
-            type: typeKey,
-            urgency: update.is_recommended ? 'critical' : 'important',
-            category: update.update_category,
-            platforms: [],
-            description: update.description || getUpdateDescription(update.type),
-            frequency: getUpdateFrequency(update.type)
-          };
-        }
-
-        const platformKey = update.platform || 'All Platforms';
-        const isNew = new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        
-        groupedUpdates[typeKey].platforms.push({
-          name: platformKey,
-          version: update.version,
-          date: new Date(update.release_date).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-          }),
-          size: formatFileSize(update.file_size),
-          icon: getPlatformIcon(platformKey),
-          status: isNew ? 'new' : 
-                 update.is_recommended ? 'updated' : 
-                 'stable',
-          criticality: update.criticality_level
-        });
-      });
-
-      // Sort to prioritize V3 DAT, MEDDAT, TIE, and Exploit Prevention
-      const sortedUpdates = Object.values(groupedUpdates).sort((a: any, b: any) => {
-        const priority = { 
-          'V3 Virus Definition Files': 1, 
-          'Medical Device DAT Files': 2, 
-          'TIE Intelligence Updates': 3,
-          'Exploit Prevention Content': 4,
-          'Standard DAT Files': 5 
-        };
-        return (priority[a.type as keyof typeof priority] || 99) - (priority[b.type as keyof typeof priority] || 99);
-      });
-
-      setSecurityUpdates(sortedUpdates);
-    } catch (error) {
-      handleError(error, 'Database connection lost. Unable to fetch security updates.');
-    } finally {
-      setLoading(false);
+  const getCategoryIcon = (type: string, updateCategory?: string) => {
+    const normalizedType = normalizeUpdateType(type, updateCategory);
+    switch (normalizedType) {
+      case 'DATV3': return <Zap className="h-4 w-4 text-primary" />;
+      case 'AMCore': return <Cpu className="h-4 w-4 text-purple-600" />;
+      case 'Engine': return <Settings className="h-4 w-4 text-indigo-600" />;
+      case 'Exploit Prevention': return <Shield className="h-4 w-4 text-orange-600" />;
+      case 'EPO': return <Globe className="h-4 w-4 text-green-600" />;
+      case 'TIE Intelligence': return <Brain className="h-4 w-4 text-blue-600" />;
+      case 'MEDDAT': return <Heart className="h-4 w-4 text-red-600" />;
+      default: return <Lock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const getUpdateDescription = (type: string): string => {
+  const getUpdateDescription = (type: string, updateCategory?: string): string => {
+    const normalizedType = normalizeUpdateType(type, updateCategory);
     const descriptions: Record<string, string> = {
-      'dat': 'Traditional virus definition files for comprehensive threat protection',
-      'datv3': 'Next-generation V3 virus definition files with enhanced detection capabilities and improved performance',
-      'meddat': 'Specialized threat definitions for medical device security and healthcare networks',
-      'tie': 'Global threat intelligence feeds with real-time reputation data and file reputation scoring',
-      'exploit_prevention': 'Zero-day exploit protection rules, behavioral heuristics, and vulnerability shields',
-      'amcore_dat': 'Advanced malware core content with behavioral analysis patterns',
-      'engine': 'Core scanning engine with latest detection capabilities',
-      'content': 'General content updates and improvements'
+      'DATV3': 'Next-generation V3 virus definition files with enhanced detection capabilities',
+      'AMCore': 'Advanced malware core content with behavioral analysis patterns',
+      'Engine': 'Core scanning engine with latest detection capabilities',
+      'Exploit Prevention': 'Zero-day exploit protection rules and vulnerability shields',
+      'EPO': 'ePO management and policy updates',
+      'TIE Intelligence': 'Global threat intelligence feeds with real-time reputation data',
+      'MEDDAT': 'Specialized threat definitions for medical device security',
+      'Content': 'General content updates and improvements'
     };
-    return descriptions[type] || 'Security update package';
+    return descriptions[normalizedType] || 'Security update package';
   };
 
-  useEffect(() => {
-    fetchSecurityUpdates();
+  // Group updates by normalized type for better display
+  const groupedUpdates = React.useMemo(() => {
+    const groups: { [key: string]: any } = {};
     
-    // Set up real-time subscription for security updates
-    const channel = supabase
-      .channel('security_updates_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'security_updates'
-        },
-        () => {
-          console.log('Security updates changed, refetching...');
-          fetchSecurityUpdates();
-        }
-      )
-      .subscribe();
+    updates.forEach(update => {
+      const normalizedType = normalizeUpdateType(update.type, update.update_category);
+      
+      if (!groups[normalizedType]) {
+        groups[normalizedType] = {
+          type: normalizedType,
+          urgency: update.is_recommended ? 'critical' : 'important',
+          category: update.update_category,
+          platforms: [],
+          description: getUpdateDescription(update.type, update.update_category),
+          icon: getCategoryIcon(update.type, update.update_category)
+        };
+      }
 
-    return () => {
-      supabase.removeChannel(channel);
+      const isNew = new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      
+      groups[normalizedType].platforms.push({
+        name: update.platform || 'All Platforms',
+        version: update.version,
+        date: new Date(update.release_date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        }),
+        size: formatFileSize(update.file_size),
+        icon: getPlatformIcon(update.platform || ''),
+        status: isNew ? 'new' : update.is_recommended ? 'updated' : 'stable',
+        criticality: update.criticality_level
+      });
+    });
+
+    // Sort by priority: DATV3, AMCore, Engine, etc.
+    const priority = { 
+      'DATV3': 1, 
+      'AMCore': 2, 
+      'Engine': 3,
+      'Exploit Prevention': 4,
+      'MEDDAT': 5,
+      'TIE Intelligence': 6
     };
-  }, []);
+    
+    return Object.values(groups).sort((a: any, b: any) => 
+      (priority[a.type as keyof typeof priority] || 99) - (priority[b.type as keyof typeof priority] || 99)
+    );
+  }, [updates]);
 
   const handleRefresh = async () => {
-    try {
-      // Trigger the edge function to fetch latest updates
-      const { data, error } = await supabase.functions.invoke('fetch-security-updates');
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "Success",
-        description: data?.message || "Security updates refreshed successfully.",
-      });
-      
-      // Refresh the displayed data
-      await fetchSecurityUpdates();
-    } catch (error) {
-      handleError(error, 'Failed to refresh security updates');
-    }
+    await triggerUpdateFetch();
   };
 
   return (
@@ -304,21 +204,26 @@ const Features = (): JSX.Element => {
         <CyberAttacksSection />
 
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold text-primary">
-            Latest Security Updates by Platform
-          </h2>
+          <div>
+            <h2 className="text-3xl font-bold text-primary">
+              Latest Security Updates by Platform
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              {stats.total} total updates • {stats.critical} critical • {stats.recent} recent
+            </p>
+          </div>
           <Button 
             onClick={handleRefresh} 
-            disabled={loading}
+            disabled={isLoading}
             variant="outline"
             className="flex items-center space-x-2"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh Updates</span>
           </Button>
         </div>
         
-        {errorState.hasError && (
+        {error && (
           <Card className="mb-8 border-destructive">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2 text-destructive">
@@ -326,12 +231,12 @@ const Features = (): JSX.Element => {
                 <span className="font-medium">Connection Issue</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                {errorState.errorMessage}
+                Failed to load security updates. Please try again.
               </p>
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={fetchSecurityUpdates}
+                onClick={handleRefresh}
                 className="mt-2"
               >
                 Retry
@@ -340,13 +245,13 @@ const Features = (): JSX.Element => {
           </Card>
         )}
         
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {securityUpdates.map((update, index) => (
+            {groupedUpdates.map((update, index) => (
               <Card key={index} className="modern-card group">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
@@ -354,27 +259,7 @@ const Features = (): JSX.Element => {
                       <h3 className="text-xl font-semibold text-card-foreground">
                         {update.type}
                       </h3>
-                      {update.category === 'dat_file' && (
-                        <Zap className="h-5 w-5 text-primary" />
-                      )}
-                      {update.category === 'medical' && (
-                        <Heart className="h-5 w-5 text-destructive" />
-                      )}
-                      {update.category === 'intelligence' && (
-                        <Globe className="h-5 w-5 text-blue-600" />
-                      )}
-                      {update.category === 'protection' && (
-                        <Lock className="h-5 w-5 text-orange-600" />
-                      )}
-                      {update.category === 'epo' && (
-                        <Shield className="h-5 w-5 text-green-600" />
-                      )}
-                      {update.category === 'amcore' && (
-                        <Cpu className="h-5 w-5 text-purple-600" />
-                      )}
-                      {update.category === 'engine' && (
-                        <Settings className="h-5 w-5 text-indigo-600" />
-                      )}
+                      {update.icon}
                     </div>
                     <div className="flex items-center space-x-2">
                       {update.urgency === 'critical' && (
@@ -389,10 +274,10 @@ const Features = (): JSX.Element => {
                           <span>Important</span>
                         </Badge>
                       )}
-                      {update.category === 'epo' && (
+                      {update.type === 'AMCore' && (
                         <Badge variant="secondary" className="flex items-center space-x-1">
-                          <Shield className="h-3 w-3" />
-                          <span>EPO Ready</span>
+                          <Cpu className="h-3 w-3" />
+                          <span>AMCore</span>
                         </Badge>
                       )}
                     </div>
@@ -400,11 +285,6 @@ const Features = (): JSX.Element => {
                   <p className="text-muted-foreground text-sm mb-4">
                     {update.description}
                   </p>
-                  <div className="flex items-center justify-center mb-6">
-                    <Badge variant="outline" className="text-xs">
-                      {update.frequency}
-                    </Badge>
-                  </div>
                   
                   <div className="space-y-4">
                     {update.platforms.map((platform, platformIndex) => (
