@@ -31,6 +31,7 @@ const SecurityUpdates = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { updates, stats, filterTabs, isLoading, triggerUpdateFetch } = useSecurityUpdates();
 
@@ -182,10 +183,44 @@ const SecurityUpdates = () => {
 
   const handleRefresh = async () => {
     try {
+      setIsRefreshing(true);
+      
+      toast.loading("Checking for updates from Trellix...", {
+        description: "Fetching the latest security updates from https://www.trellix.com/downloads/security-updates/",
+        id: "refresh-updates"
+      });
+
+      // Call the edge function to fetch from Trellix
+      const { data, error } = await supabase.functions.invoke('fetch-security-updates', {
+        body: { 
+          source: 'trellix',
+          timestamp: new Date().toISOString() 
+        }
+      });
+
+      if (error) {
+        console.error('Error calling fetch-security-updates:', error);
+        throw error;
+      }
+
+      console.log('Fetch response:', data);
+
+      // Force refresh the local data
       await triggerUpdateFetch();
-      toast.success("Updates refreshed successfully!");
+
+      toast.success("Updates refreshed successfully!", {
+        description: data?.message || `Found ${data?.totalUpdates || 0} updates, ${data?.newUpdates || 0} new ones added.`,
+        id: "refresh-updates"
+      });
+
     } catch (error) {
-      toast.error("Failed to refresh updates");
+      console.error('Error refreshing updates:', error);
+      toast.error("Failed to refresh updates", {
+        description: "Unable to fetch updates from Trellix. Please try again.",
+        id: "refresh-updates"
+      });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -392,12 +427,13 @@ const SecurityUpdates = () => {
         </div>
         <Button
           onClick={handleRefresh}
+          disabled={isLoading || isRefreshing}
           variant="outline"
           size="sm"
           className="glow-button"
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Check Updates
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Checking...' : 'Check Updates'}
         </Button>
       </div>
 
