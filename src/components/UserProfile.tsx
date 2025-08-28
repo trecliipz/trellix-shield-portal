@@ -89,7 +89,7 @@ export const UserProfile = () => {
     setEditForm({
       name: profile?.name || '',
       phone: profile?.phone || '',
-      company: profile?.company || '',
+      company: profile?.department || '',
     });
   };
 
@@ -103,7 +103,7 @@ export const UserProfile = () => {
         .update({
           name: editForm.name,
           phone: editForm.phone,
-          company: editForm.company,
+          department: editForm.company,
         })
         .eq('id', user?.id);
 
@@ -221,7 +221,7 @@ export const UserProfile = () => {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Company</Label>
-                  <p className="text-sm text-muted-foreground">{profile?.company || 'Not provided'}</p>
+                  <p className="text-sm text-muted-foreground">{profile?.department || 'Not provided'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Member Since</Label>
@@ -288,3 +288,5 @@ export const UserProfile = () => {
     </div>
   );
 };
+
+export default UserProfile;
