@@ -185,16 +185,19 @@ const SecurityUpdates = () => {
     try {
       setIsRefreshing(true);
       
-      toast.loading("Checking for updates from Trellix...", {
-        description: "Fetching the latest security updates from https://www.trellix.com/downloads/security-updates/",
+      toast.loading("Fetching updates from Trellix...", {
+        description: "Checking DAT files, engines, content updates, and AMCore from all Trellix pages",
         id: "refresh-updates"
       });
 
-      // Call the edge function to fetch from Trellix
+      console.log('Starting refresh from Trellix URLs...');
+
+      // Call the edge function to fetch from all Trellix pages
       const { data, error } = await supabase.functions.invoke('fetch-security-updates', {
         body: { 
           source: 'trellix',
-          timestamp: new Date().toISOString() 
+          timestamp: new Date().toISOString(),
+          fetchAll: true
         }
       });
 
@@ -203,20 +206,20 @@ const SecurityUpdates = () => {
         throw error;
       }
 
-      console.log('Fetch response:', data);
+      console.log('Trellix fetch response:', data);
 
-      // Force refresh the local data
+      // Force refresh the local data to show new updates
       await triggerUpdateFetch();
 
       toast.success("Updates refreshed successfully!", {
-        description: data?.message || `Found ${data?.totalUpdates || 0} updates, ${data?.newUpdates || 0} new ones added.`,
+        description: `${data?.newUpdates || 0} new updates and ${data?.updatedUpdates || 0} updated from ${data?.totalUpdates || 0} total found`,
         id: "refresh-updates"
       });
 
     } catch (error) {
-      console.error('Error refreshing updates:', error);
+      console.error('Error refreshing updates from Trellix:', error);
       toast.error("Failed to refresh updates", {
-        description: "Unable to fetch updates from Trellix. Please try again.",
+        description: "Unable to fetch updates from Trellix. Please check your connection and try again.",
         id: "refresh-updates"
       });
     } finally {
@@ -275,7 +278,9 @@ const SecurityUpdates = () => {
       return (
         <Card className="modern-card">
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">No security updates found for this category.</p>
+            <p className="text-muted-foreground">
+              No security updates found. Click "Check Updates" to fetch the latest updates from Trellix.
+            </p>
           </CardContent>
         </Card>
       );
@@ -311,7 +316,7 @@ const SecurityUpdates = () => {
                     </th>
                     <th className="text-left p-4 cursor-pointer hover:bg-card/70 transition-colors" onClick={() => handleSort('name')}>
                       <div className="flex items-center gap-2">
-                        Name
+                        Product/DAT File
                         <ChevronDown className={`h-4 w-4 transition-transform ${sortBy === 'name' && sortOrder === 'asc' ? 'rotate-180' : ''}`} />
                       </div>
                     </th>
@@ -325,7 +330,7 @@ const SecurityUpdates = () => {
                     </th>
                     <th className="text-left p-4 cursor-pointer hover:bg-card/70 transition-colors" onClick={() => handleSort('size')}>
                       <div className="flex items-center gap-2">
-                        File Size
+                        Content File Size
                         <ChevronDown className={`h-4 w-4 transition-transform ${sortBy === 'size' && sortOrder === 'asc' ? 'rotate-180' : ''}`} />
                       </div>
                     </th>
@@ -351,7 +356,7 @@ const SecurityUpdates = () => {
                             <div className="font-medium">{update.name}</div>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="secondary" className={getTypeColor(update.type)}>
-                                {update.type.toUpperCase()}
+                                {update.update_category?.toUpperCase() || update.type.toUpperCase()}
                               </Badge>
                               {update.criticality_level && (
                                 <Badge className={getCriticalityColor(update.criticality_level)}>
@@ -422,7 +427,7 @@ const SecurityUpdates = () => {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">DAT Files Management</h2>
           <p className="text-muted-foreground">
-            Download and manage DAT files, MEDDAT, TIE Intelligence, and security updates
+            Download and manage DAT files, AMCore, engines, and security updates from Trellix
           </p>
         </div>
         <Button
@@ -433,7 +438,7 @@ const SecurityUpdates = () => {
           className="glow-button"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Checking...' : 'Check Updates'}
+          {isRefreshing ? 'Fetching from Trellix...' : 'Check Updates'}
         </Button>
       </div>
 
@@ -447,33 +452,17 @@ const SecurityUpdates = () => {
           </CardContent>
         </Card>
 
-        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('meddat')}>
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('amcore')}>
           <CardContent className="p-4 text-center">
             <Shield className="h-6 w-6 mx-auto mb-2 text-primary" />
-            <div className="text-xl font-bold">{getCount('MEDDAT')}</div>
-            <p className="text-xs text-muted-foreground">MEDDAT Files</p>
-          </CardContent>
-        </Card>
-
-        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('tie')}>
-          <CardContent className="p-4 text-center">
-            <Zap className="h-6 w-6 mx-auto mb-2 text-primary" />
-            <div className="text-xl font-bold">{getCount('TIE Intelligence')}</div>
-            <p className="text-xs text-muted-foreground">TIE Intelligence</p>
-          </CardContent>
-        </Card>
-
-        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('exploit')}>
-          <CardContent className="p-4 text-center">
-            <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-primary" />
-            <div className="text-xl font-bold">{getCount('Exploit Prevention')}</div>
-            <p className="text-xs text-muted-foreground">Exploit Prevention</p>
+            <div className="text-xl font-bold">{getCount('AMCore')}</div>
+            <p className="text-xs text-muted-foreground">AMCore</p>
           </CardContent>
         </Card>
 
         <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('engine')}>
           <CardContent className="p-4 text-center">
-            <Settings className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <Zap className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('Engine')}</div>
             <p className="text-xs text-muted-foreground">Engines</p>
           </CardContent>
@@ -481,16 +470,32 @@ const SecurityUpdates = () => {
 
         <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('content')}>
           <CardContent className="p-4 text-center">
-            <Database className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <Settings className="h-6 w-6 mx-auto mb-2 text-primary" />
             <div className="text-xl font-bold">{getCount('Content')}</div>
             <p className="text-xs text-muted-foreground">Content</p>
           </CardContent>
         </Card>
+
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform" onClick={() => setActiveFilter('all')}>
+          <CardContent className="p-4 text-center">
+            <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <div className="text-xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">All Updates</p>
+          </CardContent>
+        </Card>
+
+        <Card className="modern-card cursor-pointer hover:scale-105 transition-transform">
+          <CardContent className="p-4 text-center">
+            <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-500" />
+            <div className="text-xl font-bold">{stats.recent}</div>
+            <p className="text-xs text-muted-foreground">Recent</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Show all updates without tabs */}
+      {/* Updates Table */}
       <div className="mt-6 animate-fade-in">
-        {renderUpdatesTable(getUpdatesForTab('all'))}
+        {renderUpdatesTable(getUpdatesForTab(activeFilter))}
       </div>
     </div>
   );
