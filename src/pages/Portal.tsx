@@ -488,37 +488,46 @@ export const Portal = () => {
                 )}
               </div>
               {!subscription.subscribed && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="plan-select">Choose a Plan</Label>
+                <div className="space-y-6 p-4 bg-muted/30 rounded-lg border">
+                  <div className="space-y-3">
+                    <Label htmlFor="plan-select" className="text-base font-semibold">Choose Your Plan</Label>
                     <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-                      <SelectTrigger className="w-[200px]">
+                      <SelectTrigger className="w-full h-auto p-4 text-left">
                         <SelectValue placeholder="Select plan" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="starter">
-                          <div className="flex flex-col">
-                            <span>Starter Plan</span>
-                            <span className="text-sm text-muted-foreground">$9.99/month</span>
+                      <SelectContent className="w-full">
+                        <SelectItem value="starter" className="p-4">
+                          <div className="flex flex-col space-y-1 w-full">
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-medium">Starter Plan</span>
+                              <span className="font-bold text-primary">$9.99/month</span>
+                            </div>
+                            <span className="text-sm text-muted-foreground">Perfect for small teams</span>
                           </div>
                         </SelectItem>
-                        <SelectItem value="professional">
-                          <div className="flex flex-col">
-                            <span>Professional Plan</span>
-                            <span className="text-sm text-muted-foreground">$19.99/month</span>
+                        <SelectItem value="professional" className="p-4">
+                          <div className="flex flex-col space-y-1 w-full">
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-medium">Professional Plan</span>
+                              <span className="font-bold text-primary">$19.99/month</span>
+                            </div>
+                            <span className="text-sm text-muted-foreground">Best for growing businesses</span>
                           </div>
                         </SelectItem>
-                        <SelectItem value="enterprise">
-                          <div className="flex flex-col">
-                            <span>Enterprise Plan</span>
-                            <span className="text-sm text-muted-foreground">$39.99/month</span>
+                        <SelectItem value="enterprise" className="p-4">
+                          <div className="flex flex-col space-y-1 w-full">
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-medium">Enterprise Plan</span>
+                              <span className="font-bold text-primary">$39.99/month</span>
+                            </div>
+                            <span className="text-sm text-muted-foreground">Advanced features for large organizations</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleStartSubscription}>
-                    Subscribe Now
+                  <Button onClick={handleStartSubscription} className="w-full h-12 text-base font-semibold">
+                    Subscribe to {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan
                   </Button>
                 </div>
               )}
