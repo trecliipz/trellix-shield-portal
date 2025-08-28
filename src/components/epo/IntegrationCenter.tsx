@@ -238,6 +238,17 @@ export const IntegrationCenter = () => {
   const [commandResults, setCommandResults] = useState<string>('');
   const [isExecuting, setIsExecuting] = useState(false);
 
+  // Command Console state
+  const [consoleInput, setConsoleInput] = useState('');
+  const [consoleOutput, setConsoleOutput] = useState<Array<{
+    timestamp: string;
+    command: string;
+    response: string;
+    type: 'success' | 'error';
+  }>>([]);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
   // Load connections from Supabase
   useEffect(() => {
     loadConnections();
@@ -388,16 +399,16 @@ export const IntegrationCenter = () => {
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('epo-integration', {
         body: {
-          action: authMode === 'session' ? 'proxy' : 'execute',
+          action: 'proxy',
           serverUrl: connection.server_url,
           username: connection.username,
           port: connection.port,
           connectionId: connection.id,
           userId: user?.id,
-          command: selectedCommand,
+          endpoint: selectedCommand,
           parameters,
           outputType,
-          authMode,
+          useSession: authMode === 'session',
           allowInsecureTLS: false // Could be made configurable per connection
         }
       });
@@ -406,7 +417,7 @@ export const IntegrationCenter = () => {
         throw error;
       }
 
-      setCommandResults(JSON.stringify(data.result, null, 2));
+      setCommandResults(JSON.stringify(data, null, 2));
       toast.success("Command executed successfully");
       
     } catch (error) {
@@ -416,6 +427,131 @@ export const IntegrationCenter = () => {
     } finally {
       setIsExecuting(false);
     }
+  };
+
+  // Console command execution
+  const handleConsoleCommand = async (command: string) => {
+    if (!selectedConnection || !command.trim()) {
+      toast.error("Please select a connection and enter a command");
+      return;
+    }
+
+    const connection = connections.find(c => c.id === selectedConnection);
+    if (!connection) {
+      toast.error("Selected connection not found");
+      return;
+    }
+
+    // Parse command: first word is endpoint, rest is JSON parameters
+    const parts = command.trim().split(' ');
+    const endpoint = parts[0];
+    let parameters = {};
+    
+    if (parts.length > 1) {
+      try {
+        parameters = JSON.parse(parts.slice(1).join(' '));
+      } catch (error) {
+        const errorOutput = {
+          timestamp: new Date().toLocaleTimeString(),
+          command,
+          response: `Error: Invalid JSON parameters - ${error.message}`,
+          type: 'error' as const
+        };
+        setConsoleOutput(prev => [...prev, errorOutput]);
+        return;
+      }
+    }
+
+    // Add command to history
+    setCommandHistory(prev => {
+      const updated = [command, ...prev.filter(cmd => cmd !== command)];
+      return updated.slice(0, 50); // Keep last 50 commands
+    });
+    setHistoryIndex(-1);
+
+    setIsExecuting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke('epo-integration', {
+        body: {
+          action: 'proxy',
+          serverUrl: connection.server_url,
+          username: connection.username,
+          port: connection.port,
+          connectionId: connection.id,
+          userId: user?.id,
+          endpoint,
+          parameters,
+          outputType: 'json',
+          useSession: authMode === 'session',
+          allowInsecureTLS: false
+        }
+      });
+
+      if (error) throw error;
+
+      const consoleEntry = {
+        timestamp: new Date().toLocaleTimeString(),
+        command,
+        response: typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data),
+        type: 'success' as const
+      };
+      
+      setConsoleOutput(prev => [...prev, consoleEntry]);
+    } catch (error) {
+      const errorEntry = {
+        timestamp: new Date().toLocaleTimeString(),
+        command,
+        response: `Error: ${error instanceof Error ? error.message : 'Command execution failed'}`,
+        type: 'error' as const
+      };
+      setConsoleOutput(prev => [...prev, errorEntry]);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  // Handle console input keydown
+  const handleConsoleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (consoleInput.trim()) {
+        handleConsoleCommand(consoleInput);
+        setConsoleInput('');
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (commandHistory.length > 0) {
+        const newIndex = Math.min(historyIndex + 1, commandHistory.length - 1);
+        setHistoryIndex(newIndex);
+        setConsoleInput(commandHistory[newIndex] || '');
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setConsoleInput(commandHistory[newIndex] || '');
+      } else if (historyIndex === 0) {
+        setHistoryIndex(-1);
+        setConsoleInput('');
+      }
+    }
+  };
+
+  // Clear console
+  const clearConsole = () => {
+    setConsoleOutput([]);
+  };
+
+  // Copy console output
+  const copyConsoleOutput = () => {
+    const output = consoleOutput.map(entry => 
+      `[${entry.timestamp}] ${entry.command}\n${entry.response}\n`
+    ).join('\n');
+    navigator.clipboard.writeText(output);
+    toast.success("Console output copied to clipboard");
   };
 
   const handleAddConnection = async () => {
@@ -823,6 +959,7 @@ export const IntegrationCenter = () => {
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="api">API Management</TabsTrigger>
           <TabsTrigger value="commands">API Commands</TabsTrigger>
+          <TabsTrigger value="console">Command Console</TabsTrigger>
           <TabsTrigger value="sync">Synchronization</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -1356,6 +1493,189 @@ export const IntegrationCenter = () => {
                       </Badge>
                     </div>
                   ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="console" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Terminal className="h-5 w-5" />
+                Command Console
+              </CardTitle>
+              <CardDescription>
+                Interactive terminal for ePO API commands. Type commands like "core.help" or "system.find {'{"searchText":"*"}'}"
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Connection and Auth Status */}
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={selectedConnection}
+                    onValueChange={setSelectedConnection}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Select Connection" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {connections.map((connection) => (
+                        <SelectItem key={connection.id} value={connection.id}>
+                          {connection.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={authMode} onValueChange={(value: 'basic' | 'session') => setAuthMode(value)}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Basic</SelectItem>
+                      <SelectItem value="session">Session</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {authMode === 'session' && (
+                    <div className="flex items-center gap-2">
+                      {isAuthenticated ? (
+                        <Badge variant="secondary" className="text-green-600">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Authenticated
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Not Authenticated</Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearConsole}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyConsoleOutput}
+                    disabled={consoleOutput.length === 0}
+                  >
+                    Copy All
+                  </Button>
+                </div>
+              </div>
+
+              {/* Quick Commands */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Quick Commands:</Label>
+                <div className="flex flex-wrap gap-2">
+                  {['core.help', 'core.getVersion', 'system.find {"searchText":"*"}', 'policy.listPolicies'].map((cmd) => (
+                    <Button
+                      key={cmd}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConsoleInput(cmd)}
+                      className="text-xs"
+                    >
+                      {cmd}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Console Output */}
+              <div className="border rounded-lg">
+                <ScrollArea className="h-80 p-4 font-mono text-sm">
+                  {consoleOutput.length === 0 ? (
+                    <div className="text-muted-foreground">
+                      No commands executed yet. Type a command below and press Enter.
+                      <br />
+                      <br />
+                      Examples:
+                      <br />
+                      • core.help
+                      <br />
+                      • system.find {"{\"searchText\":\"*\"}"}
+                      <br />
+                      • policy.listPolicies {"{\"type\":\"ENS\"}"}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {consoleOutput.map((entry, index) => (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              [{entry.timestamp}]
+                            </span>
+                            <span className="text-blue-600 font-medium">
+                              $ {entry.command}
+                            </span>
+                          </div>
+                          <div className={`pl-4 whitespace-pre-wrap ${
+                            entry.type === 'error' ? 'text-red-600' : 'text-foreground'
+                          }`}>
+                            {entry.response}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+
+              {/* Command Input */}
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600 font-mono font-medium">$</span>
+                <Input
+                  value={consoleInput}
+                  onChange={(e) => setConsoleInput(e.target.value)}
+                  onKeyDown={handleConsoleKeyDown}
+                  placeholder="Enter ePO API command (e.g., core.help or system.find {&quot;searchText&quot;:&quot;*&quot;})"
+                  disabled={isExecuting || !selectedConnection}
+                  className="font-mono"
+                />
+                <Button
+                  onClick={() => {
+                    if (consoleInput.trim()) {
+                      handleConsoleCommand(consoleInput);
+                      setConsoleInput('');
+                    }
+                  }}
+                  disabled={isExecuting || !selectedConnection || !consoleInput.trim()}
+                  size="sm"
+                >
+                  {isExecuting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              {/* Help Text */}
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Usage:</strong> Type endpoint name followed by optional JSON parameters</p>
+                <p><strong>Navigation:</strong> Use ↑↓ arrow keys to browse command history</p>
+                <p><strong>Session Mode:</strong> Authenticate first to use session tokens for commands</p>
+                <div className="flex items-center gap-1 mt-2">
+                  <Info className="h-3 w-3" />
+                  <span>Need Node.js for local development? Check the </span>
+                  <Button variant="link" className="p-0 h-auto text-xs underline" asChild>
+                    <a href="#" onClick={(e) => {
+                      e.preventDefault();
+                      toast.info("Switch to Admin Portal → Terminal tab for Node.js installation guide");
+                    }}>
+                      Admin Terminal
+                    </a>
+                  </Button>
                 </div>
               </div>
             </CardContent>
