@@ -64,7 +64,8 @@ export const IntegrationCenter = () => {
     password: '',
     port: '8443',
     caCertificate: '',
-    pinCertificate: false
+    pinCertificate: false,
+    allowInsecureTLS: false
   });
 
   // Certificate analysis state
@@ -299,7 +300,8 @@ export const IntegrationCenter = () => {
           password: authPassword,
           port: connection.port,
           connectionId: connection.id,
-          userId: user?.id
+          userId: user?.id,
+          allowInsecureTLS: false // Could be made configurable per connection
         }
       });
 
@@ -394,7 +396,8 @@ export const IntegrationCenter = () => {
           command: selectedCommand,
           parameters,
           outputType,
-          authMode
+          authMode,
+          allowInsecureTLS: false // Could be made configurable per connection
         }
       });
 
@@ -477,7 +480,8 @@ export const IntegrationCenter = () => {
         password: '',
         port: '8443',
         caCertificate: '',
-        pinCertificate: false
+        pinCertificate: false,
+        allowInsecureTLS: false
       });
       setCertificateAnalysis(null);
 
@@ -524,7 +528,8 @@ export const IntegrationCenter = () => {
           username: connection.username,
           port: connection.port,
           caCertificate: caCertificate,
-          pinCertificate: pinCertificate
+          pinCertificate: pinCertificate,
+          allowInsecureTLS: newConnection.allowInsecureTLS
         }
       });
 
@@ -1641,19 +1646,69 @@ Can paste multiple certificates here (full chain)"
                       </div>
                     </div>
                   )}
-                </div>
-              <div className="flex space-x-2">
-                <Button onClick={handleAddConnection} className="flex-1">
-                  Add Connection
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowAddConnection(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
+                 </div>
+                 
+                 <Separator />
+                 
+                 {/* TLS Security Options */}
+                 <div>
+                   <Label className="text-sm font-medium">TLS Security Options</Label>
+                   <div className="mt-2 space-y-3">
+                     <div className="flex items-start space-x-2">
+                       <Checkbox
+                         id="allowInsecureTLS"
+                         checked={newConnection.allowInsecureTLS}
+                         onCheckedChange={(checked) => setNewConnection({ ...newConnection, allowInsecureTLS: checked as boolean })}
+                       />
+                       <div className="space-y-1">
+                         <Label htmlFor="allowInsecureTLS" className="text-sm">
+                           Ignore TLS errors (testing only)
+                         </Label>
+                         <p className="text-xs text-muted-foreground">
+                           ⚠️ For development/testing only. Bypasses certificate validation including hostname/IP mismatches.
+                         </p>
+                       </div>
+                     </div>
+                     
+                     {newConnection.allowInsecureTLS && (
+                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                         <div className="flex items-start gap-2">
+                           <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                           <div className="text-xs text-amber-800">
+                             <div className="font-medium mb-1">Security Warning</div>
+                             <div>This option disables TLS certificate validation and should only be used for testing. In production, use proper certificates with matching hostnames.</div>
+                           </div>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+
+               <div className="flex space-x-2">
+                 <Button onClick={handleAddConnection} className="flex-1">
+                   Add Connection
+                 </Button>
+                 <Button 
+                   variant="outline" 
+                   onClick={() => {
+                     setShowAddConnection(false);
+                     setNewConnection({
+                       name: '',
+                       serverUrl: '',
+                       username: '',
+                       password: '',
+                       port: '8443',
+                       caCertificate: '',
+                       pinCertificate: false,
+                       allowInsecureTLS: false
+                     });
+                     setCertificateAnalysis(null);
+                   }}
+                   className="flex-1"
+                 >
+                   Cancel
+                 </Button>
+               </div>
             </CardContent>
           </Card>
         </div>

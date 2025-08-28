@@ -106,6 +106,18 @@ function normalizeEpoBaseUrl(url: string): string {
 function mapConnectionError(error: string): { message: string; suggestions: string[] } {
   const errorLower = error.toLowerCase();
   
+  if (errorLower.includes('altname') || errorLower.includes('hostname') || errorLower.includes('ip does not match')) {
+    return {
+      message: "Certificate hostname/IP mismatch - server certificate is for different domain",
+      suggestions: [
+        "Use hostname instead of IP address in server URL",
+        "Ensure server URL matches certificate's Common Name or Subject Alternative Name",
+        "For testing only: enable 'Ignore TLS errors' option",
+        "Update certificate to include current hostname/IP"
+      ]
+    };
+  }
+  
   if (errorLower.includes('handshakefailure') || errorLower.includes('tls') || errorLower.includes('ssl')) {
     return {
       message: "TLS handshake failed - certificate or encryption issue",
@@ -222,7 +234,8 @@ async function testEPOConnection(params: any, fallbackServerUrl: string, fallbac
     password, 
     port = 8443, 
     caCertificate, 
-    pinCertificate 
+    pinCertificate,
+    allowInsecureTLS = false
   } = params;
   
   // Use provided server details or fall back to secrets
@@ -248,6 +261,16 @@ async function testEPOConnection(params: any, fallbackServerUrl: string, fallbac
         'User-Agent': 'Trellix-EPO-Integration/1.0'
       }
     };
+
+    // Handle TLS options
+    if (allowInsecureTLS) {
+      logStep("WARNING: Using insecure TLS for testing purposes");
+      const client = Deno.createHttpClient({
+        // Allow insecure TLS for testing only
+        caCerts: caCertificate ? parsePemCertificates(caCertificate).certs : undefined
+      });
+      fetchOptions.client = client;
+    }
 
     // Enhanced certificate handling with multi-PEM support
     let certificateAnalysis = null;
@@ -484,7 +507,8 @@ async function handleHealthCheck(params: any, supabase: any) {
     caCertificates = '',
     connectionId,
     useSession = false,
-    userId 
+    userId,
+    allowInsecureTLS = false
   } = params;
   
   let authHeaders = {};
@@ -556,7 +580,8 @@ async function proxyEPORequest(params: any, supabase: any) {
     userId,
     username,
     password,
-    parameters = {}
+    parameters = {},
+    allowInsecureTLS = false
   } = params;
 
   let authHeaders = {};
@@ -597,14 +622,24 @@ async function proxyEPORequest(params: any, supabase: any) {
     ...parameters
   });
 
-  const response = await fetch(`${epoUrl}:${port}/remote/${endpoint}`, {
+  // Build fetch options with TLS handling
+  const fetchOptions: RequestInit = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       ...authHeaders
     },
     body: bodyParams
-  });
+  };
+
+  // Handle TLS options for proxy requests
+  if (allowInsecureTLS) {
+    logStep("WARNING: Using insecure TLS for proxy request");
+    const client = Deno.createHttpClient({});
+    fetchOptions.client = client;
+  }
+
+  const response = await fetch(`${epoUrl}:${port}/remote/${endpoint}`, fetchOptions);
 
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
