@@ -108,7 +108,7 @@ const Features = (): JSX.Element => {
     return descriptions[normalizedType] || 'Security update package';
   };
 
-  // Group updates by normalized type for better display
+  // Group updates by normalized type and show only most recent for each platform
   const groupedUpdates = React.useMemo(() => {
     const groups: { [key: string]: any } = {};
     
@@ -120,30 +120,42 @@ const Features = (): JSX.Element => {
           type: normalizedType,
           urgency: update.is_recommended ? 'critical' : 'important',
           category: update.update_category,
-          platforms: [],
+          platforms: new Map(),
           description: getUpdateDescription(update.type, update.update_category),
           icon: getCategoryIcon(update.type, update.update_category)
         };
       }
 
       const isNew = new Date(update.release_date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const platformKey = update.platform || 'All Platforms';
       
-      groups[normalizedType].platforms.push({
-        name: update.platform || 'All Platforms',
+      const platformData = {
+        name: platformKey,
         version: update.version,
         date: new Date(update.release_date).toLocaleDateString('en-US', { 
           month: 'short', 
           day: 'numeric', 
           year: 'numeric' 
         }),
+        releaseDate: new Date(update.release_date),
         size: formatFileSize(update.file_size),
-        icon: getPlatformIcon(update.platform || ''),
+        icon: getPlatformIcon(platformKey),
         status: isNew ? 'new' : update.is_recommended ? 'updated' : 'stable',
         criticality: update.criticality_level
-      });
+      };
+
+      // Only keep the most recent update for each platform
+      const existing = groups[normalizedType].platforms.get(platformKey);
+      if (!existing || platformData.releaseDate > existing.releaseDate) {
+        groups[normalizedType].platforms.set(platformKey, platformData);
+      }
     });
 
-    // Sort by priority: DATV3, AMCore, Engine, etc.
+    // Convert platforms Map to array and sort by priority
+    Object.values(groups).forEach((group: any) => {
+      group.platforms = Array.from(group.platforms.values());
+    });
+
     const priority = { 
       'DATV3': 1, 
       'AMCore': 2, 
