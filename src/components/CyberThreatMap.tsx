@@ -23,28 +23,7 @@ const COUNTRIES = {
   'Israel': { x: 560, y: 310, name: 'Israel' }
 };
 
-// World map paths for better visualization
-const WORLD_MAP_PATHS = {
-  // North America
-  northAmerica: "M100,150 Q120,140 140,150 Q160,145 180,150 Q200,140 220,150 Q240,145 260,160 Q280,155 300,170 Q320,165 340,180 L340,220 Q320,225 300,220 Q280,225 260,230 Q240,235 220,240 Q200,245 180,240 Q160,245 140,240 Q120,245 100,240 Z",
-  
-  // South America
-  southAmerica: "M280,320 Q290,315 300,320 Q310,315 320,325 Q330,330 335,345 Q340,360 335,380 Q330,400 325,420 Q320,440 310,455 Q300,470 290,480 Q280,485 270,480 Q260,475 255,460 Q250,445 255,430 Q260,415 265,400 Q270,385 275,370 Q280,355 285,340 Q280,325 280,320 Z",
-  
-  // Europe
-  europe: "M480,200 Q500,195 520,200 Q540,195 560,205 Q580,200 600,210 L600,250 Q580,255 560,250 Q540,255 520,250 Q500,255 480,250 Z",
-  
-  // Africa
-  africa: "M500,280 Q520,275 540,285 Q560,290 575,305 Q580,320 575,340 Q570,360 565,380 Q560,400 550,415 Q540,430 530,440 Q520,445 510,440 Q500,435 495,420 Q490,405 495,390 Q500,375 505,360 Q510,345 505,330 Q500,315 500,300 Q500,285 500,280 Z",
-  
-  // Asia
-  asia: "M600,200 Q650,190 700,200 Q750,195 800,210 Q850,205 900,220 L900,320 Q850,325 800,320 Q750,325 700,320 Q650,325 600,320 Z",
-  
-  // Australia
-  australia: "M750,420 Q780,415 810,425 Q840,430 860,445 Q870,460 860,475 Q850,485 830,480 Q810,485 790,480 Q770,485 750,480 Q730,475 720,460 Q715,445 720,430 Q730,420 750,420 Z"
-};
-
-// Threat types with colors and weights
+// Threat types with colors matching reference image
 const THREAT_TYPES = {
   'Malware': { color: '#ef4444', weight: 0.4, icon: 'virus' },
   'DDoS': { color: '#f97316', weight: 0.25, icon: 'zap' },
@@ -134,7 +113,7 @@ export const CyberThreatMap: React.FC = () => {
 
   // Add new threat
   const addThreat = useCallback(() => {
-    if (threats.length >= 150) return; // Performance limit
+    if (threats.length >= 50) return; // Performance limit
     
     const newThreat = generateThreat();
     setThreats(prev => [...prev, newThreat]);
@@ -247,262 +226,159 @@ export const CyberThreatMap: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="relative w-full h-96 bg-gradient-to-br from-background to-muted/20 rounded-lg overflow-hidden border border-primary/10">
-                {/* Grid overlay */}
-                <div className="absolute inset-0 opacity-20">
-                  <svg width="100%" height="100%">
-                    <defs>
-                      <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" />
-                  </svg>
-                </div>
-
-                {/* Enhanced World Map */}
+              <div className="relative w-full h-96 bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+                {/* Threat Map with realistic world map */}
                 <svg 
                   viewBox="0 0 900 500" 
                   className="absolute inset-0 w-full h-full"
-                  style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.3))' }}
+                  style={{ backgroundColor: '#1a1a1a' }}
                 >
                   <defs>
-                    {/* Gradient definitions for continents */}
-                    <linearGradient id="continentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
-                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
-                    </linearGradient>
-                    
-                    {/* Glow filter for countries */}
-                    <filter id="countryGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                    {/* Glow filters for threat indicators */}
+                    <filter id="threatGlow" x="-100%" y="-100%" width="300%" height="300%">
+                      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
                       <feMerge> 
                         <feMergeNode in="coloredBlur"/>
                         <feMergeNode in="SourceGraphic"/>
                       </feMerge>
                     </filter>
                     
-                    {/* Enhanced glow for active threats */}
-                    <filter id="threatGlow" x="-100%" y="-100%" width="300%" height="300%">
-                      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <filter id="pulseGlow" x="-200%" y="-200%" width="500%" height="500%">
+                      <feGaussianBlur stdDeviation="12" result="bigBlur"/>
                       <feMerge> 
-                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="bigBlur"/>
                         <feMergeNode in="SourceGraphic"/>
                       </feMerge>
                     </filter>
                   </defs>
 
-                  {/* Enhanced continent shapes */}
-                  {Object.entries(WORLD_MAP_PATHS).map(([continent, path]) => (
-                    <path
-                      key={continent}
-                      d={path}
-                      fill="url(#continentGrad)"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth="1"
-                      opacity="0.4"
-                      className="animate-pulse"
-                      style={{ 
-                        animationDuration: '4s',
-                        animationDelay: `${Math.random() * 2}s`
-                      }}
-                    />
-                  ))}
-                  
-                  {/* Ocean lines for depth */}
-                  <g opacity="0.2">
-                    <path d="M0,100 Q450,80 900,120" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,180 Q450,160 900,200" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,260 Q450,240 900,280" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,340 Q450,320 900,360" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,420 Q450,400 900,440" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                  </g>
-                  
-                  {/* Enhanced country markers */}
-                  {Object.entries(COUNTRIES).map(([country, coords]) => {
-                    const isAttackSource = ATTACK_SOURCES.includes(country);
-                    const isPopularTarget = POPULAR_TARGETS.includes(country);
+                  {/* World Map Background - detailed country boundaries */}
+                  <g stroke="#4a5568" strokeWidth="0.5" fill="#2d3748" opacity="0.8">
+                    {/* North America */}
+                    <path d="M50,100 Q80,90 120,100 Q150,95 180,110 Q200,120 220,140 Q240,160 250,180 Q255,200 250,220 Q240,240 220,250 Q200,255 180,250 Q150,245 120,240 Q80,235 50,230 Q30,220 25,200 Q30,180 40,160 Q45,140 50,120 Z"/>
                     
-                    return (
-                      <g key={country}>
-                        {/* Country glow base */}
-                        <circle
-                          cx={coords.x}
-                          cy={coords.y}
-                          r="12"
-                          fill="hsl(var(--primary))"
-                          opacity="0.1"
-                          className={isAttackSource ? "animate-pulse" : ""}
-                        />
-                        
-                        {/* Main country marker */}
-                        <circle
-                          cx={coords.x}
-                          cy={coords.y}
-                          r="5"
-                          fill={isAttackSource ? "#ef4444" : isPopularTarget ? "#10b981" : "hsl(var(--primary))"}
-                          opacity="0.8"
-                          filter="url(#countryGlow)"
-                          className="transition-all duration-300 hover:scale-125"
-                        />
-                        
-                        {/* Inner core */}
-                        <circle
-                          cx={coords.x}
-                          cy={coords.y}
-                          r="2"
-                          fill="white"
-                          opacity="0.9"
-                        />
-                        
-                        {/* Country label */}
-                        <text
-                          x={coords.x}
-                          y={coords.y - 12}
-                          fontSize="9"
-                          textAnchor="middle"
-                          fill="hsl(var(--foreground))"
-                          opacity="0.8"
-                          className="font-mono text-xs font-medium"
-                          style={{ textShadow: '0 0 4px hsl(var(--background))' }}
-                        >
-                          {country.length > 10 ? country.substring(0, 10) + '...' : country}
-                        </text>
-                      </g>
-                    );
-                  })}
+                    {/* South America */}
+                    <path d="M220,280 Q240,270 260,280 Q280,290 290,310 Q295,330 290,350 Q285,370 275,390 Q265,410 250,425 Q235,435 220,430 Q205,425 195,410 Q190,390 195,370 Q200,350 205,330 Q210,310 215,290 Q218,280 220,280 Z"/>
+                    
+                    {/* Europe */}
+                    <path d="M440,180 Q460,175 480,180 Q500,185 520,190 Q540,195 560,200 Q580,205 600,210 L600,240 Q580,245 560,240 Q540,235 520,230 Q500,225 480,220 Q460,215 440,210 Z"/>
+                    
+                    {/* Africa */}
+                    <path d="M480,260 Q500,255 520,265 Q540,275 555,290 Q565,305 560,320 Q555,335 545,350 Q535,365 520,375 Q505,380 490,375 Q475,370 465,355 Q460,340 465,325 Q470,310 475,295 Q478,280 480,260 Z"/>
+                    
+                    {/* Asia */}
+                    <path d="M600,160 Q650,150 700,160 Q750,170 800,180 Q850,190 900,200 L900,280 Q850,290 800,280 Q750,270 700,260 Q650,250 600,240 Z"/>
+                    
+                    {/* Australia */}
+                    <path d="M730,380 Q760,375 790,385 Q820,395 840,410 Q850,425 840,440 Q830,450 810,445 Q790,440 770,435 Q750,430 730,425 Q710,420 700,405 Q695,390 700,375 Q710,370 730,380 Z"/>
+                  </g>
 
-                  {/* Active threats with enhanced animations */}
+                  {/* Subtle grid overlay */}
+                  <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#374151" strokeWidth="0.3" opacity="0.3"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+
+                  {/* Active Threat Indicators */}
                   {threats.map((threat) => {
                     const source = COUNTRIES[threat.source];
                     const target = COUNTRIES[threat.target];
                     const progress = Math.min((Date.now() - threat.timestamp) / threat.duration, 1);
-                    const fadeProgress = 1 - Math.pow(progress, 2); // Smoother fade
+                    const opacity = 1 - progress;
                     
-                    if (!source || !target) return null;
+                    if (!source || !target || opacity <= 0) return null;
 
-                    // Calculate curve for more realistic attack paths
-                    const midX = (source.x + target.x) / 2;
-                    const midY = (source.y + target.y) / 2 - 30; // Arc upward
-                    const currentX = source.x + (target.x - source.x) * progress;
-                    const currentY = source.y + (target.y - source.y) * progress - 30 * Math.sin(Math.PI * progress);
-
+                    const threatColor = THREAT_TYPES[threat.type].color;
+                    const size = Math.max(8, threat.severity * 2);
+                    
                     return (
                       <g key={threat.id}>
-                        {/* Background glow line */}
-                        <path
-                          d={`M ${source.x},${source.y} Q ${midX},${midY} ${target.x},${target.y}`}
-                          fill="none"
-                          stroke={THREAT_TYPES[threat.type].color}
-                          strokeWidth="6"
-                          opacity={fadeProgress * 0.2}
+                        {/* Source indicator */}
+                        <circle
+                          cx={source.x}
+                          cy={source.y}
+                          r={size + 8}
+                          fill={threatColor}
+                          opacity={opacity * 0.2}
+                          filter="url(#pulseGlow)"
+                          className="animate-pulse"
+                        />
+                        <circle
+                          cx={source.x}
+                          cy={source.y}
+                          r={size}
+                          fill={threatColor}
+                          opacity={opacity * 0.8}
                           filter="url(#threatGlow)"
                         />
                         
-                        {/* Main attack line with curve */}
-                        <path
-                          d={`M ${source.x},${source.y} Q ${midX},${midY} ${target.x},${target.y}`}
-                          fill="none"
-                          stroke={THREAT_TYPES[threat.type].color}
-                          strokeWidth="2"
-                          opacity={fadeProgress}
-                          style={{
-                            filter: `drop-shadow(0 0 6px ${THREAT_TYPES[threat.type].color})`,
-                            strokeDasharray: '8,4',
-                            strokeDashoffset: -progress * 40,
-                            transition: 'all 0.1s ease-out'
-                          }}
+                        {/* Target indicator */}
+                        <circle
+                          cx={target.x}
+                          cy={target.y}
+                          r={size + 6}
+                          fill={threatColor}
+                          opacity={opacity * 0.15}
+                          filter="url(#pulseGlow)"
+                          className="animate-ping"
+                        />
+                        <circle
+                          cx={target.x}
+                          cy={target.y}
+                          r={size - 2}
+                          fill={threatColor}
+                          opacity={opacity * 0.9}
+                          filter="url(#threatGlow)"
                         />
                         
-                        {/* Moving threat pulse with trail */}
-                        <g>
-                          {/* Pulse trail */}
-                          {[0.8, 0.6, 0.4, 0.2].map((trailProgress, index) => {
-                            const trailPos = Math.max(0, progress - trailProgress * 0.1);
-                            const trailX = source.x + (target.x - source.x) * trailPos;
-                            const trailY = source.y + (target.y - source.y) * trailPos - 30 * Math.sin(Math.PI * trailPos);
-                            
-                            return (
-                              <circle
-                                key={index}
-                                cx={trailX}
-                                cy={trailY}
-                                r={Math.max(1, (threat.severity / 3) * trailProgress)}
-                                fill={THREAT_TYPES[threat.type].color}
-                                opacity={fadeProgress * trailProgress * 0.6}
-                                style={{
-                                  filter: `drop-shadow(0 0 4px ${THREAT_TYPES[threat.type].color})`
-                                }}
-                              />
-                            );
-                          })}
-                          
-                          {/* Main moving pulse */}
-                          <circle
-                            cx={currentX}
-                            cy={currentY}
-                            r={Math.max(4, threat.severity / 1.5)}
-                            fill={THREAT_TYPES[threat.type].color}
-                            opacity={fadeProgress}
-                            filter="url(#threatGlow)"
-                            style={{
-                              animation: 'pulse 0.5s ease-in-out infinite alternate'
-                            }}
-                          />
-                          
-                          {/* Core pulse */}
-                          <circle
-                            cx={currentX}
-                            cy={currentY}
-                            r={Math.max(2, threat.severity / 3)}
-                            fill="white"
-                            opacity={fadeProgress * 0.9}
-                          />
-                        </g>
+                        {/* Attack line (subtle) */}
+                        <line
+                          x1={source.x}
+                          y1={source.y}
+                          x2={target.x}
+                          y2={target.y}
+                          stroke={threatColor}
+                          strokeWidth="1"
+                          opacity={opacity * 0.3}
+                          strokeDasharray="4,4"
+                          className="animate-pulse"
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* Country markers */}
+                  {Object.entries(COUNTRIES).map(([country, coords]) => {
+                    const activeThreats = threats.filter(t => 
+                      t.source === country || t.target === country
+                    );
+                    const isActive = activeThreats.length > 0;
+                    
+                    return (
+                      <g key={country}>
+                        {/* Base indicator */}
+                        <circle
+                          cx={coords.x}
+                          cy={coords.y}
+                          r="4"
+                          fill={isActive ? "#10b981" : "#6b7280"}
+                          opacity="0.8"
+                          filter="url(#threatGlow)"
+                        />
                         
-                        {/* Enhanced source indicator */}
-                        <g>
+                        {/* Active glow */}
+                        {isActive && (
                           <circle
-                            cx={source.x}
-                            cy={source.y}
-                            r="15"
-                            fill={THREAT_TYPES[threat.type].color}
-                            opacity={fadeProgress * 0.15}
-                            className="animate-ping"
-                            style={{ animationDuration: '1s' }}
+                            cx={coords.x}
+                            cy={coords.y}
+                            r="8"
+                            fill="#10b981"
+                            opacity="0.3"
+                            filter="url(#pulseGlow)"
+                            className="animate-pulse"
                           />
-                          <circle
-                            cx={source.x}
-                            cy={source.y}
-                            r="10"
-                            fill={THREAT_TYPES[threat.type].color}
-                            opacity={fadeProgress * 0.25}
-                            className="animate-ping"
-                            style={{ animationDuration: '0.5s', animationDelay: '0.25s' }}
-                          />
-                        </g>
-                        
-                        {/* Enhanced target indicator */}
-                        {progress > 0.8 && (
-                          <g>
-                            <circle
-                              cx={target.x}
-                              cy={target.y}
-                              r="12"
-                              fill={THREAT_TYPES[threat.type].color}
-                              opacity={fadeProgress * 0.3}
-                              className="animate-pulse"
-                            />
-                            <circle
-                              cx={target.x}
-                              cy={target.y}
-                              r="8"
-                              fill="white"
-                              opacity={fadeProgress * 0.8}
-                              className="animate-ping"
-                              style={{ animationDuration: '0.3s' }}
-                            />
-                          </g>
                         )}
                       </g>
                     );
