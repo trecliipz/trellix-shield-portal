@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { AgentCompatibility } from './AgentCompatibility';
 import { MLDashboard } from './MLDashboard';
 import { CyberAttacksSection } from './CyberAttacksSection';
+import { CyberThreatMap } from './CyberThreatMap';
 import { useSecurityUpdates, normalizeUpdateType } from '@/hooks/useSecurityUpdates';
 import { useToast } from '@/hooks/use-toast';
 
@@ -210,6 +211,11 @@ const Features = (): JSX.Element => {
         {/* Agent Compatibility Section */}
         <div className="mb-16">
           <AgentCompatibility />
+        </div>
+
+        {/* Cyber Threat Map */}
+        <div className="mb-16">
+          <CyberThreatMap />
         </div>
 
         {/* Cyber Attacks Section */}
