@@ -1,7 +1,7 @@
 // netlify/functions/epo.js
-import fetch from "node-fetch";
+const fetch = require("node-fetch");
 
-export async function handler(event, context) {
+exports.handler = async function(event, context) {
   // CORS headers for all responses
   const headers = {
     "Access-Control-Allow-Origin": "*",
