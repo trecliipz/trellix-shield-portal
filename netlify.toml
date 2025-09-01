@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  functions = "netlify/functions"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Environment variables for local development
+# Set these in Netlify dashboard for production:
+# PROXY_URL=https://your-epo-server.com
+# PROXY_USER=your-epo-username  
+# PROXY_PASS=your-epo-password

@@ -35,9 +35,10 @@ import {
   Info,
   LogOut
 } from "lucide-react";
-import { toast } from "sonner";
+  import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logIntegrationError } from "@/lib/logger";
+import { testNetlifyEpoConnection, epoApi } from "@/utils/netlifyEpoClient";
 
 interface EPOConnection {
   id: string;
@@ -249,6 +250,10 @@ export const IntegrationCenter = () => {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
+  // Netlify EPO testing state
+  const [isTestingNetlify, setIsTestingNetlify] = useState(false);
+  const [netlifyTestResult, setNetlifyTestResult] = useState<string>('');
+
   // Load connections from Supabase
   useEffect(() => {
     loadConnections();
@@ -290,6 +295,31 @@ export const IntegrationCenter = () => {
       toast.error('Failed to load connections');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Test Netlify EPO connection
+  const handleTestNetlifyConnection = async () => {
+    setIsTestingNetlify(true);
+    setNetlifyTestResult('');
+
+    try {
+      console.log('Starting Netlify EPO connection test...');
+      const result = await testNetlifyEpoConnection();
+      
+      if (result.success) {
+        setNetlifyTestResult(`✅ ${result.message}\n\nDetails: ${JSON.stringify(result.details, null, 2)}`);
+        toast.success('Netlify EPO connection successful!');
+      } else {
+        setNetlifyTestResult(`❌ ${result.message}\n\nDetails: ${JSON.stringify(result.details, null, 2)}`);
+        toast.error('Netlify EPO connection failed');
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setNetlifyTestResult(`❌ Test failed: ${errorMsg}`);
+      toast.error('Connection test failed');
+    } finally {
+      setIsTestingNetlify(false);
     }
   };
 
@@ -964,7 +994,54 @@ export const IntegrationCenter = () => {
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="connections" className="space-y-6">
+          <TabsContent value="connections" className="space-y-6">
+          {/* Netlify EPO Testing Section */}
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plug className="h-5 w-5 text-blue-600" />
+                Netlify EPO Proxy Test
+              </CardTitle>
+              <CardDescription>
+                Test EPO connectivity via Netlify Functions proxy (bypasses CORS and credentials)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleTestNetlifyConnection}
+                  disabled={isTestingNetlify}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isTestingNetlify ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  {isTestingNetlify ? 'Testing...' : 'Test Connection'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setNetlifyTestResult('')}
+                  disabled={!netlifyTestResult}
+                >
+                  Clear Results
+                </Button>
+              </div>
+              {netlifyTestResult && (
+                <div className="bg-card border rounded-md p-4">
+                  <pre className="text-xs whitespace-pre-wrap font-mono">
+                    {netlifyTestResult}
+                  </pre>
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground">
+                <p>📋 <strong>Requirements:</strong> PROXY_URL, PROXY_USER, PROXY_PASS environment variables in Netlify</p>
+                <p>🔗 <strong>Endpoint:</strong> /.netlify/functions/epo?path=remote/core.help</p>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
