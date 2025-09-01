@@ -62,19 +62,16 @@ exports.handler = async function(event, context) {
       throw new Error(`EPO request failed: ${response.status} ${response.statusText}`);
     }
 
-    // Try to parse as JSON, fallback to text
+    // Parse as text first, then detect format
+    const rawResponse = await response.text();
     let responseData;
-    const contentType = response.headers.get('content-type') || '';
     
     try {
-      if (contentType.includes('application/json')) {
-        responseData = await response.json();
-      } else {
-        responseData = await response.text();
-      }
+      // Try to parse as JSON
+      responseData = JSON.parse(rawResponse);
     } catch (parseError) {
-      // If JSON parsing fails, get as text
-      responseData = await response.text();
+      // If JSON parsing fails, return raw text/XML
+      responseData = rawResponse;
     }
 
     console.log(`[EPO-NETLIFY] Request successful, response type: ${typeof responseData}`);
@@ -91,7 +88,7 @@ exports.handler = async function(event, context) {
         meta: {
           path: apiPath,
           timestamp: new Date().toISOString(),
-          contentType: contentType
+          contentType: response.headers.get('content-type') || 'unknown'
         }
       })
     };
