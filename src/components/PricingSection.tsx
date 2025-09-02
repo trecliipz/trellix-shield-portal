@@ -15,39 +15,57 @@ export const PricingSection = () => {
     {
       name: 'Starter',
       icon: Shield,
-      description: 'Perfect for personal use and small projects',
+      description: 'Perfect for small businesses getting started with endpoint security',
       monthlyPrice: 9.99,
       yearlyPrice: 99.99,
-      unit: 'per month',
+      unit: 'per 5 endpoints',
       popular: false,
       features: [
-        '10 conversions per day',
-        'Basic image formats (JPG, PNG, WebP)',
-        'File size up to 5MB',
-        'Local browser processing',
-        'No data uploaded to servers',
-        'Email support'
+        'Basic malware protection',
+        'Real-time scanning',
+        'Email support',
+        'Basic reporting dashboard',
+        'Automatic updates',
+        'Windows & Mac support'
       ],
       gradient: 'from-blue-500/10 to-cyan-500/10'
     },
     {
       name: 'Professional',
       icon: Zap,
-      description: 'Advanced features for professionals and businesses',
+      description: 'Advanced protection for growing businesses',
       monthlyPrice: 19.99,
       yearlyPrice: 199.99,
-      unit: 'per month',
+      unit: 'per endpoint',
       popular: true,
       features: [
-        '100 conversions per day',
-        'All formats (Images, PDFs, Audio, Video)',
-        'File size up to 50MB',
-        'Priority processing',
-        'Background removal',
-        'Batch conversion',
-        'Priority support'
+        'Advanced threat detection',
+        'TIE Intelligence integration',
+        'Behavioral analysis',
+        'Priority support (24/5)',
+        'Advanced reporting & analytics',
+        'Custom policy management',
+        'Multi-platform support'
       ],
       gradient: 'from-primary/20 to-orange-500/20'
+    },
+    {
+      name: 'Enterprise',
+      icon: Crown,
+      description: 'Complete security solution for large organizations',
+      monthlyPrice: 39.99,
+      yearlyPrice: 399.99,
+      unit: 'per endpoint',
+      popular: false,
+      features: [
+        'AI-powered behavioral analysis',
+        'Zero-day exploit protection',
+        'Advanced persistent threat detection',
+        '24/7 phone & chat support',
+        'Compliance reporting (SOX, HIPAA)',
+        'Dedicated security analyst'
+      ],
+      gradient: 'from-purple-500/10 to-pink-500/10'
     }
   ];
 
@@ -57,11 +75,9 @@ export const PricingSection = () => {
     return Math.round((savings / monthlyCost) * 100);
   };
 
-  const handleSignUp = async (planName: string) => {
-    // Dispatch event to open auth modal with plan selection
-    window.dispatchEvent(new CustomEvent('openAuthModal', { 
-      detail: { type: 'register', plan: planName.toLowerCase() } 
-    }));
+  const handleSignUp = (planName: string) => {
+    // Navigate to the setup page for the selected plan
+    navigate(`/setup/${planName.toLowerCase()}`);
   };
 
   return (
@@ -72,10 +88,10 @@ export const PricingSection = () => {
             💰 Limited Time Offer
           </Badge>
           <h2 className="text-3xl lg:text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
-            Choose Your Conversion Plan
+            Choose Your Protection Level
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Convert files locally in your browser with complete privacy and blazing fast speeds
+            From startups to enterprises, we have the perfect security solution for your business size and needs
           </p>
           
           <div className="flex items-center justify-center gap-4 mb-8">
@@ -96,7 +112,7 @@ export const PricingSection = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;

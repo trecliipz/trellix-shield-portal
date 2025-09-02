@@ -382,84 +382,6 @@ export type Database = {
         }
         Relationships: []
       }
-      conversion_limits: {
-        Row: {
-          allowed_formats: Json
-          created_at: string
-          daily_limit: number
-          id: string
-          max_file_size_mb: number
-          plan_type: string
-        }
-        Insert: {
-          allowed_formats?: Json
-          created_at?: string
-          daily_limit: number
-          id?: string
-          max_file_size_mb: number
-          plan_type: string
-        }
-        Update: {
-          allowed_formats?: Json
-          created_at?: string
-          daily_limit?: number
-          id?: string
-          max_file_size_mb?: number
-          plan_type?: string
-        }
-        Relationships: []
-      }
-      conversion_logs: {
-        Row: {
-          conversion_type: string
-          created_at: string
-          download_url: string | null
-          error_message: string | null
-          expires_at: string | null
-          file_size: number
-          id: string
-          input_format: string
-          original_filename: string
-          output_format: string
-          processing_time_ms: number | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          conversion_type?: string
-          created_at?: string
-          download_url?: string | null
-          error_message?: string | null
-          expires_at?: string | null
-          file_size: number
-          id?: string
-          input_format: string
-          original_filename: string
-          output_format: string
-          processing_time_ms?: number | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          conversion_type?: string
-          created_at?: string
-          download_url?: string | null
-          error_message?: string | null
-          expires_at?: string | null
-          file_size?: number
-          id?: string
-          input_format?: string
-          original_filename?: string
-          output_format?: string
-          processing_time_ms?: number | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       customer_api_keys: {
         Row: {
           created_at: string
@@ -2710,10 +2632,6 @@ export type Database = {
       calculate_driver_earnings: {
         Args: { p_platform_fee_rate?: number; p_ride_id: string }
         Returns: string
-      }
-      can_user_convert: {
-        Args: { p_file_size_mb: number; p_format: string; p_user_id: string }
-        Returns: boolean
       }
       can_user_download: {
         Args: { p_user_id: string }

@@ -17,33 +17,33 @@ export const Hero = ({ onGetStarted }: HeroProps) => {
           </span>
         </div>
         <h1 className="text-4xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
-          Convert Files Locally in Your Browser
+          Stop Cyber Threats Before They Stop Your Business
         </h1>
         <p className="text-lg lg:text-xl mb-8 text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          Transform any file format with complete privacy and lightning speed. 
-          <strong className="text-foreground"> Zero uploads, maximum security</strong> - all conversions 
-          happen directly in your browser using cutting-edge Web Workers.
+          Don't let ransomware, malware, or zero-day exploits cripple your operations. 
+          <strong className="text-foreground"> Trellix Endpoint Security</strong> protects every device, 
+          blocks every threat, and keeps your business running 24/7.
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <div className="flex items-center text-sm text-muted-foreground">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            <span>100% Local Processing</span>
+            <span>Deploy in under 5 minutes</span>
           </div>
           <div className="flex items-center text-sm text-muted-foreground">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            <span>No Files Leave Your Device</span>
+            <span>99.9% threat detection rate</span>
           </div>
           <div className="flex items-center text-sm text-muted-foreground">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            <span>Lightning Fast Conversion</span>
+            <span>Trusted by 40,000+ companies</span>
           </div>
         </div>
 
         <SecurityBadge />
 
         <p className="text-sm text-muted-foreground mt-4">
-          Start converting instantly • No credit card required • Upgrade anytime
+          No credit card required • 14-day free trial • Cancel anytime
         </p>
       </div>
     </section>

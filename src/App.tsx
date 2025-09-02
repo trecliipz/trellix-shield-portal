@@ -9,7 +9,6 @@ import NotFound from "./pages/NotFound";
 import { Portal } from "./pages/Portal";
 import { PlanSetup } from "./pages/PlanSetup";
 import { ArchitecturePage } from "./pages/Architecture";
-import { Account } from "./pages/Account";
 import { OnlinePresenceProvider } from "@/components/OnlinePresenceProvider";
 
 const queryClient = new QueryClient({
@@ -44,7 +43,6 @@ const App = () => (
               <Route path="/setup/:plan" element={<PlanSetup />} />
               <Route path="/portal" element={<Portal />} />
               <Route path="/architecture" element={<ArchitecturePage />} />
-              <Route path="/account" element={<Account />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
