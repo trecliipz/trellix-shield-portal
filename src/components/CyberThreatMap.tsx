@@ -4,44 +4,54 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Shield, AlertTriangle, Zap, Bot, Target } from 'lucide-react';
 
-// Country coordinates for realistic attack visualization
+// More accurate country coordinates for realistic attack visualization
 const COUNTRIES = {
-  'China': { x: 740, y: 280, name: 'China' },
-  'Russia': { x: 650, y: 200, name: 'Russia' },
+  'China': { x: 750, y: 280, name: 'China' },
+  'Russia': { x: 700, y: 180, name: 'Russia' },
   'North Korea': { x: 780, y: 260, name: 'North Korea' },
-  'Iran': { x: 580, y: 300, name: 'Iran' },
-  'United States': { x: 200, y: 240, name: 'United States' },
-  'United Kingdom': { x: 480, y: 220, name: 'United Kingdom' },
-  'Germany': { x: 520, y: 230, name: 'Germany' },
+  'Iran': { x: 580, y: 290, name: 'Iran' },
+  'United States': { x: 200, y: 250, name: 'United States' },
+  'United Kingdom': { x: 480, y: 210, name: 'United Kingdom' },
+  'Germany': { x: 510, y: 220, name: 'Germany' },
   'Japan': { x: 820, y: 270, name: 'Japan' },
-  'Australia': { x: 800, y: 450, name: 'Australia' },
-  'Brazil': { x: 300, y: 380, name: 'Brazil' },
-  'India': { x: 650, y: 320, name: 'India' },
+  'Australia': { x: 820, y: 420, name: 'Australia' },
+  'Brazil': { x: 320, y: 380, name: 'Brazil' },
+  'India': { x: 670, y: 310, name: 'India' },
   'South Korea': { x: 790, y: 270, name: 'South Korea' },
-  'France': { x: 500, y: 240, name: 'France' },
-  'Canada': { x: 180, y: 180, name: 'Canada' },
-  'Israel': { x: 560, y: 310, name: 'Israel' }
+  'France': { x: 500, y: 230, name: 'France' },
+  'Canada': { x: 180, y: 160, name: 'Canada' },
+  'Israel': { x: 560, y: 300, name: 'Israel' },
+  'Netherlands': { x: 490, y: 215, name: 'Netherlands' },
+  'Sweden': { x: 510, y: 190, name: 'Sweden' },
+  'Norway': { x: 500, y: 180, name: 'Norway' },
+  'Mexico': { x: 220, y: 320, name: 'Mexico' },
+  'South Africa': { x: 540, y: 420, name: 'South Africa' },
+  'Turkey': { x: 560, y: 270, name: 'Turkey' },
+  'Ukraine': { x: 550, y: 210, name: 'Ukraine' },
+  'Poland': { x: 530, y: 220, name: 'Poland' },
+  'Italy': { x: 510, y: 260, name: 'Italy' },
+  'Spain': { x: 470, y: 270, name: 'Spain' }
 };
 
-// World map paths for better visualization
+// More accurate world map paths using simplified SVG coordinates
 const WORLD_MAP_PATHS = {
-  // North America
-  northAmerica: "M100,150 Q120,140 140,150 Q160,145 180,150 Q200,140 220,150 Q240,145 260,160 Q280,155 300,170 Q320,165 340,180 L340,220 Q320,225 300,220 Q280,225 260,230 Q240,235 220,240 Q200,245 180,240 Q160,245 140,240 Q120,245 100,240 Z",
+  // North America - More accurate shape
+  northAmerica: "M80,150 Q100,140 120,145 Q140,140 160,145 Q180,140 200,150 Q220,145 240,155 Q260,150 280,165 Q300,160 320,175 Q340,170 360,185 L360,280 Q340,285 320,280 Q300,285 280,275 Q260,280 240,275 Q220,280 200,275 Q180,280 160,270 Q140,275 120,270 Q100,275 80,265 Z",
   
-  // South America
-  southAmerica: "M280,320 Q290,315 300,320 Q310,315 320,325 Q330,330 335,345 Q340,360 335,380 Q330,400 325,420 Q320,440 310,455 Q300,470 290,480 Q280,485 270,480 Q260,475 255,460 Q250,445 255,430 Q260,415 265,400 Q270,385 275,370 Q280,355 285,340 Q280,325 280,320 Z",
+  // South America - Better proportions
+  southAmerica: "M280,320 Q290,315 300,325 Q310,320 320,330 Q330,335 340,350 Q345,370 340,390 Q335,410 330,430 Q325,450 315,465 Q305,480 295,490 Q285,495 275,490 Q265,485 260,470 Q255,455 260,440 Q265,425 270,410 Q275,395 270,380 Q275,365 280,350 Q275,335 280,320 Z",
   
-  // Europe
-  europe: "M480,200 Q500,195 520,200 Q540,195 560,205 Q580,200 600,210 L600,250 Q580,255 560,250 Q540,255 520,250 Q500,255 480,250 Z",
+  // Europe - More detailed
+  europe: "M460,190 Q480,185 500,190 Q520,185 540,195 Q560,190 580,200 Q600,195 620,205 L620,260 Q600,265 580,260 Q560,265 540,260 Q520,265 500,260 Q480,265 460,260 Z",
   
-  // Africa
-  africa: "M500,280 Q520,275 540,285 Q560,290 575,305 Q580,320 575,340 Q570,360 565,380 Q560,400 550,415 Q540,430 530,440 Q520,445 510,440 Q500,435 495,420 Q490,405 495,390 Q500,375 505,360 Q510,345 505,330 Q500,315 500,300 Q500,285 500,280 Z",
+  // Africa - Better shape
+  africa: "M480,280 Q500,275 520,285 Q540,290 560,305 Q570,320 575,340 Q580,360 575,380 Q570,400 565,420 Q560,440 550,455 Q540,470 530,480 Q520,485 510,480 Q500,475 495,460 Q490,445 495,430 Q500,415 505,400 Q510,385 505,370 Q500,355 505,340 Q510,325 505,310 Q500,295 480,280 Z",
   
-  // Asia
-  asia: "M600,200 Q650,190 700,200 Q750,195 800,210 Q850,205 900,220 L900,320 Q850,325 800,320 Q750,325 700,320 Q650,325 600,320 Z",
+  // Asia - More accurate
+  asia: "M620,180 Q660,170 710,180 Q760,175 810,190 Q860,185 900,200 L900,340 Q860,345 810,340 Q760,345 710,340 Q660,345 620,340 Z",
   
-  // Australia
-  australia: "M750,420 Q780,415 810,425 Q840,430 860,445 Q870,460 860,475 Q850,485 830,480 Q810,485 790,480 Q770,485 750,480 Q730,475 720,460 Q715,445 720,430 Q730,420 750,420 Z"
+  // Australia - Correct position
+  australia: "M760,400 Q790,395 820,405 Q850,410 870,425 Q880,440 870,455 Q860,470 840,465 Q820,470 800,465 Q780,470 760,465 Q740,460 730,445 Q725,430 730,415 Q740,405 760,400 Z"
 };
 
 // Threat types with colors and weights
@@ -53,9 +63,9 @@ const THREAT_TYPES = {
   'APT': { color: '#ec4899', weight: 0.05, icon: 'target' }
 };
 
-// Common attack sources (higher probability)
-const ATTACK_SOURCES = ['China', 'Russia', 'North Korea', 'Iran'];
-const POPULAR_TARGETS = ['United States', 'United Kingdom', 'Germany', 'Japan', 'Australia'];
+// Common attack sources and targets based on real cybersecurity data
+const ATTACK_SOURCES = ['China', 'Russia', 'North Korea', 'Iran', 'Ukraine'];
+const POPULAR_TARGETS = ['United States', 'United Kingdom', 'Germany', 'Japan', 'Australia', 'France', 'Canada', 'Netherlands', 'Sweden'];
 
 interface Threat {
   id: string;
