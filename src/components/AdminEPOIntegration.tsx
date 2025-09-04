@@ -64,99 +64,70 @@ export const AdminEPOIntegration = () => {
     loading: false
   });
 
+  const [testResults, setTestResults] = useState<any>(null);
+
   const handleTestConnection = async () => {
     setConnectionStatus('testing');
+    setTestResults(null);
     
     try {
-      // Validate required fields
-      if (!epoConfig.serverUrl || !epoConfig.username || !epoConfig.password) {
-        setConnectionStatus('disconnected');
-        toast.error("Please fill in all required fields (Server URL, Username, Password)");
-        return;
-      }
-
-      // Use the server URL as is - no auto-rewrite
-      const serverUrl = epoConfig.serverUrl;
-
-      // Test connection using EPO integration function
-      const { data, error } = await supabase.functions.invoke('epo-integration', {
-        body: {
-          action: 'test-connection',
-          serverUrl: serverUrl,
-          username: epoConfig.username,
-          password: epoConfig.password
-        }
-      });
-
-      if (error) {
-        setConnectionStatus('disconnected');
-        logIntegrationError(
-          `EPO connection test failed: ${error.message}`,
-          'AdminEPOIntegration.tsx',
-          'epo',
-          {
-            serverUrl: epoConfig.serverUrl,
-            username: epoConfig.username,
-            error: error.message
-          }
-        );
-        toast.error(`Connection test failed: ${error.message}`);
-      } else if (data?.success) {
+      // Import and use the Netlify client
+      const { testNetlifyEpoConnection } = await import('@/utils/netlifyEpoClient');
+      
+      console.log('Testing connection via Netlify proxy...');
+      const result = await testNetlifyEpoConnection();
+      
+      setTestResults(result);
+      
+      if (result.success) {
         setConnectionStatus('connected');
-        toast.success("Successfully connected to Trellix EPO server!");
+        toast.success(result.message);
+        console.log('Connection test successful:', result.details);
       } else {
         setConnectionStatus('disconnected');
         
-        // Enhanced error messaging with suggestions
-        let errorMessage = data?.error || "Connection test failed";
-        const suggestions = data?.suggestions || [];
-        
-        if (data?.type === 'network_error') {
-          errorMessage = `Network connectivity issue: ${data.error}`;
-          if (suggestions.length > 0) {
-            errorMessage += `\n\nSuggestions:\n${suggestions.map((s: string) => `• ${s}`).join('\n')}`;
-          }
+        // Build comprehensive error message
+        let errorMessage = result.message;
+        if (result.details?.suggestions?.length > 0) {
+          errorMessage += '\n\nSuggestions:\n' + result.details.suggestions.map((s: string) => `• ${s}`).join('\n');
         }
         
         logIntegrationError(
           errorMessage,
           'AdminEPOIntegration.tsx',
-          'epo',
+          'netlify-epo',
           {
-            serverUrl: epoConfig.serverUrl,
-            username: epoConfig.username,
-            responseData: data,
-            suggestions
+            testResult: result,
+            diagnostics: result.diagnostics,
+            details: result.details
           }
         );
-        toast.error(errorMessage);
+        
+        toast.error(errorMessage, { duration: 8000 });
+        console.error('Connection test failed:', result.details);
       }
     } catch (error: any) {
       setConnectionStatus('disconnected');
       console.error('EPO connection test error:', error);
       
-      let errorMessage = "Connection test failed";
+      const errorMessage = `Client error: ${error.message || 'Unknown error'}`;
       
-      // Provide specific guidance for common issues
-      if (epoConfig.serverUrl.includes('trellixepo2025:8443')) {
-        errorMessage = "Cannot reach trellixepo2025:8443. This appears to be a private server address. Consider: 1) Using the public IP address, 2) Setting up port forwarding, 3) Using a VPN, or 4) Making the server publicly accessible.";
-      } else if (error.message?.includes('fetch') || error.message?.includes('network')) {
-        errorMessage = "Network error: Unable to reach EPO server. Please check the server URL and network connectivity.";
-      } else {
-        errorMessage = `Connection test failed: ${error.message || 'Unknown error'}`;
-      }
+      setTestResults({
+        success: false,
+        message: errorMessage,
+        details: { clientError: error.message }
+      });
       
       logIntegrationError(
         errorMessage,
         'AdminEPOIntegration.tsx',
-        'epo',
+        'netlify-epo',
         {
-          serverUrl: epoConfig.serverUrl,
-          username: epoConfig.username,
           error: error.message,
           stack: error.stack
         }
       );
+      
       toast.error(errorMessage);
     }
   };
@@ -422,8 +393,12 @@ export const AdminEPOIntegration = () => {
 
               <div className="flex space-x-2 pt-4">
                 <Button onClick={handleTestConnection} disabled={connectionStatus === 'testing'}>
-                  <Shield className="h-4 w-4 mr-2" />
-                  Test Connection
+                  {connectionStatus === 'testing' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Shield className="h-4 w-4 mr-2" />
+                  )}
+                  Test Connection (Netlify Proxy)
                 </Button>
                 <Button 
                   variant="outline" 
@@ -441,6 +416,61 @@ export const AdminEPOIntegration = () => {
                   {isEditing ? 'View Mode' : 'Edit Mode'}
                 </Button>
               </div>
+
+              {/* Test Results Display */}
+              {testResults && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {testResults.success ? (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-red-500" />
+                      )}
+                      Connection Test Results
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label>Status</Label>
+                      <p className={`text-sm ${testResults.success ? 'text-green-600' : 'text-red-600'}`}>
+                        {testResults.message}
+                      </p>
+                    </div>
+                    
+                    {testResults.diagnostics && (
+                      <div>
+                        <Label>Diagnostics</Label>
+                        <div className="bg-muted p-3 rounded text-xs font-mono space-y-1">
+                          {testResults.diagnostics.targetUrl && (
+                            <div>Target URL: {testResults.diagnostics.targetUrl}</div>
+                          )}
+                          {testResults.diagnostics.latency && (
+                            <div>Response Time: {testResults.diagnostics.latency}ms</div>
+                          )}
+                          {testResults.diagnostics.contentType && (
+                            <div>Content Type: {testResults.diagnostics.contentType}</div>
+                          )}
+                          {testResults.diagnostics.detectedFormat && (
+                            <div>Format: {testResults.diagnostics.detectedFormat}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {testResults.details?.suggestions && (
+                      <div>
+                        <Label>Suggestions</Label>
+                        <ul className="text-sm text-muted-foreground list-disc list-inside">
+                          {testResults.details.suggestions.map((suggestion: string, idx: number) => (
+                            <li key={idx}>{suggestion}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
 
