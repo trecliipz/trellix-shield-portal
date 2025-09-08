@@ -27,6 +27,28 @@ exports.handler = async function(event, context) {
     const apiPath = searchParams.get('path') || 'remote/core.help';
     const timeout = parseInt(searchParams.get('timeout') || '30000');
     const parseMode = searchParams.get('parse') || 'auto'; // auto, json, xml, raw
+    const ping = searchParams.get('ping') === '1'; // health check mode
+
+    // Handle ping/health check mode
+    if (ping) {
+      return {
+        statusCode: 200,
+        headers: {
+          ...headers,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          success: true,
+          message: "Netlify function is operational",
+          timestamp: new Date().toISOString(),
+          environment: {
+            hasProxyUrl: !!process.env.PROXY_URL,
+            hasProxyUser: !!process.env.PROXY_USER,
+            hasProxyPass: !!process.env.PROXY_PASS
+          }
+        })
+      };
+    }
 
     // Validate environment variables
     if (!process.env.PROXY_URL || !process.env.PROXY_USER || !process.env.PROXY_PASS) {

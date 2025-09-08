@@ -305,13 +305,39 @@ export const IntegrationCenter = () => {
 
     try {
       console.log('Starting Netlify EPO connection test...');
+      
+      // First test Netlify function health
+      const { testNetlifyHealth } = await import('@/utils/netlifyEpoClient');
+      const healthResult = await testNetlifyHealth();
+      
+      if (!healthResult.success) {
+        setNetlifyTestResult(`❌ Netlify function health check failed: ${healthResult.error}\n\nSuggestions:\n${healthResult.suggestions?.map(s => `• ${s}`).join('\n') || 'No suggestions available'}`);
+        toast.error('Netlify function not accessible');
+        return;
+      }
+
+      // Then test EPO connection
       const result = await testNetlifyEpoConnection();
       
       if (result.success) {
-        setNetlifyTestResult(`✅ ${result.message}\n\nDetails: ${JSON.stringify(result.details, null, 2)}`);
+        setNetlifyTestResult(`✅ ${result.message}\n\nDiagnostics:\n${JSON.stringify(result.diagnostics, null, 2)}\n\nDetails:\n${JSON.stringify(result.details, null, 2)}`);
         toast.success('Netlify EPO connection successful!');
       } else {
-        setNetlifyTestResult(`❌ ${result.message}\n\nDetails: ${JSON.stringify(result.details, null, 2)}`);
+        let errorOutput = `❌ ${result.message}\n\n`;
+        
+        if (result.details?.suggestions) {
+          errorOutput += `Suggestions:\n${result.details.suggestions.map(s => `• ${s}`).join('\n')}\n\n`;
+        }
+        
+        if (result.diagnostics) {
+          errorOutput += `Diagnostics:\n${JSON.stringify(result.diagnostics, null, 2)}\n\n`;
+        }
+        
+        if (result.details) {
+          errorOutput += `Details:\n${JSON.stringify(result.details, null, 2)}`;
+        }
+        
+        setNetlifyTestResult(errorOutput);
         toast.error('Netlify EPO connection failed');
       }
     } catch (error) {

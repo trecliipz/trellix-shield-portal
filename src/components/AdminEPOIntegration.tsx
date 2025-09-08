@@ -402,6 +402,13 @@ export const AdminEPOIntegration = () => {
                 </Button>
                 <Button 
                   variant="outline" 
+                  onClick={() => window.open(`${import.meta.env.VITE_NETLIFY_SITE_URL || 'https://rtxepo.netlify.app'}/api/epo?ping=1`, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Run on Netlify
+                </Button>
+                <Button 
+                  variant="outline" 
                   disabled={connectionStatus !== 'connected'}
                   onClick={handleSaveConfiguration}
                 >
@@ -466,6 +473,15 @@ export const AdminEPOIntegration = () => {
                             <li key={idx}>{suggestion}</li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+
+                    {testResults.details?.responsePreview && (
+                      <div>
+                        <Label>Response Preview</Label>
+                        <div className="bg-muted p-3 rounded text-xs font-mono max-h-32 overflow-auto">
+                          {testResults.details.responsePreview}
+                        </div>
                       </div>
                     )}
                   </CardContent>

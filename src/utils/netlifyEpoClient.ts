@@ -19,6 +19,10 @@ export interface NetlifyEpoResponse<T = any> {
     httpStatus?: number;
     httpStatusText?: string;
     proxyUrl?: string;
+    responsePreview?: string;
+    parseError?: string;
+    requestUrl?: string;
+    userAgent?: string;
   };
 }
 
@@ -41,6 +45,18 @@ export async function callEpoViaNetlify<T = any>(
 ): Promise<NetlifyEpoResponse<T>> {
   const { timeout = 30000, method = 'GET', body, parse = 'auto' } = options;
 
+  // Environment-aware base URL resolution
+  const getBaseUrl = () => {
+    // Check if we're in preview environment and have Netlify URL
+    if (typeof window !== 'undefined' && window.location.hostname.includes('lovable.dev')) {
+      const netlifyUrl = import.meta.env.VITE_NETLIFY_SITE_URL;
+      if (netlifyUrl) {
+        return netlifyUrl;
+      }
+    }
+    return ''; // Use relative URL for same-origin requests
+  };
+
   // Build query parameters
   const params = new URLSearchParams({
     path: apiPath,
@@ -48,7 +64,8 @@ export async function callEpoViaNetlify<T = any>(
     parse
   });
 
-  const url = `/api/epo?${params}`;
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/api/epo?${params}`;
 
   try {
     console.log(`[NetlifyEpoClient] Calling ${method} ${url}`);
@@ -61,7 +78,84 @@ export async function callEpoViaNetlify<T = any>(
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    const result: NetlifyEpoResponse<T> = await response.json();
+    // Enhanced response handling for HTML/redirect detection
+    const contentType = response.headers.get('content-type') || '';
+    let responseText = '';
+    
+    try {
+      responseText = await response.text();
+    } catch (textError) {
+      return {
+        success: false,
+        error: 'Failed to read response body',
+        code: 'RESPONSE_READ_ERROR',
+        suggestions: ['Check network connectivity', 'Try again in a moment'],
+        timestamp: new Date().toISOString(),
+        meta: {
+          path: apiPath,
+          timestamp: new Date().toISOString(),
+          httpStatus: response.status,
+          httpStatusText: response.statusText,
+          contentType
+        }
+      };
+    }
+
+    // Detect HTML responses (error pages, redirects)
+    const isHtmlResponse = contentType.includes('text/html') || 
+                          responseText.trim().startsWith('<!DOCTYPE') ||
+                          responseText.trim().startsWith('<html');
+
+    if (isHtmlResponse) {
+      return {
+        success: false,
+        error: 'Received HTML page instead of JSON API response',
+        code: 'HTML_RESPONSE_ERROR',
+        suggestions: [
+          'Check if Netlify function is properly deployed',
+          'Verify environment variables are set in Netlify dashboard',
+          'Check if EPO server URL is accessible from Netlify',
+          'Try testing directly via "Run on Netlify" button'
+        ],
+        timestamp: new Date().toISOString(),
+        meta: {
+          path: apiPath,
+          timestamp: new Date().toISOString(),
+          httpStatus: response.status,
+          httpStatusText: response.statusText,
+          contentType,
+          responsePreview: responseText.substring(0, 200) + '...',
+          detectedFormat: 'html'
+        }
+      };
+    }
+
+    // Try to parse as JSON
+    let result: NetlifyEpoResponse<T>;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      return {
+        success: false,
+        error: 'Invalid JSON response from Netlify function',
+        code: 'JSON_PARSE_ERROR',
+        suggestions: [
+          'Check Netlify function logs for errors',
+          'Verify EPO server is returning valid responses',
+          'Try different parse mode (xml, raw)'
+        ],
+        timestamp: new Date().toISOString(),
+        meta: {
+          path: apiPath,
+          timestamp: new Date().toISOString(),
+          httpStatus: response.status,
+          httpStatusText: response.statusText,
+          contentType,
+          responsePreview: responseText.substring(0, 200) + '...',
+          parseError: parseError.message
+        }
+      };
+    }
     
     if (!response.ok) {
       // Enhanced error handling with Netlify function error details
@@ -86,17 +180,37 @@ export async function callEpoViaNetlify<T = any>(
 
   } catch (error) {
     console.error(`[NetlifyEpoClient] Network error:`, error);
-    // Return standardized error response
+    
+    // Enhanced error classification
+    let errorCode = 'NETWORK_ERROR';
+    let suggestions = [
+      'Check your network connection',
+      'Verify Netlify functions are deployed',
+      'Check browser console for more details'
+    ];
+
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      errorCode = 'FETCH_ERROR';
+      suggestions = [
+        'Check if the Netlify function URL is accessible',
+        'Verify CORS configuration',
+        'Try refreshing the page'
+      ];
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Network request failed',
-      code: 'NETWORK_ERROR',
-      suggestions: [
-        'Check your network connection',
-        'Verify Netlify functions are deployed',
-        'Check browser console for more details'
-      ],
-      timestamp: new Date().toISOString()
+      code: errorCode,
+      suggestions,
+      timestamp: new Date().toISOString(),
+      meta: {
+        path: apiPath,
+        timestamp: new Date().toISOString(),
+        contentType: 'unknown',
+        requestUrl: url,
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'server-side'
+      }
     };
   }
 }
@@ -147,6 +261,13 @@ export const epoApi = {
     });
   }
 };
+
+/**
+ * Test Netlify function health
+ */
+export async function testNetlifyHealth(): Promise<NetlifyEpoResponse> {
+  return callEpoViaNetlify('ping', { parse: 'raw' });
+}
 
 /**
  * Test connection to EPO via Netlify proxy
