@@ -74,6 +74,16 @@ export const IntegrationCenter = () => {
   const [certificateAnalysis, setCertificateAnalysis] = useState<any>(null);
   const [showCertificateAnalysis, setShowCertificateAnalysis] = useState(false);
 
+  // Webhook management state
+  const [showAddWebhook, setShowAddWebhook] = useState(false);
+  const [newWebhook, setNewWebhook] = useState({
+    name: '',
+    url: '',
+    events: [] as string[],
+    secret: '',
+    active: true
+  });
+
   // Authentication state
   const [authMode, setAuthMode] = useState<'basic' | 'session'>('basic');
   const [outputType, setOutputType] = useState('json');
@@ -1268,7 +1278,7 @@ export const IntegrationCenter = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium">Active Webhooks</h3>
-                  <Button>
+                  <Button onClick={() => setShowAddWebhook(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Webhook
                   </Button>
