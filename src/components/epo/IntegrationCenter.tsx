@@ -2151,6 +2151,127 @@ Can paste multiple certificates here (full chain)"
           </Card>
         </div>
       )}
+
+      {/* Add Webhook Modal */}
+      {showAddWebhook && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                Add New Webhook
+              </CardTitle>
+              <CardDescription>
+                Configure a webhook endpoint to receive EPO events
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="webhook-name">Webhook Name</Label>
+                <Input
+                  id="webhook-name"
+                  value={newWebhook.name}
+                  onChange={(e) => setNewWebhook({ ...newWebhook, name: e.target.value })}
+                  placeholder="e.g., Threat Detection Webhook"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="webhook-url">Endpoint URL</Label>
+                <Input
+                  id="webhook-url"
+                  value={newWebhook.url}
+                  onChange={(e) => setNewWebhook({ ...newWebhook, url: e.target.value })}
+                  placeholder="https://api.example.com/webhooks/epo"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="webhook-secret">Secret (Optional)</Label>
+                <Input
+                  id="webhook-secret"
+                  type="password"
+                  value={newWebhook.secret}
+                  onChange={(e) => setNewWebhook({ ...newWebhook, secret: e.target.value })}
+                  placeholder="Webhook secret for verification"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Event Types</Label>
+                <div className="space-y-2">
+                  {['threat-detection', 'policy-update', 'agent-status', 'system-alert'].map((event) => (
+                    <div key={event} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`event-${event}`}
+                        checked={newWebhook.events.includes(event)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setNewWebhook({ ...newWebhook, events: [...newWebhook.events, event] });
+                          } else {
+                            setNewWebhook({ ...newWebhook, events: newWebhook.events.filter(e => e !== event) });
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`event-${event}`} className="text-sm capitalize">
+                        {event.replace('-', ' ')}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="webhook-active"
+                  checked={newWebhook.active}
+                  onCheckedChange={(checked) => setNewWebhook({ ...newWebhook, active: checked as boolean })}
+                />
+                <Label htmlFor="webhook-active" className="text-sm">
+                  Active (start receiving events immediately)
+                </Label>
+              </div>
+            </CardContent>
+            
+            <div className="flex space-x-2 p-6 pt-4 border-t bg-card">
+              <Button 
+                onClick={() => {
+                  // Here you would typically save the webhook to your backend
+                  toast.success("Webhook added successfully!");
+                  setShowAddWebhook(false);
+                  setNewWebhook({
+                    name: '',
+                    url: '',
+                    events: [],
+                    secret: '',
+                    active: true
+                  });
+                }}
+                className="flex-1"
+                disabled={!newWebhook.name.trim() || !newWebhook.url.trim()}
+              >
+                Add Webhook
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowAddWebhook(false);
+                  setNewWebhook({
+                    name: '',
+                    url: '',
+                    events: [],
+                    secret: '',
+                    active: true
+                  });
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
