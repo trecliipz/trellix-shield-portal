@@ -8,66 +8,91 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 6%;
-    --foreground: 0 0% 100%;
+    /* Core Trellix Colors */
+    --background: 0 0% 4%; /* Darker enterprise background */
+    --foreground: 0 0% 98%; /* Pure white text */
 
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 100%;
+    --card: 0 0% 8%; /* Darker cards for depth */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 39% 11%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
 
     --primary: 22 100% 50%; /* Trellix Orange #FF6900 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 220 20% 12%; /* Trellix dark gray */
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 220 15% 18%;
-    --muted-foreground: 215 20% 70%;
+    --muted: 220 15% 15%; /* Subtle background elements */
+    --muted-foreground: 220 10% 65%;
 
-    --accent: 15 90% 58%; /* Trellix Red accent */
+    --accent: 6 78% 55%; /* Trellix Red #E74C3C for alerts/warnings */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 65% 51%; /* Danger red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 100% / 0.1;
-    --input: 0 0% 100% / 0.2;
-    --ring: 22 100% 50%;
+    --border: 0 0% 100% / 0.08; /* Subtle borders */
+    --input: 0 0% 100% / 0.15; /* Input field borders */
+    --ring: 22 100% 50%; /* Focus rings */
 
     --radius: 0.75rem;
 
-    /* Trellix brand colors */
-    --trellix-orange: 22 100% 50%; /* Official Trellix Orange #FF6900 */
-    --trellix-orange-hover: 20 100% 45%;
-    --trellix-dark: 220 15% 12%;
-    --trellix-darker: 220 20% 8%;
+    /* Comprehensive Trellix Brand Palette */
+    --trellix-orange: 22 100% 50%; /* Primary Orange #FF6900 */
+    --trellix-orange-light: 22 100% 65%; /* Lighter orange for hover states */
+    --trellix-orange-dark: 22 100% 35%; /* Darker orange for pressed states */
+    --trellix-orange-hover: 20 100% 45%; /* Hover state orange */
     
-    /* Modern Gradients */
+    --trellix-red: 6 78% 55%; /* Secondary Red #E74C3C */
+    --trellix-red-light: 6 78% 70%;
+    --trellix-red-dark: 6 78% 40%;
+    
+    --trellix-dark: 220 20% 8%; /* Primary dark background */
+    --trellix-darker: 220 25% 4%; /* Deepest background */
+    --trellix-gray: 220 15% 20%; /* Medium gray */
+    --trellix-gray-light: 220 10% 35%; /* Light gray */
+    
+    --trellix-blue: 213 100% 45%; /* Accent blue for links/info */
+    --trellix-blue-light: 213 100% 60%;
+    
+    /* Cybersecurity themed colors */
+    --cyber-green: 140 60% 45%; /* Success/secure states */
+    --cyber-yellow: 45 100% 55%; /* Warning states */
+    
+    /* Enhanced Trellix Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--trellix-darker)) 0%, hsl(var(--trellix-dark)) 100%);
-    --gradient-hero: radial-gradient(ellipse at center, hsl(var(--trellix-orange) / 0.15) 0%, hsl(var(--trellix-orange) / 0.05) 40%, transparent 70%);
-    --gradient-card: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--trellix-dark) / 0.3) 100%);
-    --gradient-button: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--trellix-orange-hover)) 100%);
-    --gradient-accent: linear-gradient(45deg, hsl(var(--trellix-orange) / 0.1) 0%, hsl(var(--trellix-dark) / 0.1) 100%);
+    --gradient-hero: radial-gradient(ellipse at center, hsl(var(--trellix-orange) / 0.12) 0%, hsl(var(--trellix-orange) / 0.04) 50%, transparent 80%);
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--trellix-dark) / 0.4) 100%);
+    --gradient-button: linear-gradient(135deg, hsl(var(--trellix-orange)) 0%, hsl(var(--trellix-orange-hover)) 100%);
+    --gradient-button-secondary: linear-gradient(135deg, hsl(var(--trellix-red)) 0%, hsl(var(--trellix-red-dark)) 100%);
+    --gradient-accent: linear-gradient(45deg, hsl(var(--trellix-orange) / 0.08) 0%, hsl(var(--trellix-dark) / 0.08) 100%);
+    --gradient-cyber: linear-gradient(135deg, hsl(var(--trellix-darker)) 0%, hsl(var(--trellix-blue) / 0.1) 50%, hsl(var(--trellix-darker)) 100%);
+    --gradient-warning: linear-gradient(135deg, hsl(var(--cyber-yellow) / 0.1) 0%, hsl(var(--trellix-dark)) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(var(--cyber-green) / 0.1) 0%, hsl(var(--trellix-dark)) 100%);
     
-    /* Advanced Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(var(--trellix-orange) / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(var(--trellix-orange) / 0.1), 0 2px 4px -2px hsl(var(--trellix-orange) / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(var(--trellix-orange) / 0.1), 0 4px 6px -4px hsl(var(--trellix-orange) / 0.1);
-    --shadow-xl: 0 20px 25px -5px hsl(var(--trellix-orange) / 0.1), 0 8px 10px -6px hsl(var(--trellix-orange) / 0.1);
-    --shadow-glow: 0 0 20px hsl(var(--trellix-orange) / 0.3);
-    --shadow-card: 0 4px 12px hsl(var(--background) / 0.1), 0 2px 4px hsl(var(--trellix-orange) / 0.1);
+    /* Trellix-themed Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(var(--trellix-orange) / 0.06);
+    --shadow-md: 0 4px 6px -1px hsl(var(--trellix-orange) / 0.12), 0 2px 4px -2px hsl(var(--trellix-orange) / 0.08);
+    --shadow-lg: 0 10px 15px -3px hsl(var(--trellix-orange) / 0.15), 0 4px 6px -4px hsl(var(--trellix-orange) / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(var(--trellix-orange) / 0.2), 0 8px 10px -6px hsl(var(--trellix-orange) / 0.12);
+    --shadow-glow: 0 0 30px hsl(var(--trellix-orange) / 0.4), 0 0 60px hsl(var(--trellix-orange) / 0.2);
+    --shadow-glow-red: 0 0 25px hsl(var(--trellix-red) / 0.3), 0 0 50px hsl(var(--trellix-red) / 0.15);
+    --shadow-card: 0 8px 32px hsl(var(--trellix-darker) / 0.3), 0 2px 8px hsl(var(--trellix-orange) / 0.08);
+    --shadow-cyber: 0 0 20px hsl(var(--trellix-blue) / 0.2), inset 0 1px 0 hsl(var(--trellix-blue) / 0.1);
     
-    /* Glass Effects */
-    --glass-bg: hsl(var(--card) / 0.7);
-    --glass-border: hsl(var(--border) / 0.2);
-    --glass-backdrop: blur(12px);
+    /* Enhanced Glass Effects */
+    --glass-bg: hsl(var(--card) / 0.6);
+    --glass-border: hsl(var(--trellix-orange) / 0.1);
+    --glass-backdrop: blur(16px) saturate(180%);
+    --glass-cyber: hsl(var(--trellix-blue) / 0.05);
     
-    /* Transitions */
-    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Smooth Trellix Transitions */
+    --transition-fast: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --transition-normal: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --transition-slow: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 6%;
     --sidebar-foreground: 0 0% 100%;

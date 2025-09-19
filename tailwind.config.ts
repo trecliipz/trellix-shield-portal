@@ -63,16 +63,48 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				trellix: {
-					orange: 'hsl(var(--trellix-orange))',
-					'orange-hover': 'hsl(var(--trellix-orange-hover))',
+					orange: {
+						DEFAULT: 'hsl(var(--trellix-orange))',
+						light: 'hsl(var(--trellix-orange-light))',
+						dark: 'hsl(var(--trellix-orange-dark))',
+						hover: 'hsl(var(--trellix-orange-hover))'
+					},
+					red: {
+						DEFAULT: 'hsl(var(--trellix-red))',
+						light: 'hsl(var(--trellix-red-light))',
+						dark: 'hsl(var(--trellix-red-dark))'
+					},
+					blue: {
+						DEFAULT: 'hsl(var(--trellix-blue))',
+						light: 'hsl(var(--trellix-blue-light))'
+					},
 					dark: 'hsl(var(--trellix-dark))',
-					darker: 'hsl(var(--trellix-darker))'
+					darker: 'hsl(var(--trellix-darker))',
+					gray: {
+						DEFAULT: 'hsl(var(--trellix-gray))',
+						light: 'hsl(var(--trellix-gray-light))'
+					}
+				},
+				cyber: {
+					green: 'hsl(var(--cyber-green))',
+					yellow: 'hsl(var(--cyber-yellow))'
 				}
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-hero': 'var(--gradient-hero)',
-				'gradient-card': 'var(--gradient-card)'
+				'gradient-card': 'var(--gradient-card)',
+				'gradient-button': 'var(--gradient-button)',
+				'gradient-button-secondary': 'var(--gradient-button-secondary)',
+				'gradient-cyber': 'var(--gradient-cyber)',
+				'gradient-warning': 'var(--gradient-warning)',
+				'gradient-success': 'var(--gradient-success)'
+			},
+			boxShadow: {
+				'glow': 'var(--shadow-glow)',
+				'glow-red': 'var(--shadow-glow-red)',
+				'cyber': 'var(--shadow-cyber)',
+				'card': 'var(--shadow-card)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
