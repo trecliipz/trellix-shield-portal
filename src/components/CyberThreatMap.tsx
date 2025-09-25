@@ -248,29 +248,17 @@ export const CyberThreatMap: React.FC = () => {
             </CardHeader>
             <CardContent className="p-6">
               <div className="relative w-full h-96 bg-gradient-to-br from-background to-muted/20 rounded-lg overflow-hidden border border-primary/10">
-                {/* Grid overlay */}
-                <div className="absolute inset-0 opacity-20">
-                  <svg width="100%" height="100%">
-                    <defs>
-                      <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" />
-                  </svg>
-                </div>
-
-                {/* Enhanced World Map */}
+                {/* World Map - Flat Mercator Projection */}
                 <svg 
                   viewBox="0 0 900 500" 
                   className="absolute inset-0 w-full h-full"
                   style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.3))' }}
                 >
                   <defs>
-                    {/* Gradient definitions for continents */}
-                    <linearGradient id="continentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
-                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+                    {/* Gradient for highlighted countries */}
+                    <linearGradient id="countryHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
                     </linearGradient>
                     
                     {/* Glow filter for countries */}
@@ -281,93 +269,115 @@ export const CyberThreatMap: React.FC = () => {
                         <feMergeNode in="SourceGraphic"/>
                       </feMerge>
                     </filter>
-                    
-                    {/* Enhanced glow for active threats */}
-                    <filter id="threatGlow" x="-100%" y="-100%" width="300%" height="300%">
-                      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                      <feMerge> 
-                        <feMergeNode in="coloredBlur"/>
-                        <feMergeNode in="SourceGraphic"/>
-                      </feMerge>
-                    </filter>
                   </defs>
 
-                  {/* Enhanced continent shapes */}
-                  {Object.entries(WORLD_MAP_PATHS).map(([continent, path]) => (
-                    <path
-                      key={continent}
-                      d={path}
-                      fill="url(#continentGrad)"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth="1"
-                      opacity="0.4"
-                      className="animate-pulse"
-                      style={{ 
-                        animationDuration: '4s',
-                        animationDelay: `${Math.random() * 2}s`
-                      }}
-                    />
-                  ))}
-                  
-                  {/* Ocean lines for depth */}
-                  <g opacity="0.2">
-                    <path d="M0,100 Q450,80 900,120" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,180 Q450,160 900,200" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,260 Q450,240 900,280" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,340 Q450,320 900,360" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
-                    <path d="M0,420 Q450,400 900,440" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none" />
+                  {/* Flat World Map - Basic Continents */}
+                  <g opacity="0.3" stroke="hsl(var(--primary))" strokeWidth="1" fill="hsl(var(--muted))">
+                    {/* North America */}
+                    <path d="M50,80 L250,80 L250,220 L180,260 L50,260 Z" />
+                    {/* South America */}
+                    <path d="M200,280 L300,280 L280,450 L220,450 Z" />
+                    {/* Europe */}
+                    <path d="M400,120 L550,120 L550,220 L400,220 Z" />
+                    {/* Africa */}
+                    <path d="M420,240 L550,240 L530,420 L440,420 Z" />
+                    {/* Asia */}
+                    <path d="M580,80 L850,80 L850,350 L580,350 Z" />
+                    {/* Australia */}
+                    <path d="M750,400 L850,400 L850,460 L750,460 Z" />
+                  </g>
+
+                  {/* Grid lines for map projection */}
+                  <g opacity="0.2" stroke="hsl(var(--primary))" strokeWidth="0.5" fill="none">
+                    {/* Longitude lines */}
+                    <line x1="150" y1="50" x2="150" y2="480" />
+                    <line x1="300" y1="50" x2="300" y2="480" />
+                    <line x1="450" y1="50" x2="450" y2="480" />
+                    <line x1="600" y1="50" x2="600" y2="480" />
+                    <line x1="750" y1="50" x2="750" y2="480" />
+                    
+                    {/* Latitude lines */}
+                    <line x1="50" y1="150" x2="850" y2="150" />
+                    <line x1="50" y1="250" x2="850" y2="250" />
+                    <line x1="50" y1="350" x2="850" y2="350" />
                   </g>
                   
-                  {/* Enhanced country markers */}
+                  {/* Highlighted Countries */}
                   {Object.entries(COUNTRIES).map(([country, coords]) => {
-                    const isAttackSource = ATTACK_SOURCES.includes(country);
-                    const isPopularTarget = POPULAR_TARGETS.includes(country);
+                    const highlightedCountries = [
+                      'Canada', 'United States', 'Brazil', 'United Kingdom', 
+                      'Germany', 'France', 'Iran', 'Israel', 'Russia', 
+                      'India', 'China', 'Australia', 'North Korea', 'Japan'
+                    ];
+                    
+                    if (!highlightedCountries.includes(country)) return null;
                     
                     return (
                       <g key={country}>
-                        {/* Country glow base */}
-                        <circle
-                          cx={coords.x}
-                          cy={coords.y}
-                          r="12"
-                          fill="hsl(var(--primary))"
-                          opacity="0.1"
-                          className={isAttackSource ? "animate-pulse" : ""}
+                        {/* Country highlight area */}
+                        <rect
+                          x={coords.x - 20}
+                          y={coords.y - 15}
+                          width="40"
+                          height="30"
+                          fill="url(#countryHighlight)"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth="1"
+                          rx="4"
+                          className="animate-pulse"
+                          style={{ 
+                            animationDuration: '3s',
+                            animationDelay: `${Math.random() * 2}s`
+                          }}
                         />
                         
                         {/* Main country marker */}
                         <circle
                           cx={coords.x}
                           cy={coords.y}
-                          r="5"
-                          fill={isAttackSource ? "#ef4444" : isPopularTarget ? "#10b981" : "hsl(var(--primary))"}
-                          opacity="0.8"
+                          r="6"
+                          fill="hsl(var(--primary))"
+                          opacity="0.9"
                           filter="url(#countryGlow)"
-                          className="transition-all duration-300 hover:scale-125"
+                          className="transition-all duration-300 hover:scale-125 cursor-pointer"
                         />
                         
                         {/* Inner core */}
                         <circle
                           cx={coords.x}
                           cy={coords.y}
-                          r="2"
+                          r="3"
                           fill="white"
-                          opacity="0.9"
+                          opacity="1"
                         />
                         
                         {/* Country label */}
                         <text
                           x={coords.x}
-                          y={coords.y - 12}
-                          fontSize="9"
+                          y={coords.y - 25}
+                          fontSize="10"
                           textAnchor="middle"
                           fill="hsl(var(--foreground))"
-                          opacity="0.8"
-                          className="font-mono text-xs font-medium"
-                          style={{ textShadow: '0 0 4px hsl(var(--background))' }}
+                          opacity="0.9"
+                          className="font-mono text-xs font-bold"
+                          style={{ 
+                            textShadow: '0 0 4px hsl(var(--background))',
+                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
+                          }}
                         >
-                          {country.length > 10 ? country.substring(0, 10) + '...' : country}
+                          {country}
                         </text>
+                        
+                        {/* Connection lines to show relationships */}
+                        <line
+                          x1={coords.x}
+                          y1={coords.y + 6}
+                          x2={coords.x}
+                          y2={coords.y + 15}
+                          stroke="hsl(var(--primary))"
+                          strokeWidth="2"
+                          opacity="0.5"
+                        />
                       </g>
                     );
                   })}
