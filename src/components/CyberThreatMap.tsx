@@ -4,23 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Shield, AlertTriangle, Zap, Bot, Target } from 'lucide-react';
 
-// Country coordinates for realistic attack visualization
+// More accurate country coordinates for realistic attack visualization
 const COUNTRIES = {
-  'China': { x: 740, y: 280, name: 'China' },
-  'Russia': { x: 650, y: 200, name: 'Russia' },
-  'North Korea': { x: 780, y: 260, name: 'North Korea' },
-  'Iran': { x: 580, y: 300, name: 'Iran' },
-  'United States': { x: 200, y: 240, name: 'United States' },
-  'United Kingdom': { x: 480, y: 220, name: 'United Kingdom' },
-  'Germany': { x: 520, y: 230, name: 'Germany' },
-  'Japan': { x: 820, y: 270, name: 'Japan' },
-  'Australia': { x: 800, y: 450, name: 'Australia' },
-  'Brazil': { x: 300, y: 380, name: 'Brazil' },
-  'India': { x: 650, y: 320, name: 'India' },
-  'South Korea': { x: 790, y: 270, name: 'South Korea' },
-  'France': { x: 500, y: 240, name: 'France' },
-  'Canada': { x: 180, y: 180, name: 'Canada' },
-  'Israel': { x: 560, y: 310, name: 'Israel' }
+  'China': { x: 720, y: 260, name: 'China' },
+  'Russia': { x: 680, y: 180, name: 'Russia' },
+  'North Korea': { x: 750, y: 250, name: 'North Korea' },
+  'Iran': { x: 600, y: 280, name: 'Iran' },
+  'United States': { x: 220, y: 260, name: 'United States' },
+  'United Kingdom': { x: 490, y: 200, name: 'United Kingdom' },
+  'Germany': { x: 510, y: 210, name: 'Germany' },
+  'Japan': { x: 780, y: 270, name: 'Japan' },
+  'Australia': { x: 760, y: 400, name: 'Australia' },
+  'Brazil': { x: 320, y: 360, name: 'Brazil' },
+  'India': { x: 650, y: 300, name: 'India' },
+  'South Korea': { x: 760, y: 260, name: 'South Korea' },
+  'France': { x: 500, y: 220, name: 'France' },
+  'Canada': { x: 200, y: 160, name: 'Canada' },
+  'Israel': { x: 570, y: 290, name: 'Israel' }
 };
 
 // World map paths for better visualization
@@ -271,20 +271,25 @@ export const CyberThreatMap: React.FC = () => {
                     </filter>
                   </defs>
 
-                  {/* Flat World Map - Basic Continents */}
-                  <g opacity="0.3" stroke="hsl(var(--primary))" strokeWidth="1" fill="hsl(var(--muted))">
-                    {/* North America */}
-                    <path d="M50,80 L250,80 L250,220 L180,260 L50,260 Z" />
-                    {/* South America */}
-                    <path d="M200,280 L300,280 L280,450 L220,450 Z" />
-                    {/* Europe */}
-                    <path d="M400,120 L550,120 L550,220 L400,220 Z" />
-                    {/* Africa */}
-                    <path d="M420,240 L550,240 L530,420 L440,420 Z" />
-                    {/* Asia */}
-                    <path d="M580,80 L850,80 L850,350 L580,350 Z" />
-                    {/* Australia */}
-                    <path d="M750,400 L850,400 L850,460 L750,460 Z" />
+                  {/* More Accurate World Map Continents */}
+                  <g opacity="0.4" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="hsl(var(--muted))">
+                    {/* North America - More accurate shape */}
+                    <path d="M60,120 Q80,110 120,120 Q150,115 180,130 Q200,125 230,140 Q250,135 270,150 Q290,145 310,160 L315,180 Q320,200 315,220 Q310,240 300,260 L280,270 Q260,275 240,270 Q220,275 200,270 Q180,275 160,270 Q140,275 120,270 Q100,275 80,270 Q60,275 50,260 Q45,240 50,220 Q55,200 60,180 Q65,160 60,140 Q58,130 60,120 Z" />
+                    
+                    {/* South America - More accurate shape */}
+                    <path d="M280,320 Q290,315 310,325 Q320,330 325,345 Q330,360 335,380 Q340,400 335,420 Q330,440 325,460 Q320,475 310,485 Q300,490 290,485 Q280,490 270,485 Q260,490 250,480 Q245,470 250,450 Q255,430 260,410 Q265,390 270,370 Q275,350 280,330 Q282,325 280,320 Z" />
+                    
+                    {/* Europe - More detailed */}
+                    <path d="M460,180 Q480,175 500,185 Q520,180 540,190 Q560,185 580,195 Q590,200 595,215 Q590,230 585,245 Q580,260 570,270 Q560,275 540,270 Q520,275 500,270 Q480,275 460,270 Q450,265 455,250 Q460,235 465,220 Q470,205 465,190 Q462,185 460,180 Z" />
+                    
+                    {/* Africa - More realistic outline */}
+                    <path d="M480,280 Q500,275 520,285 Q540,290 560,300 Q575,310 580,325 Q585,340 580,355 Q575,370 570,385 Q565,400 560,415 Q555,430 545,440 Q535,445 525,440 Q515,445 505,440 Q495,445 485,435 Q480,425 485,410 Q490,395 495,380 Q500,365 495,350 Q490,335 485,320 Q480,305 475,290 Q478,285 480,280 Z" />
+                    
+                    {/* Asia - Better proportions */}
+                    <path d="M600,120 Q650,110 700,125 Q750,120 800,135 Q830,140 850,155 Q860,170 855,185 Q850,200 845,215 Q840,230 835,245 Q830,260 825,275 Q820,290 815,305 Q810,320 805,335 Q800,350 790,360 Q780,365 770,360 Q760,365 750,360 Q740,365 730,360 Q720,365 710,360 Q700,365 690,360 Q680,365 670,360 Q660,365 650,360 Q640,365 630,360 Q620,365 610,355 Q605,345 610,330 Q615,315 620,300 Q625,285 620,270 Q615,255 620,240 Q625,225 630,210 Q635,195 630,180 Q625,165 620,150 Q615,135 610,125 Q605,120 600,120 Z" />
+                    
+                    {/* Australia - Better shape */}
+                    <path d="M720,380 Q750,375 780,385 Q810,390 830,405 Q840,420 835,435 Q830,450 820,460 Q810,465 800,460 Q790,465 780,460 Q770,465 760,460 Q750,465 740,460 Q730,465 720,455 Q715,445 720,430 Q725,415 730,400 Q735,385 730,385 Q725,380 720,380 Z" />
                   </g>
 
                   {/* Grid lines for map projection */}
